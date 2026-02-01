@@ -11,23 +11,56 @@ Core features: upload NDAs → clause extraction (CUAD 41-category taxonomy) →
 ## Commands
 
 ```bash
+# Development
 pnpm dev          # Start development server (http://localhost:3000)
 pnpm build        # Production build
 pnpm lint         # ESLint
 pnpm start        # Production server
+
+# Database
 pnpm db:push      # Push Drizzle schema to database
 pnpm db:generate  # Generate Drizzle migrations
+pnpm db:migrate   # Run migrations
 pnpm db:studio    # Open Drizzle Studio
+
+# Testing
+pnpm test         # Run Vitest tests
+pnpm test:coverage # Run with coverage report
 ```
 
 ## Architecture
 
-### Two-Tier Database Model
+### Database Model (Current: Single DB with Schema Separation)
 
-- **Shared Reference DB** (`neon-http`, read-only): CUAD clauses, ContractNLI, Bonterms/CommonAccord templates, ~33K vectors
-- **Tenant DB** (`neon-serverless`, RLS-enforced): user documents, analyses, comparisons, generated NDAs
+Single Neon database for MVP with logical separation:
+- **Shared tables**: reference_documents, reference_embeddings (future: CUAD, ContractNLI, templates)
+- **Tenant tables**: documents, analyses, comparisons, generated_ndas (RLS-enforced via `tenant_id`)
 
-Query pattern: parallel fetch from both DBs, merge results before passing to Claude.
+Will split into two physical databases later. Keep shared/tenant queries in separate files.
+
+### Auth & Multi-Tenancy
+
+- **Auth.js v5** with DrizzleAdapter, database sessions (not JWT)
+- **Providers**: Google OAuth + Email/Password (bcryptjs)
+- **Multi-org**: Users can belong to multiple organizations via `organization_members` junction table
+- **Session**: Includes `activeOrganizationId` for tenant context switching
+
+### Data Access Layer (DAL)
+
+```typescript
+import { verifySession, withTenant, requireRole } from "@/lib/dal"
+
+// In Server Components:
+const { userId, user } = await verifySession()           // Redirects if not auth'd
+const { db, tenantId, role } = await withTenant()        // Sets RLS context
+const ctx = await requireRole(["owner", "admin"])        // Role-based access
+```
+
+### Next.js 16 Patterns
+
+- **Proxy file**: `src/proxy.ts` (renamed from middleware.ts in v16)
+- **DAL**: Uses React `cache()` for request memoization
+- **Server-only**: Import `"server-only"` in DAL to prevent client bundling
 
 ### Agent Pipeline (Inngest + LangGraph.js)
 
@@ -51,21 +84,43 @@ Each agent runs inside an `inngest step.run()` for durability. LangGraph handles
 @/*  →  ./*  (e.g., @/components, @/lib/utils, @/hooks)
 ```
 
-### Key Directories (per PRD Appendix C)
-- `app/` - Next.js App Router (auth, dashboard, API routes)
-- `src/db/` - Drizzle schema (shared/ and tenant/ subdirs)
-- `src/inngest/` - Inngest client and pipeline functions
-- `src/agents/` - LangGraph agent definitions
-- `src/lib/` - Core utilities (embeddings, chunker, claude client, tenant context)
+### Key Directories
+- `app/` - Next.js App Router (pages, API routes including `/api/auth/[...nextauth]`)
+- `src/db/` - Drizzle schema and client
+  - `schema/` - Table definitions (auth, organizations, documents, analyses, etc.)
+  - `_columns.ts` - Reusable column helpers (timestamps, tenantId, etc.)
+  - `client.ts` - Neon serverless connection
+- `src/lib/` - Core utilities
+  - `auth.ts` - Auth.js configuration
+  - `dal.ts` - Data Access Layer (verifySession, withTenant, requireRole)
+  - `password.ts` - Password hashing/validation
+- `src/proxy.ts` - Next.js 16 auth redirects (formerly middleware.ts)
+- `src/test/` - Test setup (PGlite)
+- `src/inngest/` - Inngest client and pipeline functions (future)
+- `src/agents/` - LangGraph agent definitions (future)
 - `components/` - shadcn/ui + AI SDK Elements
 
 ## Conventions
 
 ### Database (Drizzle)
-- All tenant tables require `tenant_id UUID NOT NULL` with RLS policy
+- All tenant tables use `...tenantId` spread from `src/db/_columns.ts`
+- Use column helpers: `primaryId`, `timestamps`, `softDelete`, `tenantId`
 - Use `cosineDistance()` for vector similarity queries
 - HNSW indexes created AFTER bulk data load
 - Idempotent ingestion via `content_hash` + `ON CONFLICT DO NOTHING`
+- **pgvector**: Enable manually on Neon before `db:push`: `CREATE EXTENSION IF NOT EXISTS vector;`
+
+### Auth Patterns
+- Use `verifySession()` in Server Components for auth check
+- Use `withTenant()` for tenant-scoped queries (sets RLS context)
+- Use `requireRole(["owner", "admin"])` for role-based access
+- Password utilities: `hashPassword()`, `verifyPassword()`, `validatePassword()`
+
+### Testing (Vitest + PGlite)
+- Tests use in-memory PGlite (WASM Postgres) - no Docker needed
+- Test files: `*.test.ts` in `src/` directory
+- Setup file: `src/test/setup.ts` creates schema before each test
+- Run: `pnpm test` or `pnpm test:coverage`
 
 ### Inngest Patterns
 - Wrap each LangGraph agent in `step.run()` for durability
@@ -100,3 +155,16 @@ Detailed specs in `docs/`:
 - `agents.md` - Agent architecture specs
 - `api-patterns.md` - API design patterns
 - `embedding-strategy.md` - Vector embedding approach
+
+Implementation plans in `docs/plans/`:
+- `2026-02-01-database-foundation-design.md` - Database architecture decisions
+- `2026-02-01-database-foundation-implementation.md` - Step-by-step implementation
+
+## Environment Variables
+
+See `.env.example` for required variables:
+- `DATABASE_URL` - Neon PostgreSQL connection string
+- `AUTH_SECRET` - Auth.js session secret
+- `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` - Google OAuth credentials
+- `RESEND_API_KEY` - Email provider for password reset
+- `BLOB_READ_WRITE_TOKEN` - Vercel Blob for file uploads
