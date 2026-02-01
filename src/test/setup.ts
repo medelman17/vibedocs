@@ -16,8 +16,8 @@ vi.mock("@/db/client", () => ({
 
 // Schema creation SQL (simplified for testing)
 const createSchema = async () => {
-  // Enable pgcrypto for gen_random_uuid()
-  await testDb.execute(sql`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`)
+  // PGlite supports gen_random_uuid() natively in PostgreSQL 13+ core
+  // No extension needed
 
   // Create tables in order (respecting foreign keys)
   await testDb.execute(sql`
