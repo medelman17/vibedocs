@@ -1,12 +1,18 @@
 # Database Schema Reference
 
-> Extracted from [PRD §11](./PRD.md#11-database-schema). This is the authoritative reference for all Drizzle schema definitions.
+> **Source of truth for all database definitions.** Imported by CLAUDE.md for database-related tasks.
+> For narrative context on data architecture decisions, see [PRD §7](./PRD.md#7-data-architecture) and [PRD §20 ADR-004](./PRD.md#20-technical-decision-log).
 
-## Overview
+---
 
-Two-tier data model with strict separation:
-- **Tier 1 (Shared Reference DB):** Read-only legal corpora. Connected via `neon-http`. No RLS.
-- **Tier 2 (Tenant DB):** User data with Row-Level Security. Connected via `neon-serverless`.
+## Two-Tier Overview
+
+| Tier | Purpose | Connection | Driver | RLS |
+|------|---------|------------|--------|-----|
+| **Shared Reference** | CUAD, ContractNLI, Bonterms, CommonAccord, Kleister | Read-only | `neon-http` (Edge-compatible) | None — public reads |
+| **Tenant-Scoped** | User documents, analyses, generated NDAs | Read/write | `neon-serverless` (WebSocket) | Yes — `tenant_id` isolation |
+
+> **Current Implementation:** Single Neon database with logical schema separation for MVP. Will split into two physical databases when scaling requires it. See `docs/plans/2026-02-01-database-foundation-design.md` for architecture decisions.
 
 ---
 
