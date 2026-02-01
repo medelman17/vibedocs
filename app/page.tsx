@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Cormorant_Garamond, Outfit } from "next/font/google"
 import { cn } from "@/lib/utils"
+import { joinWaitlist } from "./actions/waitlist"
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -18,6 +19,8 @@ const outfit = Outfit({
 export default function Home() {
   const [email, setEmail] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [isHovering, setIsHovering] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -39,11 +42,20 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (email) {
-      // TODO: Connect to your waitlist API
-      await new Promise((resolve) => setTimeout(resolve, 800))
+    if (!email || isSubmitting) return
+
+    setIsSubmitting(true)
+    setError(null)
+
+    const result = await joinWaitlist(email)
+
+    if (result.success) {
       setIsSubmitted(true)
+    } else {
+      setError(result.error)
     }
+
+    setIsSubmitting(false)
   }
 
   return (
@@ -199,7 +211,8 @@ export default function Home() {
                     />
                     <button
                       type="submit"
-                      className="m-1.5 rounded-full px-6 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                      disabled={isSubmitting}
+                      className="m-1.5 rounded-full px-6 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
                       style={{
                         fontFamily: "var(--font-body)",
                         background: "linear-gradient(135deg, oklch(0.45 0.12 55) 0%, oklch(0.35 0.10 50) 100%)",
@@ -208,20 +221,32 @@ export default function Home() {
                       onMouseEnter={() => setIsHovering(true)}
                       onMouseLeave={() => setIsHovering(false)}
                     >
-                      Join Waitlist
+                      {isSubmitting ? "Joining..." : "Join Waitlist"}
                     </button>
                   </div>
                 </div>
 
-                <p
-                  className="mt-4 text-sm"
-                  style={{
-                    fontFamily: "var(--font-body)",
-                    color: "oklch(0.55 0.02 50)",
-                  }}
-                >
-                  No spam, ever. Unsubscribe anytime.
-                </p>
+                {error ? (
+                  <p
+                    className="mt-4 text-sm"
+                    style={{
+                      fontFamily: "var(--font-body)",
+                      color: "oklch(0.55 0.20 25)",
+                    }}
+                  >
+                    {error}
+                  </p>
+                ) : (
+                  <p
+                    className="mt-4 text-sm"
+                    style={{
+                      fontFamily: "var(--font-body)",
+                      color: "oklch(0.55 0.02 50)",
+                    }}
+                  >
+                    No spam, ever. Unsubscribe anytime.
+                  </p>
+                )}
               </form>
             ) : (
               <div
