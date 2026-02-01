@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 
 const protectedRoutes = ["/dashboard", "/documents", "/analysis", "/settings"]
-const publicRoutes = ["/login", "/signup", "/"]
 const authRoutes = ["/login", "/signup"]
 
 export default async function proxy(req: NextRequest) {
@@ -12,7 +11,6 @@ export default async function proxy(req: NextRequest) {
   const isProtectedRoute = protectedRoutes.some((route) =>
     path.startsWith(route)
   )
-  const isPublicRoute = publicRoutes.includes(path)
   const isAuthRoute = authRoutes.includes(path)
 
   // Check for session cookie (optimistic check, no DB call)

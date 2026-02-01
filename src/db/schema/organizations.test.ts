@@ -2,7 +2,6 @@
 import { describe, it, expect } from "vitest"
 import { testDb } from "@/test/setup"
 import { users, organizations, organizationMembers } from "./index"
-import { eq } from "drizzle-orm"
 
 describe("organizations schema", () => {
   it("creates an organization", async () => {

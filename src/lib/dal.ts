@@ -60,7 +60,7 @@ export const requireRole = cache(
   async (allowedRoles: ("owner" | "admin" | "member" | "viewer")[]) => {
     const { role, ...rest } = await withTenant()
 
-    if (!allowedRoles.includes(role as any)) {
+    if (!allowedRoles.includes(role as "owner" | "admin" | "member" | "viewer")) {
       redirect("/dashboard?error=unauthorized")
     }
 

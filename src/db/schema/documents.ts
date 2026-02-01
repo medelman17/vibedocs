@@ -10,7 +10,6 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core"
 import { primaryId, timestamps, tenantId } from "../_columns"
-import { organizations } from "./organizations"
 import { users } from "./auth"
 
 export const documents = pgTable(
