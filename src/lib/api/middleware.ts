@@ -15,7 +15,6 @@ import {
 import {
   asUserId,
   type UserId,
-  type TenantId,
   type Role,
   type TenantContext,
   type RoleContext,

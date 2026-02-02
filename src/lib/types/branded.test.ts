@@ -5,8 +5,6 @@ import {
   asUserId,
   asDocumentId,
   type TenantId,
-  type UserId,
-  type DocumentId,
 } from "./branded"
 
 describe("Branded Types", () => {
