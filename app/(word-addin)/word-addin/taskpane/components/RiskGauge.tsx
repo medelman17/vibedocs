@@ -1,38 +1,34 @@
 "use client"
 
+import { type RiskLevel, RISK_BADGE_CONFIG } from "@/types/word-addin"
 import { useAnalysisStore } from "../store"
 
 /**
- * Risk level type from PRD
+ * Extended risk level configuration with label and color class for gauge display
  */
-type RiskLevel = "standard" | "cautious" | "aggressive" | "unknown"
-
-/**
- * Configuration for each risk level
- */
-const riskLevelConfig: Record<
+const RISK_GAUGE_CONFIG: Record<
   RiskLevel,
   { label: string; colorClass: string; strokeColor: string }
 > = {
   standard: {
     label: "Standard Risk",
-    colorClass: "text-green-600 dark:text-green-400",
-    strokeColor: "#16a34a", // green-600
+    colorClass: "text-success-600 dark:text-success-400",
+    strokeColor: RISK_BADGE_CONFIG.standard.strokeColor,
   },
   cautious: {
     label: "Cautious Risk",
-    colorClass: "text-yellow-600 dark:text-yellow-400",
-    strokeColor: "#ca8a04", // yellow-600
+    colorClass: "text-warning-600 dark:text-warning-400",
+    strokeColor: RISK_BADGE_CONFIG.cautious.strokeColor,
   },
   aggressive: {
     label: "Aggressive Risk",
-    colorClass: "text-red-600 dark:text-red-400",
-    strokeColor: "#dc2626", // red-600
+    colorClass: "text-error-600 dark:text-error-400",
+    strokeColor: RISK_BADGE_CONFIG.aggressive.strokeColor,
   },
   unknown: {
     label: "Unknown",
     colorClass: "text-muted-foreground",
-    strokeColor: "#71717a", // zinc-500
+    strokeColor: RISK_BADGE_CONFIG.unknown.strokeColor,
   },
 }
 
@@ -41,7 +37,7 @@ const riskLevelConfig: Record<
  */
 function deriveRiskLevel(score: number | null, level: string | null): RiskLevel {
   // If we have a valid level, use it
-  if (level && level in riskLevelConfig) {
+  if (level && level in RISK_GAUGE_CONFIG) {
     return level as RiskLevel
   }
 
@@ -142,7 +138,7 @@ export function RiskGauge() {
 
   const { overallRiskScore, overallRiskLevel } = results
   const riskLevel = deriveRiskLevel(overallRiskScore, overallRiskLevel)
-  const config = riskLevelConfig[riskLevel]
+  const config = RISK_GAUGE_CONFIG[riskLevel]
   const displayScore = overallRiskScore ?? 0
 
   return (

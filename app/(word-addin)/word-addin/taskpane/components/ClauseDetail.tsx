@@ -4,57 +4,11 @@ import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { RISK_BADGE_CONFIG } from "@/types/word-addin"
 import { ArrowLeft, MapPin, FileText, Loader2 } from "lucide-react"
 import { useAnalysisStore } from "../store"
 import { useDocumentNavigation } from "../hooks"
-
-/**
- * Risk level type from PRD
- */
-type RiskLevel = "standard" | "cautious" | "aggressive" | "unknown"
-
-/**
- * Configuration for each risk level's badge styling
- */
-const riskBadgeConfig: Record<RiskLevel, { label: string; className: string }> = {
-  standard: {
-    label: "Standard",
-    className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  },
-  cautious: {
-    label: "Cautious",
-    className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  },
-  aggressive: {
-    label: "Aggressive",
-    className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  },
-  unknown: {
-    label: "Unknown",
-    className: "bg-muted text-muted-foreground",
-  },
-}
-
-/**
- * Normalize risk level string to typed RiskLevel
- */
-function normalizeRiskLevel(level: string): RiskLevel {
-  const normalized = level.toLowerCase()
-  if (normalized === "standard" || normalized === "cautious" || normalized === "aggressive") {
-    return normalized
-  }
-  return "unknown"
-}
-
-/**
- * Format category name for display (e.g., "non_compete" -> "Non Compete")
- */
-function formatCategory(category: string): string {
-  return category
-    .split(/[_-]/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ")
-}
+import { formatCategory, normalizeRiskLevel } from "../lib/format"
 
 /**
  * ClauseDetail displays expanded information for a selected clause.
@@ -88,7 +42,7 @@ export function ClauseDetail() {
   }
 
   const riskLevel = normalizeRiskLevel(clause.riskLevel)
-  const badgeConfig = riskBadgeConfig[riskLevel]
+  const badgeConfig = RISK_BADGE_CONFIG[riskLevel]
   const confidencePercent = Math.round(clause.confidence * 100)
 
   const handleBackToList = () => {

@@ -8,41 +8,10 @@ import {
 } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { PRIORITY_BADGE_CONFIG } from "@/types/word-addin"
 import { AlertCircle, AlertTriangle, CheckCircle2, Lightbulb, XCircle } from "lucide-react"
 import { useAnalysisStore } from "../store"
-
-/**
- * Priority type for recommendations
- */
-type Priority = "low" | "medium" | "high"
-
-/**
- * Configuration for priority badge styling
- */
-const priorityBadgeConfig: Record<Priority, { label: string; className: string }> = {
-  high: {
-    label: "High",
-    className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  },
-  medium: {
-    label: "Medium",
-    className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  },
-  low: {
-    label: "Low",
-    className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  },
-}
-
-/**
- * Format category name for display (e.g., "non_compete" -> "Non Compete")
- */
-function formatCategory(category: string): string {
-  return category
-    .split(/[_-]/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ")
-}
+import { formatCategory } from "../lib/format"
 
 /**
  * GapAnalysis displays the gap analysis results from NDA analysis.
@@ -104,7 +73,7 @@ export function GapAnalysis() {
               <span>Missing Clauses</span>
               <Badge
                 variant="secondary"
-                className="ml-1 text-[10px] px-1.5 py-0 bg-muted"
+                className="ml-1 text-xs px-1.5 py-0 bg-muted"
               >
                 {missingClauses.length}
               </Badge>
@@ -139,7 +108,7 @@ export function GapAnalysis() {
               <span>Weak Clauses</span>
               <Badge
                 variant="secondary"
-                className="ml-1 text-[10px] px-1.5 py-0 bg-muted"
+                className="ml-1 text-xs px-1.5 py-0 bg-muted"
               >
                 {weakClauses.length}
               </Badge>
@@ -181,7 +150,7 @@ export function GapAnalysis() {
               <span>Recommendations</span>
               <Badge
                 variant="secondary"
-                className="ml-1 text-[10px] px-1.5 py-0 bg-muted"
+                className="ml-1 text-xs px-1.5 py-0 bg-muted"
               >
                 {recommendations.length}
               </Badge>
@@ -195,7 +164,7 @@ export function GapAnalysis() {
             ) : (
               <div className="space-y-3">
                 {recommendations.map((item, index) => {
-                  const badgeConfig = priorityBadgeConfig[item.priority]
+                  const badgeConfig = PRIORITY_BADGE_CONFIG[item.priority]
                   return (
                     <div
                       key={index}
@@ -208,7 +177,7 @@ export function GapAnalysis() {
                         <Badge
                           variant="secondary"
                           className={cn(
-                            "shrink-0 text-[10px] px-1.5 py-0",
+                            "shrink-0 text-xs px-1.5 py-0",
                             badgeConfig.className
                           )}
                         >
