@@ -589,5 +589,138 @@ describe("generate/actions", () => {
         expect(result.error.code).toBe("NOT_FOUND")
       }
     })
+
+    it("validates export format", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "member")
+      const nda = await createTestGeneratedNda(org.id, user.id)
+      setupTenantContext({ user, org, membership: { role: "member" } })
+
+      const { exportGeneratedNda } = await import("./actions")
+      // @ts-expect-error testing invalid format
+      const result = await exportGeneratedNda({ id: nda.id, format: "invalid" })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.code).toBe("VALIDATION_ERROR")
+      }
+    })
+
+    it("validates NDA ID format", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "member")
+      setupTenantContext({ user, org, membership: { role: "member" } })
+
+      const { exportGeneratedNda } = await import("./actions")
+      const result = await exportGeneratedNda({ id: "not-a-uuid", format: "pdf" })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.code).toBe("VALIDATION_ERROR")
+      }
+    })
+  })
+
+  describe("generateNda with optional clauses", () => {
+    it("generates NDA with non-solicitation clause", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "member")
+      setupTenantContext({ user, org, membership: { role: "member" } })
+
+      const { generateNda } = await import("./actions")
+      const result = await generateNda({
+        templateSource: "bonterms",
+        title: "NDA with Non-Solicit",
+        parameters: {
+          disclosingParty: { name: "Acme Corp" },
+          receivingParty: { name: "Test Inc" },
+          effectiveDate: "2024-01-01",
+          termYears: 2,
+          mutual: false,
+          governingLaw: "Delaware",
+          includeNonSolicit: true,
+        },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.content).toContain("NON-SOLICITATION")
+      }
+    })
+
+    it("generates NDA with non-compete clause", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "member")
+      setupTenantContext({ user, org, membership: { role: "member" } })
+
+      const { generateNda } = await import("./actions")
+      const result = await generateNda({
+        templateSource: "commonaccord",
+        title: "NDA with Non-Compete",
+        parameters: {
+          disclosingParty: { name: "Acme Corp" },
+          receivingParty: { name: "Test Inc" },
+          effectiveDate: "2024-01-01",
+          termYears: 3,
+          mutual: true,
+          governingLaw: "New York",
+          includeNonCompete: true,
+        },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.content).toContain("NON-COMPETE")
+      }
+    })
+
+    it("generates NDA with both non-solicit and non-compete", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "member")
+      setupTenantContext({ user, org, membership: { role: "member" } })
+
+      const { generateNda } = await import("./actions")
+      const result = await generateNda({
+        templateSource: "bonterms",
+        title: "Full NDA",
+        parameters: {
+          disclosingParty: {
+            name: "Acme Corp",
+            jurisdiction: "Delaware",
+            signerName: "John Doe",
+            signerTitle: "CEO",
+          },
+          receivingParty: {
+            name: "Test Inc",
+            jurisdiction: "California",
+            signerName: "Jane Smith",
+            signerTitle: "CTO",
+          },
+          effectiveDate: "2024-06-01",
+          termYears: 5,
+          mutual: true,
+          governingLaw: "California",
+          disputeResolution: "arbitration",
+          purposeDescription: "software development partnership",
+          includeNonSolicit: true,
+          includeNonCompete: true,
+        },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.content).toContain("NON-SOLICITATION")
+        expect(result.data.content).toContain("NON-COMPETE")
+        expect(result.data.content).toContain("arbitration")
+        expect(result.data.content).toContain("software development partnership")
+        expect(result.data.content).toContain("John Doe")
+        expect(result.data.content).toContain("Jane Smith")
+      }
+    })
   })
 })

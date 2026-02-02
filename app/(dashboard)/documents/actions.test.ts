@@ -78,6 +78,174 @@ describe("documents/actions", () => {
   beforeEach(() => {
     mockTenantContext = null
     resetFactoryCounter()
+    vi.resetModules()
+  })
+
+  describe("uploadDocument", () => {
+    it("uploads a valid PDF file", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      // Mock blob functions
+      const { uploadFile, computeContentHash } = await import("@/lib/blob")
+      vi.mocked(computeContentHash).mockResolvedValue("hash-abc123")
+      vi.mocked(uploadFile).mockResolvedValue({ url: "https://blob.test/uploaded.pdf" } as never)
+
+      const formData = new FormData()
+      const file = new File(["test content"], "test.pdf", { type: "application/pdf" })
+      formData.append("file", file)
+      formData.append("title", "Test NDA")
+
+      const { uploadDocument } = await import("./actions")
+      const result = await uploadDocument(formData)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.title).toBe("Test NDA")
+        expect(result.data.status).toBe("pending")
+        expect(result.data.fileUrl).toBe("https://blob.test/uploaded.pdf")
+      }
+    })
+
+    it("uploads a valid DOCX file", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const { uploadFile, computeContentHash } = await import("@/lib/blob")
+      vi.mocked(computeContentHash).mockResolvedValue("hash-docx123")
+      vi.mocked(uploadFile).mockResolvedValue({ url: "https://blob.test/uploaded.docx" } as never)
+
+      const formData = new FormData()
+      const file = new File(["test content"], "test.docx", {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      })
+      formData.append("file", file)
+
+      const { uploadDocument } = await import("./actions")
+      const result = await uploadDocument(formData)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        // Title extracted from filename
+        expect(result.data.title).toBe("test")
+      }
+    })
+
+    it("returns error when no file provided", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const formData = new FormData()
+
+      const { uploadDocument } = await import("./actions")
+      const result = await uploadDocument(formData)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.code).toBe("VALIDATION_ERROR")
+        expect(result.error.message).toContain("No file provided")
+      }
+    })
+
+    it("returns error for invalid file type", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const formData = new FormData()
+      const file = new File(["test content"], "test.txt", { type: "text/plain" })
+      formData.append("file", file)
+
+      const { uploadDocument } = await import("./actions")
+      const result = await uploadDocument(formData)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.code).toBe("VALIDATION_ERROR")
+        expect(result.error.message).toContain("Invalid file type")
+      }
+    })
+
+    it("returns error for file exceeding size limit", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const formData = new FormData()
+      // Create a mock File with size > 10MB
+      const largeContent = new ArrayBuffer(11 * 1024 * 1024)
+      const file = new File([largeContent], "large.pdf", { type: "application/pdf" })
+      formData.append("file", file)
+
+      const { uploadDocument } = await import("./actions")
+      const result = await uploadDocument(formData)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.code).toBe("VALIDATION_ERROR")
+        expect(result.error.message).toContain("10MB")
+      }
+    })
+
+    it("returns error for duplicate content", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      // Create existing document with same hash
+      await createTestDocument(org.id, {
+        title: "Existing Doc",
+        contentHash: "duplicate-hash",
+      })
+
+      const { computeContentHash } = await import("@/lib/blob")
+      vi.mocked(computeContentHash).mockResolvedValue("duplicate-hash")
+
+      const formData = new FormData()
+      const file = new File(["test content"], "test.pdf", { type: "application/pdf" })
+      formData.append("file", file)
+
+      const { uploadDocument } = await import("./actions")
+      const result = await uploadDocument(formData)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.code).toBe("DUPLICATE")
+        expect(result.error.message).toContain("Existing Doc")
+      }
+    })
+
+    it("extracts title from filename when not provided", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const { uploadFile, computeContentHash } = await import("@/lib/blob")
+      vi.mocked(computeContentHash).mockResolvedValue("hash-xyz")
+      vi.mocked(uploadFile).mockResolvedValue({ url: "https://blob.test/doc.pdf" } as never)
+
+      const formData = new FormData()
+      const file = new File(["test content"], "Acme NDA Agreement.pdf", { type: "application/pdf" })
+      formData.append("file", file)
+
+      const { uploadDocument } = await import("./actions")
+      const result = await uploadDocument(formData)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.title).toBe("Acme NDA Agreement")
+      }
+    })
   })
 
   describe("getDocuments", () => {
@@ -487,6 +655,130 @@ describe("documents/actions", () => {
       if (!result.success) {
         expect(result.error.code).toBe("NOT_FOUND")
       }
+    })
+  })
+
+  describe("hardDeleteDocument", () => {
+    it("permanently deletes a soft-deleted document", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const doc = await createTestDocument(org.id, {
+        title: "To Delete",
+        deletedAt: new Date(),
+        fileUrl: "https://blob.test/doc.pdf",
+      })
+
+      const { deleteFile } = await import("@/lib/blob")
+      vi.mocked(deleteFile).mockResolvedValue(undefined)
+
+      const { hardDeleteDocument } = await import("./actions")
+      const result = await hardDeleteDocument({ documentId: doc.id })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.message).toContain("permanently deleted")
+      }
+
+      // Verify document is actually gone
+      const { getDocument } = await import("./actions")
+      const checkResult = await getDocument({ documentId: doc.id })
+      expect(checkResult.success).toBe(false)
+    })
+
+    it("deletes associated chunks before document", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const doc = await createTestDocument(org.id, { deletedAt: new Date() })
+      await createTestChunk(org.id, doc.id, 0, { content: "Chunk 1" })
+      await createTestChunk(org.id, doc.id, 1, { content: "Chunk 2" })
+
+      const { deleteFile } = await import("@/lib/blob")
+      vi.mocked(deleteFile).mockResolvedValue(undefined)
+
+      const { hardDeleteDocument } = await import("./actions")
+      const result = await hardDeleteDocument({ documentId: doc.id })
+
+      expect(result.success).toBe(true)
+    })
+
+    it("returns NOT_FOUND for non-deleted document", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const doc = await createTestDocument(org.id) // not soft-deleted
+
+      const { hardDeleteDocument } = await import("./actions")
+      const result = await hardDeleteDocument({ documentId: doc.id })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.code).toBe("NOT_FOUND")
+        expect(result.error.message).toContain("Soft-delete")
+      }
+    })
+
+    it("returns NOT_FOUND for non-existent document", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const { hardDeleteDocument } = await import("./actions")
+      const result = await hardDeleteDocument({ documentId: "00000000-0000-0000-0000-000000000000" })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.code).toBe("NOT_FOUND")
+      }
+    })
+
+    it("continues even if blob deletion fails", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const doc = await createTestDocument(org.id, {
+        deletedAt: new Date(),
+        fileUrl: "https://blob.test/doc.pdf",
+      })
+
+      const { deleteFile } = await import("@/lib/blob")
+      vi.mocked(deleteFile).mockRejectedValue(new Error("Blob error"))
+
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+
+      const { hardDeleteDocument } = await import("./actions")
+      const result = await hardDeleteDocument({ documentId: doc.id })
+
+      expect(result.success).toBe(true) // Should still succeed
+      expect(consoleSpy).toHaveBeenCalled()
+      consoleSpy.mockRestore()
+    })
+
+    it("handles document without file URL", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "owner")
+      setupTenantContext({ user, org, membership: { role: "owner" } })
+
+      const doc = await createTestDocument(org.id, {
+        deletedAt: new Date(),
+        fileUrl: null,
+      })
+
+      const { hardDeleteDocument } = await import("./actions")
+      const result = await hardDeleteDocument({ documentId: doc.id })
+
+      expect(result.success).toBe(true)
     })
   })
 

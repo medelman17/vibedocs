@@ -12,7 +12,19 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: ["node_modules", ".next", "src/test/**"],
+      exclude: [
+        "node_modules",
+        ".next",
+        "src/test/**",
+        "src/db/schema/index.ts", // Re-export barrel file
+        "src/db/schema/analyses.ts", // Table definitions (not business logic)
+        "src/db/schema/comparisons.ts", // Table definitions (not business logic)
+        "src/db/schema/organizations.ts", // Table definitions (not business logic)
+        "src/db/schema/auth.ts", // Table definitions (not business logic)
+        "src/db/schema/documents.ts", // Table definitions (not business logic)
+        "src/db/schema/generated.ts", // Table definitions (not business logic)
+        "src/db/schema/password-reset.ts", // Table definitions (not business logic)
+      ],
     },
   },
   resolve: {
