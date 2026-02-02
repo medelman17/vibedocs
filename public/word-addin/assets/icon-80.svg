@@ -1,0 +1,20 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shadow layer -->
+  <path d="M17 12C17 9.79086 18.7909 8 21 8H47L63 24V68C63 70.2091 61.2091 72 59 72H21C18.7909 72 17 70.2091 17 68V12Z" fill="#000" fill-opacity="0.1" transform="translate(2, 2)"/>
+
+  <!-- Document base -->
+  <path d="M15 10C15 7.79086 16.7909 6 19 6H45L61 22V66C61 68.2091 59.2091 70 57 70H19C16.7909 70 15 68.2091 15 66V10Z" fill="#22c55e"/>
+
+  <!-- Folded corner -->
+  <path d="M45 6V18C45 20.2091 46.7909 22 49 22H61L45 6Z" fill="#16a34a"/>
+
+  <!-- Document lines (subtle) -->
+  <path d="M24 34H52" stroke="white" stroke-opacity="0.3" stroke-width="2" stroke-linecap="round"/>
+  <path d="M24 42H48" stroke="white" stroke-opacity="0.3" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Check circle background -->
+  <circle cx="38" cy="52" r="12" fill="white" fill-opacity="0.2"/>
+
+  <!-- Check mark -->
+  <path d="M31 52L36 57L46 46" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
