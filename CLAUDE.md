@@ -65,13 +65,17 @@ const ctx = await requireRole(["owner", "admin"])        // Role-based access
 - **DAL**: Uses React `cache()` for request memoization
 - **Server-only**: Import `"server-only"` in DAL to prevent client bundling
 
-### Agent Pipeline (Inngest + LangGraph.js)
+### Agent Pipeline (Inngest + AI SDK 6)
 
 ```
 Parser Agent → Classifier Agent → Risk Scorer Agent → Gap Analyst Agent
 ```
 
-Each agent runs inside an `inngest step.run()` for durability. LangGraph handles intra-agent state.
+Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generateObject()` for structured output.
+
+**Risk Levels (PRD-aligned):** `standard` | `cautious` | `aggressive` | `unknown` (not low/medium/high)
+
+**Token Budget:** ~212K tokens per document (~$1.10 at Sonnet pricing)
 
 ### Stack
 - Next.js 16 (App Router, RSC), React 19, TypeScript (strict)
@@ -88,7 +92,10 @@ Each agent runs inside an `inngest step.run()` for durability. LangGraph handles
 ```
 
 ### Key Directories
-- `app/` - Next.js App Router (pages, API routes including `/api/auth/[...nextauth]`)
+- `app/` - Next.js App Router (pages, API routes)
+  - `/api/auth/[...nextauth]` - Auth.js routes
+  - `/api/comparisons/` - NDA comparison endpoints
+  - `/api/generate/` - NDA generation endpoints (includes `/[id]/export`)
 - `src/db/` - Drizzle schema and client
   - `schema/` - Table definitions (auth, organizations, documents, analyses, etc.)
   - `queries/` - Prepared queries (documents, analyses, similarity)
@@ -100,10 +107,18 @@ Each agent runs inside an `inngest step.run()` for durability. LangGraph handles
   - `errors.ts` - Custom error classes (AppError, NotFoundError, etc.)
   - `api-utils.ts` - API response helpers (success, error, withErrorHandling)
   - `password.ts` - Password hashing/validation
+  - `clause-alignment.ts` - Hungarian algorithm for clause matching
+  - `document-export.ts` - DOCX/PDF export utilities
+  - `template-service.ts` - Bonterms/CommonAccord template retrieval
 - `src/proxy.ts` - Next.js 16 auth redirects (formerly middleware.ts)
 - `src/test/` - Test setup (PGlite)
-- `src/inngest/` - Inngest client and pipeline functions (future)
-- `src/agents/` - LangGraph agent definitions (future)
+- `src/inngest/` - Inngest client and pipeline functions
+- `src/agents/` - AI SDK 6 agent definitions
+  - `prompts/` - System prompts for each agent
+  - `tools/` - Vector search and other agent tools
+  - `testing/` - Mock AI and fixtures for agent tests
+  - `comparison/` - Comparison pipeline schemas and prompts
+- `src/lib/cache/` - LRU caching (embeddings, responses, search)
 - `components/` - shadcn/ui + AI SDK Elements
 
 ## Conventions
@@ -137,9 +152,17 @@ Each agent runs inside an `inngest step.run()` for durability. LangGraph handles
 - Use `vi.resetModules()` in `beforeEach` when mocks need fresh state between tests
 
 ### Inngest Patterns
-- Wrap each LangGraph agent in `step.run()` for durability
+- Wrap each agent in `step.run()` for durability
 - Use `step.sleep()` for rate limiting between API calls
 - Concurrency limits: 5 analyses, 3 embedding batches
+- **Progress events**: Emit `nda/analysis.progress` at each stage for real-time UI
+- **Partial persistence**: Save results after each agent for resume capability
+
+### Caching (LRU)
+- **Embedding cache**: 1-hour TTL, 10K entries - `src/lib/cache/embedding-cache.ts`
+- **Response cache**: 30-min TTL, 1K entries - `src/lib/cache/response-cache.ts`
+- **Vector search cache**: 5-min TTL, 500 entries - `src/agents/tools/vector-search.ts`
+- Package: `lru-cache` (not Redis for MVP)
 
 ### Component Patterns
 - UI components use `data-slot` attributes for styling hooks
@@ -207,6 +230,11 @@ Detailed specs in `docs/`:
 Implementation plans in `docs/plans/`:
 - `2026-02-01-database-foundation-design.md` - Database architecture decisions
 - `2026-02-01-database-foundation-implementation.md` - Step-by-step implementation
+- `2026-02-01-inngest-infrastructure.md` - Inngest setup (Plan 1)
+- `2026-02-01-inngest-bootstrap.md` - Bootstrap pipeline for reference data (Plan 2)
+- `2026-02-01-inngest-agents-foundation.md` - AI SDK 6 base patterns (Plan 3)
+- `2026-02-01-inngest-analysis-pipeline.md` - Full analysis pipeline (Plan 4)
+- `2026-02-01-inngest-comparison-generation.md` - Comparison & generation pipelines (Plan 5)
 
 ## Environment Variables
 
