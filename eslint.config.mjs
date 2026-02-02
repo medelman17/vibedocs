@@ -12,9 +12,19 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Generated UI components (shadcn ai-elements)
+    // Generated UI components (shadcn)
     "components/ai-elements/**",
+    "components/ui/**",
   ]),
+  // Allow underscore prefix for intentionally unused variables
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
