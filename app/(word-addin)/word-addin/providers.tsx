@@ -2,16 +2,17 @@
 
 import { ReactNode, useMemo } from "react"
 import Script from "next/script"
+import { SessionProvider } from "next-auth/react"
 
 /**
  * Providers for the Word Add-in.
  *
  * Handles:
  * - Conditional Office.js loading (skipped in dev mode)
- * - Future: Other providers as needed
+ * - SessionProvider for auth callback dialog (uses next-auth OAuth flow)
  *
- * Note: We don't use SessionProvider here because the add-in uses
- * its own Bearer token auth stored in Zustand, not next-auth sessions.
+ * Note: The task pane uses Bearer token auth stored in Zustand, but the
+ * auth callback dialog needs SessionProvider to read the session after OAuth.
  */
 export function Providers({ children }: { children: ReactNode }) {
   // Check dev mode once during render (safe since URL doesn't change)
@@ -27,7 +28,7 @@ export function Providers({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <>
+    <SessionProvider>
       {loadOfficeJs && (
         <Script
           src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"
@@ -36,6 +37,6 @@ export function Providers({ children }: { children: ReactNode }) {
         />
       )}
       {children}
-    </>
+    </SessionProvider>
   )
 }
