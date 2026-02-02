@@ -127,6 +127,77 @@ export async function createTestClauseExtraction(
   return clause
 }
 
+export async function createTestAuditLog(
+  tenantId: string,
+  overrides: Partial<{
+    tableName: string
+    recordId: string
+    action: "INSERT" | "UPDATE" | "DELETE"
+    oldValues: unknown
+    newValues: unknown
+    userId: string | null
+    ipAddress: string | null
+    performedAt: Date
+  }> = {}
+) {
+  const { auditLogs } = await import("@/db/schema")
+  const [log] = await testDb
+    .insert(auditLogs)
+    .values({
+      tenantId,
+      tableName: overrides.tableName ?? "documents",
+      recordId: overrides.recordId ?? crypto.randomUUID(),
+      action: overrides.action ?? "INSERT",
+      oldValues: overrides.oldValues ?? null,
+      newValues: overrides.newValues ?? { title: "Test" },
+      userId: overrides.userId ?? null,
+      ipAddress: overrides.ipAddress ?? null,
+    })
+    .returning()
+  return log
+}
+
+export async function createTestCuadCategory(
+  overrides: Partial<{
+    name: string
+    description: string | null
+    riskWeight: number
+    isNdaRelevant: boolean
+  }> = {}
+) {
+  const { cuadCategories } = await import("@/db/schema")
+  const [category] = await testDb
+    .insert(cuadCategories)
+    .values({
+      name: overrides.name ?? `Test Category ${uniqueId()}`,
+      description: overrides.description ?? "Test category description",
+      riskWeight: overrides.riskWeight ?? 1.0,
+      isNdaRelevant: overrides.isNdaRelevant ?? true,
+    })
+    .returning()
+  return category
+}
+
+/**
+ * Create a complete tenant context with user, organization, and membership.
+ * Useful for setting up authenticated test scenarios.
+ */
+export async function createTestTenantContext(options: {
+  role?: "owner" | "admin" | "member" | "viewer"
+  userOverrides?: Partial<typeof users.$inferInsert>
+  orgOverrides?: Partial<typeof organizations.$inferInsert>
+} = {}) {
+  const user = await createTestUser(options.userOverrides)
+  const org = await createTestOrg(options.orgOverrides)
+  const membership = await createTestMembership(
+    org.id,
+    user.id,
+    options.role ?? "owner"
+  )
+
+  return { user, org, membership }
+}
+
 // Reset counter between test runs
 export function resetFactoryCounter() {
   counter = 0
