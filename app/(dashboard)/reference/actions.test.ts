@@ -1,6 +1,5 @@
 // app/(dashboard)/reference/actions.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { testDb } from "@/test/setup"
 import {
   createTestUser,
   createTestOrg,
