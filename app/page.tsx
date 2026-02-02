@@ -146,7 +146,7 @@ export default function Home() {
             style={{
               fontFamily: "var(--font-display)",
               fontWeight: 300,
-              color: "oklch(0.25 0.03 50)",
+              color: "oklch(0.20 0.02 280)",
             }}
           >
             Something{" "}
@@ -154,7 +154,7 @@ export default function Home() {
               className="italic"
               style={{
                 fontWeight: 400,
-                background: "linear-gradient(135deg, oklch(0.50 0.15 55) 0%, oklch(0.40 0.12 70) 100%)",
+                background: "linear-gradient(135deg, oklch(0.55 0.24 293) 0%, oklch(0.65 0.16 175) 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -169,8 +169,8 @@ export default function Home() {
           <p
             className="mx-auto mb-12 max-w-xl text-lg leading-relaxed opacity-0 animate-[fadeSlideUp_1s_ease-out_0.6s_forwards] sm:text-xl"
             style={{
-              fontFamily: "var(--font-body)",
-              color: "oklch(0.45 0.02 50)",
+              fontFamily: "var(--font-geist-sans)",
+              color: "oklch(0.40 0.01 280)",
               fontWeight: 400,
             }}
           >
