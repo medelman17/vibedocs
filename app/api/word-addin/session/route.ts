@@ -6,19 +6,17 @@
  * The token can then be used for Bearer authentication in subsequent API calls.
  */
 
-import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { auth } from "@/lib/auth"
+import { withErrorHandling, success } from "@/lib/api-utils"
+import { UnauthorizedError } from "@/lib/errors"
 
-export async function GET() {
+export const GET = withErrorHandling(async () => {
   // Get the current session to verify user is authenticated
   const session = await auth()
 
   if (!session?.user) {
-    return NextResponse.json(
-      { error: "Not authenticated" },
-      { status: 401 }
-    )
+    throw new UnauthorizedError("Not authenticated")
   }
 
   // Get the session token from cookies
@@ -29,13 +27,10 @@ export async function GET() {
     cookieStore.get("__Secure-authjs.session-token")?.value
 
   if (!sessionToken) {
-    return NextResponse.json(
-      { error: "Session token not found" },
-      { status: 401 }
-    )
+    throw new UnauthorizedError("Session token not found")
   }
 
-  return NextResponse.json({
+  return success({
     token: sessionToken,
     user: {
       id: session.user.id,
@@ -43,4 +38,4 @@ export async function GET() {
       name: session.user.name,
     },
   })
-}
+})
