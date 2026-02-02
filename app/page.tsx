@@ -248,14 +248,14 @@ export default function Home() {
               <div
                 className="mx-auto max-w-md rounded-2xl p-8 animate-[scaleIn_0.5s_ease-out_forwards]"
                 style={{
-                  background: "linear-gradient(135deg, oklch(0.96 0.03 70) 0%, oklch(0.98 0.02 60) 100%)",
-                  border: "1px solid oklch(0.90 0.04 65)",
+                  background: "linear-gradient(135deg, oklch(0.97 0.02 175) 0%, oklch(0.99 0.01 200) 100%)",
+                  border: "1px solid oklch(0.92 0.04 175)",
                 }}
               >
                 <div
                   className="mb-4 mx-auto flex h-16 w-16 items-center justify-center rounded-full"
                   style={{
-                    background: "linear-gradient(135deg, oklch(0.50 0.15 55) 0%, oklch(0.40 0.12 70) 100%)",
+                    background: "linear-gradient(135deg, oklch(0.60 0.14 175) 0%, oklch(0.55 0.12 185) 100%)",
                   }}
                 >
                   <svg
@@ -277,7 +277,7 @@ export default function Home() {
                   style={{
                     fontFamily: "var(--font-display)",
                     fontWeight: 500,
-                    color: "oklch(0.25 0.03 50)",
+                    color: "oklch(0.20 0.02 280)",
                   }}
                 >
                   You&apos;re on the list
@@ -285,8 +285,8 @@ export default function Home() {
                 <p
                   className="text-base"
                   style={{
-                    fontFamily: "var(--font-body)",
-                    color: "oklch(0.45 0.02 50)",
+                    fontFamily: "var(--font-geist-sans)",
+                    color: "oklch(0.40 0.01 280)",
                   }}
                 >
                   We&apos;ll let you know when we launch.
