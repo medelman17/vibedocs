@@ -37,7 +37,8 @@ export default function WordAddInAuthPage() {
       await signIn("microsoft-entra-id", {
         callbackUrl: "/word-addin/auth/callback",
       })
-    } catch {
+    } catch (e) {
+      console.error("[AuthPage] Failed to start sign in:", e)
       setError("Failed to start sign in. Please try again.")
       setIsLoading(false)
     }

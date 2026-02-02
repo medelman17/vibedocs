@@ -64,7 +64,8 @@ export function useAuth() {
                 } else {
                   resolve(data)
                 }
-              } catch {
+              } catch (e) {
+                console.error("[useAuth] Failed to parse auth response:", e)
                 resolve({ type: "auth-error", error: "Failed to parse auth response" })
               }
             } else if ("error" in arg) {

@@ -150,8 +150,8 @@ export function useAnalysisProgress(
                 if (data.stage === "completed" || data.stage === "failed") {
                   setState((prev) => ({ ...prev, isConnected: false }))
                 }
-              } catch {
-                // Ignore malformed JSON
+              } catch (e) {
+                console.warn("[useAnalysisProgress] Malformed SSE data:", e)
               }
             }
           }

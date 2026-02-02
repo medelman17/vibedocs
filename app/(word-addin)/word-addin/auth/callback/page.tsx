@@ -48,7 +48,8 @@ export default function WordAddInAuthCallbackPage() {
         }
 
         setMessageSent(true)
-      } catch {
+      } catch (e) {
+        console.error("[AuthCallback] Failed to complete authentication:", e)
         setError("Failed to complete authentication")
       }
     }
