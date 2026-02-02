@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from "vitest"
-import { checkLoginRateLimit, recordLoginAttempt, resetLoginAttempts } from "./rate-limit"
+import { describe, it, expect, vi } from "vitest"
+import { checkLoginRateLimit } from "./rate-limit"
 
 // Mock the db
 vi.mock("@/db/client", () => ({

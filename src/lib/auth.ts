@@ -14,6 +14,7 @@ import {
 } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import bcrypt from "bcryptjs"
+import { checkLoginRateLimit, recordLoginAttempt } from "./rate-limit"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -37,16 +38,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         if (!credentials?.email || !credentials?.password) {
           return null
         }
 
+        const email = credentials.email as string
+        const ip = request?.headers?.get?.("x-forwarded-for") ?? undefined
+
+        // Check rate limit before attempting auth
+        const rateLimit = await checkLoginRateLimit(email)
+        if (!rateLimit.allowed) {
+          throw new Error(
+            `Too many login attempts. Try again in ${rateLimit.retryAfter} seconds.`
+          )
+        }
+
         const user = await db.query.users.findFirst({
-          where: eq(users.email, credentials.email as string),
+          where: eq(users.email, email),
         })
 
         if (!user?.passwordHash) {
+          // Record failed attempt even for non-existent users (timing attack prevention)
+          await recordLoginAttempt(email, false)
           return null
         }
 
@@ -56,8 +70,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         )
 
         if (!isValid) {
+          await recordLoginAttempt(email, false)
           return null
         }
+
+        // Record successful login
+        await recordLoginAttempt(email, true, ip)
 
         return {
           id: user.id,
