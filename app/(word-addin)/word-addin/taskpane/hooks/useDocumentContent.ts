@@ -1,18 +1,10 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { useDevModeStore } from "../store/devMode"
+import { MOCK_NDA_CONTENT, type DocumentContent, type Paragraph } from "./mockDocumentContent"
 
-interface Paragraph {
-  text: string
-  style: string
-  isHeading: boolean
-}
-
-interface DocumentContent {
-  fullText: string
-  paragraphs: Paragraph[]
-  title: string
-}
+export type { DocumentContent, Paragraph }
 
 interface UseDocumentContentReturn {
   extractContent: () => Promise<DocumentContent>
@@ -23,14 +15,24 @@ interface UseDocumentContentReturn {
 /**
  * Hook to extract content from the current Word document.
  * Uses the Office.js Word API to get text and paragraph structure.
+ * In dev mode (?dev=true), returns mock NDA content for testing.
  */
 export function useDocumentContent(): UseDocumentContentReturn {
   const [isExtracting, setIsExtracting] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  const isDevMode = useDevModeStore((state) => state.isDevMode)
 
   const extractContent = useCallback(async (): Promise<DocumentContent> => {
     setIsExtracting(true)
     setError(null)
+
+    // In dev mode, return mock content after a brief delay
+    if (isDevMode) {
+      await new Promise((resolve) => setTimeout(resolve, 500)) // Simulate extraction time
+      setIsExtracting(false)
+      console.log("[Dev Mode] Returning mock NDA content")
+      return MOCK_NDA_CONTENT
+    }
 
     try {
       const content = await Word.run(async (context) => {
