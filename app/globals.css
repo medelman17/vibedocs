@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "../.ui-design/tokens/brand-palette.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -134,6 +135,8 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
 
@@ -163,6 +166,31 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Brand palette - exposed to Tailwind (e.g., bg-violet-500, text-teal-600) */
+  --color-violet-50: var(--violet-50);
+  --color-violet-100: var(--violet-100);
+  --color-violet-200: var(--violet-200);
+  --color-violet-300: var(--violet-300);
+  --color-violet-400: var(--violet-400);
+  --color-violet-500: var(--violet-500);
+  --color-violet-600: var(--violet-600);
+  --color-violet-700: var(--violet-700);
+  --color-violet-800: var(--violet-800);
+  --color-violet-900: var(--violet-900);
+  --color-violet-950: var(--violet-950);
+
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-200: var(--teal-200);
+  --color-teal-300: var(--teal-300);
+  --color-teal-400: var(--teal-400);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-teal-800: var(--teal-800);
+  --color-teal-900: var(--teal-900);
+  --color-teal-950: var(--teal-950);
 
   /* ═══════════════════════════════════════════════════════════════════════════
      RADIUS TOKENS
@@ -195,170 +223,183 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  /* Base radius - moderate (8px) */
+  --radius: 0.5rem;
 
   /* ─────────────────────────────────────────────────────────────────────────
-     CORE COLORS - Light Mode
+     CORE COLORS - Light Mode (using brand palette)
      ───────────────────────────────────────────────────────────────────────── */
-  --background: oklch(0.995 0 0);
-  --foreground: oklch(0.145 0.014 285);
+  --background: var(--neutral-50);
+  --foreground: var(--neutral-900);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.014 285);
+  --card-foreground: var(--neutral-900);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.014 285);
+  --popover-foreground: var(--neutral-900);
 
-  /* Primary - Modern Indigo */
-  --primary: oklch(0.511 0.262 276);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Primary - Violet brand color */
+  --primary: var(--violet-500);
+  --primary-foreground: oklch(1 0 0);
 
-  --secondary: oklch(0.967 0.001 285);
-  --secondary-foreground: oklch(0.235 0.014 285);
+  /* Secondary - Teal for secondary actions */
+  --secondary: var(--teal-100);
+  --secondary-foreground: var(--teal-900);
 
-  --muted: oklch(0.967 0.001 285);
-  --muted-foreground: oklch(0.45 0.014 285);
+  /* Muted - for subtle backgrounds */
+  --muted: var(--neutral-100);
+  --muted-foreground: var(--neutral-500);
 
-  --accent: oklch(0.967 0.001 285);
-  --accent-foreground: oklch(0.235 0.014 285);
+  /* Accent - Teal for highlights */
+  --accent: var(--teal-500);
+  --accent-foreground: oklch(1 0 0);
 
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive: var(--error-500);
+  --destructive-foreground: oklch(1 0 0);
 
-  --border: oklch(0.922 0.004 285);
-  --input: oklch(0.922 0.004 285);
-  --ring: oklch(0.511 0.262 276);
+  --border: var(--neutral-200);
+  --input: var(--neutral-200);
+  --ring: var(--violet-400);
 
   /* ─────────────────────────────────────────────────────────────────────────
      STATUS COLORS - Light Mode
      ───────────────────────────────────────────────────────────────────────── */
-  --success: oklch(0.527 0.154 150);
-  --success-foreground: oklch(0.985 0 0);
+  --success: var(--success-500);
+  --success-foreground: oklch(1 0 0);
 
-  --warning: oklch(0.769 0.188 70);
-  --warning-foreground: oklch(0.235 0.014 285);
+  --warning: var(--warning-500);
+  --warning-foreground: var(--neutral-900);
 
-  --info: oklch(0.588 0.158 241);
-  --info-foreground: oklch(0.985 0 0);
+  --error: var(--error-500);
+  --error-foreground: oklch(1 0 0);
+
+  --info: var(--info-500);
+  --info-foreground: oklch(1 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
      RISK LEVEL COLORS - NDA Analysis (Light Mode)
      Per PRD: standard | cautious | aggressive | unknown
      ───────────────────────────────────────────────────────────────────────── */
-  --risk-standard: oklch(0.527 0.154 150);        /* Green - favorable terms */
-  --risk-standard-foreground: oklch(0.985 0 0);
+  --risk-standard: var(--success-500);        /* Green - favorable terms */
+  --risk-standard-foreground: oklch(1 0 0);
 
-  --risk-cautious: oklch(0.769 0.164 75);         /* Amber - review needed */
-  --risk-cautious-foreground: oklch(0.235 0.014 285);
+  --risk-cautious: var(--warning-500);        /* Amber - review needed */
+  --risk-cautious-foreground: var(--neutral-900);
 
-  --risk-aggressive: oklch(0.628 0.258 29);       /* Red - unfavorable terms */
-  --risk-aggressive-foreground: oklch(0.985 0 0);
+  --risk-aggressive: var(--error-500);        /* Red - unfavorable terms */
+  --risk-aggressive-foreground: oklch(1 0 0);
 
-  --risk-unknown: oklch(0.556 0.014 285);         /* Gray - insufficient info */
-  --risk-unknown-foreground: oklch(0.985 0 0);
+  --risk-unknown: var(--neutral-500);         /* Gray - insufficient info */
+  --risk-unknown-foreground: oklch(1 0 0);
 
   /* ─────────────────────────────────────────────────────────────────────────
-     CHART COLORS - Light Mode
+     CHART COLORS - Light Mode (harmonious palette)
      ───────────────────────────────────────────────────────────────────────── */
-  --chart-1: oklch(0.511 0.262 276);  /* Indigo */
-  --chart-2: oklch(0.588 0.158 241);  /* Cyan */
-  --chart-3: oklch(0.527 0.154 150);  /* Green */
-  --chart-4: oklch(0.769 0.188 70);   /* Amber */
-  --chart-5: oklch(0.628 0.258 29);   /* Red */
+  --chart-1: var(--violet-500);
+  --chart-2: var(--teal-500);
+  --chart-3: var(--warning-500);
+  --chart-4: var(--info-500);
+  --chart-5: var(--success-500);
 
   /* ─────────────────────────────────────────────────────────────────────────
      SIDEBAR COLORS - Light Mode
      ───────────────────────────────────────────────────────────────────────── */
-  --sidebar: oklch(0.985 0.002 285);
-  --sidebar-foreground: oklch(0.145 0.014 285);
-  --sidebar-primary: oklch(0.511 0.262 276);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 285);
-  --sidebar-accent-foreground: oklch(0.235 0.014 285);
-  --sidebar-border: oklch(0.922 0.004 285);
-  --sidebar-ring: oklch(0.511 0.262 276);
+  --sidebar: var(--neutral-50);
+  --sidebar-foreground: var(--neutral-900);
+  --sidebar-primary: var(--violet-500);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: var(--violet-100);
+  --sidebar-accent-foreground: var(--violet-900);
+  --sidebar-border: var(--neutral-200);
+  --sidebar-ring: var(--violet-400);
 }
 
 .dark {
   /* ─────────────────────────────────────────────────────────────────────────
      CORE COLORS - Dark Mode
      ───────────────────────────────────────────────────────────────────────── */
-  --background: oklch(0.13 0.014 285);
-  --foreground: oklch(0.985 0 0);
+  --background: var(--neutral-950);
+  --foreground: var(--neutral-50);
 
-  --card: oklch(0.18 0.014 285);
-  --card-foreground: oklch(0.985 0 0);
+  --card: var(--neutral-900);
+  --card-foreground: var(--neutral-50);
 
-  --popover: oklch(0.18 0.014 285);
-  --popover-foreground: oklch(0.985 0 0);
+  --popover: var(--neutral-900);
+  --popover-foreground: var(--neutral-50);
 
-  /* Primary - Modern Indigo (lighter for dark mode) */
-  --primary: oklch(0.707 0.165 276);
-  --primary-foreground: oklch(0.13 0.014 285);
+  /* Primary - Lighter violet for dark mode */
+  --primary: var(--violet-400);
+  --primary-foreground: var(--neutral-950);
 
-  --secondary: oklch(0.235 0.014 285);
-  --secondary-foreground: oklch(0.985 0 0);
+  /* Secondary - Adjusted teal for dark mode */
+  --secondary: var(--teal-900);
+  --secondary-foreground: var(--teal-100);
 
-  --muted: oklch(0.235 0.014 285);
-  --muted-foreground: oklch(0.65 0.014 285);
+  /* Muted */
+  --muted: var(--neutral-800);
+  --muted-foreground: var(--neutral-400);
 
-  --accent: oklch(0.235 0.014 285);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Accent */
+  --accent: var(--teal-400);
+  --accent-foreground: var(--neutral-950);
 
-  --destructive: oklch(0.704 0.191 22);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive: var(--error-600);
+  --destructive-foreground: oklch(1 0 0);
 
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.707 0.165 276);
+  --ring: var(--violet-500);
 
   /* ─────────────────────────────────────────────────────────────────────────
      STATUS COLORS - Dark Mode
      ───────────────────────────────────────────────────────────────────────── */
-  --success: oklch(0.627 0.154 150);
-  --success-foreground: oklch(0.13 0.014 285);
+  --success: var(--success-500);
+  --success-foreground: var(--neutral-950);
 
-  --warning: oklch(0.828 0.164 75);
-  --warning-foreground: oklch(0.235 0.014 285);
+  --warning: var(--warning-500);
+  --warning-foreground: var(--neutral-900);
 
-  --info: oklch(0.688 0.158 241);
-  --info-foreground: oklch(0.13 0.014 285);
+  --error: var(--error-600);
+  --error-foreground: oklch(1 0 0);
+
+  --info: var(--info-500);
+  --info-foreground: var(--neutral-950);
 
   /* ─────────────────────────────────────────────────────────────────────────
      RISK LEVEL COLORS - NDA Analysis (Dark Mode)
      ───────────────────────────────────────────────────────────────────────── */
-  --risk-standard: oklch(0.627 0.154 150);        /* Green - favorable */
-  --risk-standard-foreground: oklch(0.13 0.014 285);
+  --risk-standard: var(--success-500);        /* Green - favorable */
+  --risk-standard-foreground: var(--neutral-950);
 
-  --risk-cautious: oklch(0.828 0.164 75);         /* Amber - review needed */
-  --risk-cautious-foreground: oklch(0.235 0.014 285);
+  --risk-cautious: var(--warning-500);        /* Amber - review needed */
+  --risk-cautious-foreground: var(--neutral-900);
 
-  --risk-aggressive: oklch(0.704 0.191 22);       /* Red - unfavorable */
-  --risk-aggressive-foreground: oklch(0.985 0 0);
+  --risk-aggressive: var(--error-600);        /* Red - unfavorable */
+  --risk-aggressive-foreground: oklch(1 0 0);
 
-  --risk-unknown: oklch(0.65 0.014 285);          /* Gray - insufficient info */
-  --risk-unknown-foreground: oklch(0.13 0.014 285);
+  --risk-unknown: var(--neutral-400);         /* Gray - insufficient info */
+  --risk-unknown-foreground: var(--neutral-950);
 
   /* ─────────────────────────────────────────────────────────────────────────
-     CHART COLORS - Dark Mode
+     CHART COLORS - Dark Mode (brighter for visibility)
      ───────────────────────────────────────────────────────────────────────── */
-  --chart-1: oklch(0.707 0.165 276);  /* Indigo */
-  --chart-2: oklch(0.688 0.158 241);  /* Cyan */
-  --chart-3: oklch(0.627 0.154 150);  /* Green */
-  --chart-4: oklch(0.828 0.164 75);   /* Amber */
-  --chart-5: oklch(0.704 0.191 22);   /* Red */
+  --chart-1: var(--violet-400);
+  --chart-2: var(--teal-400);
+  --chart-3: var(--warning-500);
+  --chart-4: var(--info-500);
+  --chart-5: var(--success-500);
 
   /* ─────────────────────────────────────────────────────────────────────────
      SIDEBAR COLORS - Dark Mode
      ───────────────────────────────────────────────────────────────────────── */
-  --sidebar: oklch(0.16 0.014 285);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.707 0.165 276);
-  --sidebar-primary-foreground: oklch(0.13 0.014 285);
-  --sidebar-accent: oklch(0.235 0.014 285);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar: var(--neutral-900);
+  --sidebar-foreground: var(--neutral-50);
+  --sidebar-primary: var(--violet-400);
+  --sidebar-primary-foreground: var(--neutral-950);
+  --sidebar-accent: var(--violet-900);
+  --sidebar-accent-foreground: var(--violet-100);
   --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.707 0.165 276);
+  --sidebar-ring: var(--violet-500);
 }
 
 @layer base {

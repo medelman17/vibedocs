@@ -35,10 +35,10 @@ function PasswordStrength({ password }: { password: string }) {
               "h-1 flex-1 rounded-full transition-colors duration-300",
               i < passed
                 ? strength === 1
-                  ? "bg-emerald-500"
+                  ? "bg-success"
                   : strength >= 0.6
-                    ? "bg-amber-500"
-                    : "bg-red-500"
+                    ? "bg-warning"
+                    : "bg-error"
                 : "bg-muted"
             )}
             initial={{ scaleX: 0 }}
@@ -62,11 +62,11 @@ function PasswordStrength({ password }: { password: string }) {
             >
               <motion.div
                 initial={false}
-                animate={{
-                  scale: passed ? [1, 1.2, 1] : 1,
-                  backgroundColor: passed ? "rgb(16 185 129)" : "rgb(239 68 68)",
-                }}
-                className="w-4 h-4 rounded-full flex items-center justify-center"
+                animate={{ scale: passed ? [1, 1.2, 1] : 1 }}
+                className={cn(
+                  "w-4 h-4 rounded-full flex items-center justify-center transition-colors",
+                  passed ? "bg-success" : "bg-error"
+                )}
               >
                 {passed ? (
                   <Check className="w-2.5 h-2.5 text-white" />
@@ -76,7 +76,7 @@ function PasswordStrength({ password }: { password: string }) {
               </motion.div>
               <span className={cn(
                 "transition-colors",
-                passed ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                passed ? "text-success" : "text-muted-foreground"
               )}>
                 {req.label}
               </span>
@@ -201,7 +201,7 @@ function ResetPasswordForm() {
       </motion.div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -229,7 +229,8 @@ function ResetPasswordForm() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-1 top-1/2 -translate-y-1/2 p-3 text-muted-foreground hover:text-foreground transition-colors"
             >
               {showPassword ? (
                 <EyeOff className="h-5 w-5" />
@@ -271,7 +272,8 @@ function ResetPasswordForm() {
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={showConfirmPassword ? "Hide password confirmation" : "Show password confirmation"}
+              className="absolute right-1 top-1/2 -translate-y-1/2 p-3 text-muted-foreground hover:text-foreground transition-colors"
             >
               {showConfirmPassword ? (
                 <EyeOff className="h-5 w-5" />

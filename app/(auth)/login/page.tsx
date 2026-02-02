@@ -89,7 +89,7 @@ function LoginForm() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+          className="flex items-center gap-3 p-4 rounded-lg bg-success/10 border border-success/20 text-success"
         >
           <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
           <p className="text-sm">
@@ -102,7 +102,7 @@ function LoginForm() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+          className="flex items-center gap-3 p-4 rounded-lg bg-success/10 border border-success/20 text-success"
         >
           <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
           <p className="text-sm">
@@ -120,9 +120,13 @@ function LoginForm() {
           type="button"
           onClick={() => handleOAuthSignIn("google")}
           disabled={!!oauthLoading}
+          aria-busy={oauthLoading === "google"}
         >
           {oauthLoading === "google" ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="sr-only">Signing in with Google...</span>
+            </>
           ) : (
             <>
               <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
@@ -155,9 +159,13 @@ function LoginForm() {
           type="button"
           onClick={() => handleOAuthSignIn("github")}
           disabled={!!oauthLoading}
+          aria-busy={oauthLoading === "github"}
         >
           {oauthLoading === "github" ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="sr-only">Signing in with GitHub...</span>
+            </>
           ) : (
             <>
               <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -182,7 +190,7 @@ function LoginForm() {
       </motion.div>
 
       {/* Form */}
-      <form onSubmit={handleCredentialsSubmit} className="space-y-5">
+      <form onSubmit={handleCredentialsSubmit} className="space-y-4">
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -229,7 +237,8 @@ function LoginForm() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-1 top-1/2 -translate-y-1/2 p-3 text-muted-foreground hover:text-foreground transition-colors"
             >
               {showPassword ? (
                 <EyeOff className="h-5 w-5" />

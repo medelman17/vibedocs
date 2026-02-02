@@ -22,15 +22,15 @@ export default function AuthLayout({
         />
 
         {/* Floating orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-slate-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col h-full p-10">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 group-hover:border-amber-500/40 transition-colors">
-              <FileText className="w-5 h-5 text-amber-400" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 group-hover:border-violet-500/40 transition-colors">
+              <FileText className="w-5 h-5 text-violet-400" />
             </div>
             <span className="text-xl font-semibold tracking-tight">VibeDocs</span>
           </Link>
@@ -39,9 +39,9 @@ export default function AuthLayout({
           <div className="flex-1 flex items-center justify-center">
             <div className="max-w-md space-y-8">
               <div className="space-y-4">
-                <h1 className="text-4xl font-serif font-light tracking-tight leading-tight">
+                <h1 className="text-4xl font-light tracking-tight leading-tight">
                   Analyze contracts with
-                  <span className="block text-amber-400 font-normal">precision & clarity</span>
+                  <span className="block text-violet-400 font-normal">precision & clarity</span>
                 </h1>
                 <p className="text-lg text-slate-400 leading-relaxed">
                   AI-powered NDA analysis that identifies risks, extracts key clauses, and ensures your agreements protect what matters most.
@@ -59,7 +59,7 @@ export default function AuthLayout({
                     key={i}
                     className="flex items-center gap-3 text-slate-300"
                   >
-                    <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-violet-500" />
                     <span className="text-sm">{feature}</span>
                   </div>
                 ))}
@@ -73,7 +73,7 @@ export default function AuthLayout({
               &ldquo;The best NDA analysis tool we&apos;ve used. It caught issues our legal team missed.&rdquo;
             </blockquote>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-600" />
               <div>
                 <p className="text-sm font-medium">Sarah Chen</p>
                 <p className="text-xs text-slate-500">General Counsel, TechCorp</p>
@@ -88,8 +88,8 @@ export default function AuthLayout({
         {/* Mobile logo */}
         <div className="lg:hidden p-6">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 border border-primary/20">
-              <FileText className="w-5 h-5 text-primary" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20">
+              <FileText className="w-5 h-5 text-violet-500" />
             </div>
             <span className="text-xl font-semibold tracking-tight">VibeDocs</span>
           </Link>
