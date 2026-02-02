@@ -66,9 +66,9 @@ export default function Home() {
         background: `
           radial-gradient(
             ellipse 80% 50% at ${50 + mousePosition.x * 10}% ${40 + mousePosition.y * 10}%,
-            oklch(0.92 0.05 75) 0%,
-            oklch(0.96 0.03 80) 40%,
-            oklch(0.98 0.01 60) 100%
+            oklch(0.95 0.025 293) 0%,
+            oklch(0.97 0.015 290) 40%,
+            oklch(0.99 0.005 285) 100%
           )
         `,
       }}
