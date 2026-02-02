@@ -7,7 +7,10 @@
  * @module inngest/functions
  */
 
-// Placeholder exports - will be populated as functions are created
+// Demo functions (for testing Inngest setup)
+import { demoProcess, demoMultiStep } from "./demo"
+
+// Production functions - will be populated as functions are created
 // import { processDocument } from "./process-document"
 // import { analyzeNda } from "./analyze-nda"
 // import { compareNdas } from "./compare-ndas"
@@ -20,6 +23,11 @@
  * Add new functions to this array as they are created.
  */
 export const functions = [
+  // Demo functions
+  demoProcess,
+  demoMultiStep,
+
+  // Production functions
   // processDocument,
   // analyzeNda,
   // compareNdas,
