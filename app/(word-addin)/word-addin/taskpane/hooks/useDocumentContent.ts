@@ -77,7 +77,7 @@ export function useDocumentContent(): UseDocumentContentReturn {
       setIsExtracting(false)
       throw error
     }
-  }, [])
+  }, [isDevMode])
 
   return { extractContent, isExtracting, error }
 }
