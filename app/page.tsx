@@ -85,21 +85,21 @@ export default function Home() {
       <div
         className="absolute top-1/4 left-1/4 h-[500px] w-[500px] rounded-full opacity-40 blur-3xl transition-transform duration-[3000ms] ease-out"
         style={{
-          background: "oklch(0.85 0.08 70)",
+          background: "oklch(0.75 0.12 293)",
           transform: `translate(${mousePosition.x * 30}px, ${mousePosition.y * 30}px)`,
         }}
       />
       <div
         className="absolute bottom-1/4 right-1/4 h-[400px] w-[400px] rounded-full opacity-30 blur-3xl transition-transform duration-[4000ms] ease-out"
         style={{
-          background: "oklch(0.88 0.06 50)",
+          background: "oklch(0.80 0.10 175)",
           transform: `translate(${-mousePosition.x * 40}px, ${-mousePosition.y * 40}px)`,
         }}
       />
       <div
         className="absolute top-1/2 right-1/3 h-[300px] w-[300px] rounded-full opacity-25 blur-3xl transition-transform duration-[5000ms] ease-out"
         style={{
-          background: "oklch(0.82 0.09 85)",
+          background: "oklch(0.70 0.14 280)",
           transform: `translate(${mousePosition.x * 20}px, ${-mousePosition.y * 20}px)`,
         }}
       />
