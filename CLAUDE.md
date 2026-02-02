@@ -97,6 +97,8 @@ Each agent runs inside an `inngest step.run()` for durability. LangGraph handles
 - `src/lib/` - Core utilities
   - `auth.ts` - Auth.js configuration
   - `dal.ts` - Data Access Layer (verifySession, withTenant, requireRole)
+  - `errors.ts` - Custom error classes (AppError, NotFoundError, etc.)
+  - `api-utils.ts` - API response helpers (success, error, withErrorHandling)
   - `password.ts` - Password hashing/validation
 - `src/proxy.ts` - Next.js 16 auth redirects (formerly middleware.ts)
 - `src/test/` - Test setup (PGlite)
@@ -120,6 +122,12 @@ Each agent runs inside an `inngest step.run()` for durability. LangGraph handles
 - Use `requireRole(["owner", "admin"])` for role-based access
 - Password utilities: `hashPassword()`, `verifyPassword()`, `validatePassword()`
 - **Zod 4**: Use `parsed.error.issues[0]` not `parsed.error.errors[0]` for safeParse errors
+
+### Error Handling
+- Use custom errors from `src/lib/errors.ts`: `NotFoundError`, `ValidationError`, `ForbiddenError`, etc.
+- API routes: Wrap with `withErrorHandling()` from `src/lib/api-utils.ts`
+- Server actions: Use `withActionErrorHandling()` or return `ActionResult<T>` type
+- Convert Zod errors: `ValidationError.fromZodError(zodError)`
 
 ### Testing (Vitest + PGlite)
 - Tests use in-memory PGlite (WASM Postgres) - no Docker needed
