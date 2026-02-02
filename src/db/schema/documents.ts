@@ -9,7 +9,7 @@ import {
   vector,
   jsonb,
 } from "drizzle-orm/pg-core"
-import { primaryId, timestamps, tenantId } from "../_columns"
+import { primaryId, timestamps, tenantId, softDelete } from "../_columns"
 import { users } from "./auth"
 
 export const documents = pgTable(
@@ -29,6 +29,7 @@ export const documents = pgTable(
     errorMessage: text("error_message"),
     metadata: jsonb("metadata").default({}),
     ...timestamps,
+    ...softDelete,
   },
   (table) => [
     index("idx_docs_tenant").on(table.tenantId, table.createdAt),
