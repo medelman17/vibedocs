@@ -77,6 +77,7 @@
 import { relations } from "drizzle-orm"
 
 import { users, accounts, sessions } from "./auth"
+import { passwordResetTokens } from "./password-reset"
 import { organizations, organizationMembers } from "./organizations"
 import { documents, documentChunks } from "./documents"
 import { analyses, clauseExtractions } from "./analyses"
@@ -140,7 +141,28 @@ export const usersRelations = relations(users, ({ many }) => ({
   uploadedDocuments: many(documents),
   /** NDAs generated/created by this user */
   generatedNdas: many(generatedNdas),
+  /** Password reset tokens for this user */
+  passwordResetTokens: many(passwordResetTokens),
 }))
+
+/**
+ * Relations for the `password_reset_tokens` table.
+ *
+ * Password reset tokens allow users to securely reset their password via email.
+ * Tokens are single-use and expire after a set time period (typically 1 hour).
+ *
+ * @description Many-to-one relationship from token to user.
+ */
+export const passwordResetTokensRelations = relations(
+  passwordResetTokens,
+  ({ one }) => ({
+    /** The user this password reset token belongs to */
+    user: one(users, {
+      fields: [passwordResetTokens.userId],
+      references: [users.id],
+    }),
+  })
+)
 
 /**
  * Relations for the `accounts` table (OAuth provider accounts).
