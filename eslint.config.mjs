@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Generated UI components (shadcn)
     "components/ai-elements/**",
     "components/ui/**",
+    // Git worktrees (isolated workspaces)
+    ".worktrees/**",
   ]),
   // Allow underscore prefix for intentionally unused variables
   {
