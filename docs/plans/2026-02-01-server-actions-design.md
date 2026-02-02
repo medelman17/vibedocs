@@ -2,6 +2,7 @@
 
 > Internal API surface for the Next.js UI using Server Actions.
 > Created: 2026-02-01
+> Updated: 2026-02-01 (audit pass)
 
 ---
 
@@ -44,6 +45,7 @@ export type ErrorCode =
   | "VALIDATION_ERROR"
   | "RATE_LIMITED"
   | "DUPLICATE"
+  | "CONFLICT"
   | "ANALYSIS_FAILED"
   | "EMBEDDING_FAILED"
   | "LLM_FAILED"
@@ -75,22 +77,24 @@ export function err<T = never>(
 app/
 ├── (dashboard)/
 │   ├── documents/
-│   │   └── actions.ts          # Document CRUD + dashboard stats
+│   │   └── actions.ts          # Document CRUD + search + dashboard stats
 │   ├── analyses/
-│   │   └── actions.ts          # Analysis triggers + results
+│   │   └── actions.ts          # Analysis triggers + results + history
 │   ├── comparisons/
 │   │   └── actions.ts          # Comparison operations
 │   ├── generate/
 │   │   └── actions.ts          # NDA generation
+│   ├── reference/
+│   │   └── actions.ts          # CUAD categories, templates
 │   └── settings/
 │       ├── organization/
 │       │   └── actions.ts      # Org management
 │       ├── members/
 │       │   └── actions.ts      # Member management
 │       ├── profile/
-│       │   └── actions.ts      # User profile
+│       │   └── actions.ts      # User profile + account
 │       └── notifications/
-│           └── actions.ts      # Notification prefs
+│           └── actions.ts      # Notification prefs + in-app
 ├── (auth)/
 │   └── actions.ts              # Session + invitations
 └── (admin)/
@@ -100,7 +104,7 @@ app/
 
 ---
 
-## Documents (8 actions)
+## Documents (11 actions)
 
 **File:** `app/(dashboard)/documents/actions.ts`
 
@@ -171,6 +175,32 @@ const getDocumentsSchema = z.object({
 
 ---
 
+### searchDocuments
+
+Search documents by title or content.
+
+```typescript
+export async function searchDocuments(input: {
+  query: string;
+  limit?: number;
+}): Promise<ApiResponse<Document[]>>
+```
+
+**Input Schema:**
+```typescript
+const searchDocumentsSchema = z.object({
+  query: z.string().min(1).max(200),
+  limit: z.number().int().min(1).max(50).default(20),
+});
+```
+
+**Flow:**
+1. Validate session → `withTenant()`
+2. Search by title (ILIKE) and optionally rawText
+3. Return matching documents ordered by relevance
+
+---
+
 ### getDocument
 
 Get a single document by ID.
@@ -235,6 +265,47 @@ export async function deleteDocument(
 
 ---
 
+### restoreDocument
+
+Restore a soft-deleted document.
+
+```typescript
+export async function restoreDocument(
+  documentId: string
+): Promise<ApiResponse<Document>>
+```
+
+**Flow:**
+1. Validate ownership
+2. Verify document is soft-deleted (`deletedAt` is not null)
+3. Clear `deletedAt` timestamp
+4. Return restored document
+
+**Errors:** `UNAUTHORIZED`, `NOT_FOUND`, `CONFLICT` (if not deleted)
+
+---
+
+### retryDocumentProcessing
+
+Retry processing for a document stuck in error state.
+
+```typescript
+export async function retryDocumentProcessing(
+  documentId: string
+): Promise<ApiResponse<Document>>
+```
+
+**Flow:**
+1. Validate document exists and status is `error`
+2. Reset status to `pending`
+3. Clear error message
+4. Re-send `nda/uploaded` event to Inngest
+5. Return updated document
+
+**Errors:** `UNAUTHORIZED`, `NOT_FOUND`, `CONFLICT` (if not in error state)
+
+---
+
 ### getDocumentDownloadUrl
 
 Get a signed URL to download the original file.
@@ -267,7 +338,7 @@ export async function getDashboardStats(): Promise<ApiResponse<{
 
 ---
 
-## Analyses (9 actions)
+## Analyses (11 actions)
 
 **File:** `app/(dashboard)/analyses/actions.ts`
 
@@ -361,6 +432,29 @@ export async function getDocumentAnalyses(
 
 ---
 
+### getAnalysisHistory
+
+Get all analyses across all documents for the current tenant (US-014: view analysis history).
+
+```typescript
+export async function getAnalysisHistory(input?: {
+  limit?: number;
+  offset?: number;
+  status?: AnalysisStatus;
+}): Promise<ApiResponse<{
+  analyses: Array<Analysis & { document: Pick<Document, "id" | "title"> }>;
+  total: number;
+}>>
+```
+
+**Flow:**
+1. Validate session → `withTenant()`
+2. Query analyses joined with documents
+3. Order by `completedAt` descending (most recent first)
+4. Return paginated list with document info
+
+---
+
 ### rerunAnalysis
 
 Create a new analysis version for a document.
@@ -395,6 +489,25 @@ export async function cancelAnalysis(
 
 ---
 
+### deleteAnalysis
+
+Delete an analysis version.
+
+```typescript
+export async function deleteAnalysis(
+  analysisId: string
+): Promise<ApiResponse<void>>
+```
+
+**Flow:**
+1. Validate ownership
+2. Verify analysis is not the only version (keep at least one)
+3. Hard delete analysis and cascade to clause extractions
+
+**Errors:** `UNAUTHORIZED`, `NOT_FOUND`, `CONFLICT` (if last version)
+
+---
+
 ### exportAnalysisPdf
 
 Generate a PDF report of the analysis.
@@ -413,7 +526,7 @@ export async function exportAnalysisPdf(
 
 ---
 
-## Comparisons (6 actions)
+## Comparisons (7 actions)
 
 **File:** `app/(dashboard)/comparisons/actions.ts`
 
@@ -495,6 +608,26 @@ export async function getDocumentComparisons(
 
 ---
 
+### retryComparison
+
+Retry a failed comparison.
+
+```typescript
+export async function retryComparison(
+  comparisonId: string
+): Promise<ApiResponse<Comparison>>
+```
+
+**Flow:**
+1. Validate comparison exists and status is `error`
+2. Reset status to `pending`
+3. Re-trigger Inngest comparison workflow
+4. Return updated comparison
+
+**Errors:** `UNAUTHORIZED`, `NOT_FOUND`, `CONFLICT` (if not in error state)
+
+---
+
 ### deleteComparison
 
 Remove a comparison.
@@ -507,7 +640,7 @@ export async function deleteComparison(
 
 ---
 
-## Generation (8 actions)
+## Generation (11 actions)
 
 **File:** `app/(dashboard)/generate/actions.ts`
 
@@ -612,6 +745,25 @@ export async function updateGeneratedNda(
 
 ---
 
+### duplicateGeneratedNda
+
+Create a copy of an existing generated NDA.
+
+```typescript
+export async function duplicateGeneratedNda(
+  ndaId: string
+): Promise<ApiResponse<GeneratedNda>>
+```
+
+**Flow:**
+1. Validate ownership
+2. Create new NDA with same parameters/content
+3. Set status to `draft`
+4. Append " (Copy)" to title
+5. Return new NDA
+
+---
+
 ### finalizeNda
 
 Lock an NDA for signing.
@@ -629,6 +781,40 @@ export async function finalizeNda(
 
 ---
 
+### archiveGeneratedNda
+
+Archive a generated NDA.
+
+```typescript
+export async function archiveGeneratedNda(
+  ndaId: string
+): Promise<ApiResponse<GeneratedNda>>
+```
+
+**Flow:**
+1. Validate ownership
+2. Update status to `archived`
+
+**Note:** Can archive from any status (draft or finalized).
+
+---
+
+### deleteGeneratedNda
+
+Permanently delete a generated NDA.
+
+```typescript
+export async function deleteGeneratedNda(
+  ndaId: string
+): Promise<ApiResponse<void>>
+```
+
+**Flow:**
+1. Validate ownership
+2. Hard delete the record
+
+---
+
 ### exportGeneratedNda
 
 Export as DOCX or PDF.
@@ -642,7 +828,36 @@ export async function exportGeneratedNda(
 
 ---
 
-## Organizations (8 actions)
+## Reference Data (1 action)
+
+**File:** `app/(dashboard)/reference/actions.ts`
+
+### getCategories
+
+Get CUAD category taxonomy for UI filtering.
+
+```typescript
+export async function getCategories(input?: {
+  ndaRelevantOnly?: boolean;
+}): Promise<ApiResponse<Array<{
+  id: number;
+  name: string;
+  description: string | null;
+  riskWeight: number;
+  isNdaRelevant: boolean;
+}>>>
+```
+
+**Flow:**
+1. Query `cuad_categories` table (shared reference data)
+2. Optionally filter by `isNdaRelevant`
+3. Return category list
+
+**Note:** This queries shared reference data, no tenant isolation needed.
+
+---
+
+## Organizations (4 actions)
 
 **File:** `app/(dashboard)/settings/organization/actions.ts`
 
@@ -706,7 +921,7 @@ export async function deleteOrganization(): Promise<ApiResponse<void>>
 
 ---
 
-## Members (4 actions)
+## Members (7 actions)
 
 **File:** `app/(dashboard)/settings/members/actions.ts`
 
@@ -720,6 +935,7 @@ export async function getOrganizationMembers(): Promise<ApiResponse<Array<{
   user: { id: string; name: string; email: string; image?: string };
   role: "owner" | "admin" | "member";
   acceptedAt: string | null;
+  invitedAt: string | null;
 }>>>
 ```
 
@@ -739,8 +955,48 @@ export async function inviteMember(input: {
 **Requires:** `admin` or `owner` role.
 **Flow:**
 1. Check if user exists, create if not
-2. Create pending membership
-3. Send invitation email via Resend
+2. Check if already a member
+3. Create pending membership
+4. Send invitation email via Resend
+
+---
+
+### resendInvitation
+
+Resend invitation email for a pending membership.
+
+```typescript
+export async function resendInvitation(
+  membershipId: string
+): Promise<ApiResponse<void>>
+```
+
+**Requires:** `admin` or `owner` role.
+**Flow:**
+1. Validate membership is pending (`acceptedAt` is null)
+2. Update `invitedAt` timestamp
+3. Resend invitation email
+
+**Errors:** `UNAUTHORIZED`, `NOT_FOUND`, `CONFLICT` (if already accepted)
+
+---
+
+### cancelInvitation
+
+Cancel a pending invitation.
+
+```typescript
+export async function cancelInvitation(
+  membershipId: string
+): Promise<ApiResponse<void>>
+```
+
+**Requires:** `admin` or `owner` role.
+**Flow:**
+1. Validate membership is pending
+2. Delete the membership record
+
+**Errors:** `UNAUTHORIZED`, `NOT_FOUND`, `CONFLICT` (if already accepted)
 
 ---
 
@@ -762,7 +1018,7 @@ export async function updateMemberRole(
 
 ### removeMember
 
-Remove a member from the organization.
+Remove a member from the organization (admin action).
 
 ```typescript
 export async function removeMember(
@@ -775,9 +1031,27 @@ export async function removeMember(
 
 ---
 
-## User/Session (6 actions)
+### leaveOrganization
 
-**File:** `app/(auth)/actions.ts`
+Leave the current organization (self-initiated).
+
+```typescript
+export async function leaveOrganization(): Promise<ApiResponse<void>>
+```
+
+**Flow:**
+1. Validate user is member of current org
+2. Check user is not the last owner
+3. Delete own membership
+4. Switch to another org or clear session
+
+**Errors:** `CONFLICT` (if last owner)
+
+---
+
+## User/Session (8 actions)
+
+**File:** `app/(auth)/actions.ts` + `app/(dashboard)/settings/profile/actions.ts`
 
 ### switchOrganization
 
@@ -877,7 +1151,47 @@ const changePasswordSchema = z.object({
 
 ---
 
-## Notifications (3 actions)
+### deleteAccount
+
+Permanently delete user account (GDPR: right to erasure).
+
+```typescript
+export async function deleteAccount(input: {
+  confirmation: string; // Must type "DELETE" to confirm
+}): Promise<ApiResponse<void>>
+```
+
+**Flow:**
+1. Validate confirmation string
+2. Check user is not sole owner of any org
+3. Remove user from all organizations
+4. Delete all user data (cascade)
+5. Invalidate session
+
+**Errors:** `CONFLICT` (if sole owner of org)
+
+---
+
+### exportUserData
+
+Export all user data (GDPR: right to data portability).
+
+```typescript
+export async function exportUserData(): Promise<ApiResponse<{
+  url: string;
+  expiresAt: string;
+}>>
+```
+
+**Flow:**
+1. Collect all user data (profile, memberships, documents, analyses)
+2. Generate JSON export file
+3. Upload to Vercel Blob
+4. Return signed download URL
+
+---
+
+## Notifications (6 actions)
 
 **File:** `app/(dashboard)/settings/notifications/actions.ts`
 
@@ -922,6 +1236,40 @@ export async function getNotifications(input?: {
 
 ---
 
+### markNotificationRead
+
+Mark a single notification as read.
+
+```typescript
+export async function markNotificationRead(
+  notificationId: string
+): Promise<ApiResponse<void>>
+```
+
+---
+
+### markAllNotificationsRead
+
+Mark all notifications as read.
+
+```typescript
+export async function markAllNotificationsRead(): Promise<ApiResponse<void>>
+```
+
+---
+
+### deleteNotification
+
+Delete a notification.
+
+```typescript
+export async function deleteNotification(
+  notificationId: string
+): Promise<ApiResponse<void>>
+```
+
+---
+
 ## Audit (1 action)
 
 **File:** `app/(admin)/audit/actions.ts`
@@ -951,17 +1299,66 @@ export async function getAuditLogs(input?: {
 
 | Domain | Actions | File |
 |--------|---------|------|
-| Documents | 8 | `documents/actions.ts` |
-| Analyses | 9 | `analyses/actions.ts` |
-| Comparisons | 6 | `comparisons/actions.ts` |
-| Generation | 8 | `generate/actions.ts` |
+| Documents | 11 | `documents/actions.ts` |
+| Analyses | 11 | `analyses/actions.ts` |
+| Comparisons | 7 | `comparisons/actions.ts` |
+| Generation | 11 | `generate/actions.ts` |
+| Reference | 1 | `reference/actions.ts` |
 | Organizations | 4 | `settings/organization/actions.ts` |
-| Members | 4 | `settings/members/actions.ts` |
-| User/Session | 6 | `(auth)/actions.ts` + `settings/profile/actions.ts` |
-| Notifications | 3 | `settings/notifications/actions.ts` |
+| Members | 7 | `settings/members/actions.ts` |
+| User/Session | 8 | `(auth)/actions.ts` + `settings/profile/actions.ts` |
+| Notifications | 6 | `settings/notifications/actions.ts` |
 | Audit | 1 | `(admin)/audit/actions.ts` |
 
-**Total: 57 Server Actions**
+**Total: 67 Server Actions**
+
+---
+
+## Priority Matrix
+
+### P0 — Core Functionality (MVP)
+
+| Domain | Actions |
+|--------|---------|
+| Documents | `uploadDocument`, `getDocuments`, `getDocument`, `deleteDocument`, `getDashboardStats` |
+| Analyses | `triggerAnalysis`, `getAnalysis`, `getAnalysisStatus`, `getAnalysisClauses`, `getAnalysisGaps` |
+| Comparisons | `createComparison`, `compareWithTemplate`, `getComparison`, `getComparisonStatus` |
+| Generation | `getTemplates`, `generateNda`, `getGeneratedNda`, `updateGeneratedNda`, `exportGeneratedNda` |
+| Organizations | `createOrganization`, `getOrganization` |
+| User | `switchOrganization`, `getUserOrganizations` |
+
+### P1 — Essential UX
+
+| Domain | Actions |
+|--------|---------|
+| Documents | `searchDocuments`, `getDocumentDownloadUrl`, `updateDocumentTitle` |
+| Analyses | `getAnalysisHistory`, `rerunAnalysis`, `exportAnalysisPdf` |
+| Comparisons | `getDocumentComparisons`, `deleteComparison` |
+| Generation | `getGeneratedNdas`, `finalizeNda`, `duplicateGeneratedNda` |
+| Organizations | `updateOrganization`, `deleteOrganization` |
+| Members | `getOrganizationMembers`, `inviteMember`, `removeMember` |
+| User | `acceptInvitation`, `declineInvitation`, `updateProfile` |
+| Notifications | `getNotificationPreferences`, `updateNotificationPreferences` |
+
+### P2 — Nice to Have
+
+| Domain | Actions |
+|--------|---------|
+| Documents | `restoreDocument`, `retryDocumentProcessing` |
+| Analyses | `cancelAnalysis`, `deleteAnalysis` |
+| Comparisons | `retryComparison` |
+| Generation | `archiveGeneratedNda`, `deleteGeneratedNda` |
+| Reference | `getCategories` |
+| Members | `updateMemberRole`, `resendInvitation`, `cancelInvitation`, `leaveOrganization` |
+| User | `changePassword` |
+| Notifications | `getNotifications`, `markNotificationRead`, `markAllNotificationsRead`, `deleteNotification` |
+| Audit | `getAuditLogs` |
+
+### P3 — Compliance (Post-MVP)
+
+| Domain | Actions |
+|--------|---------|
+| User | `deleteAccount`, `exportUserData` |
 
 ---
 
@@ -1036,5 +1433,28 @@ Consider rate limiting for expensive operations:
 | `triggerAnalysis` | 5/min |
 | `generateNda` | 10/min |
 | `exportAnalysisPdf` | 5/min |
+| `exportUserData` | 1/hour |
 
 Implement with Upstash Redis or similar.
+
+---
+
+## Appendix: User Story Mapping
+
+| User Story | Server Actions |
+|------------|----------------|
+| US-001: Upload PDF/DOCX | `uploadDocument` |
+| US-002: Progress indicator | `getAnalysisStatus` |
+| US-003: Clause extraction | `getAnalysisClauses` |
+| US-004: Risk scores | `getAnalysisClauses` (includes risk) |
+| US-005: Missing clauses | `getAnalysisGaps` |
+| US-006: Cited evidence | `getAnalysis` (includes evidence) |
+| US-007: Compare two NDAs | `createComparison` |
+| US-008: Clause alignment | `getComparison` |
+| US-009: Compare vs template | `compareWithTemplate` |
+| US-010: Generate NDA | `generateNda` |
+| US-011: Use Bonterms/CommonAccord | `getTemplates`, `getTemplate` |
+| US-012: Customize before download | `updateGeneratedNda`, `exportGeneratedNda` |
+| US-013: Sign up/login | Auth.js (not Server Actions) |
+| US-014: View analysis history | `getAnalysisHistory` |
+| US-015: Private documents | Tenant isolation (implicit) |
