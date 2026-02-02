@@ -26,6 +26,13 @@ export function error(err: AppError): NextResponse<ApiResponse<never>> {
 }
 
 /**
+ * Route context for dynamic routes (Next.js 15+ uses Promise-based params)
+ */
+export interface RouteContext<P = Record<string, string>> {
+  params: Promise<P>
+}
+
+/**
  * Wrap an async handler with consistent error handling.
  *
  * Usage in API routes:
@@ -33,13 +40,19 @@ export function error(err: AppError): NextResponse<ApiResponse<never>> {
  *     const data = await fetchData()
  *     return success(data)
  *   })
+ *
+ * For dynamic routes with params:
+ *   export const GET = withErrorHandling(async (request, { params }) => {
+ *     const { id } = await params
+ *     return success(data)
+ *   })
  */
-export function withErrorHandling<T>(
-  handler: (request: Request) => Promise<NextResponse<ApiResponse<T>>>
+export function withErrorHandling<T, P = Record<string, string>>(
+  handler: (request: Request, context: RouteContext<P>) => Promise<NextResponse<ApiResponse<T>>>
 ) {
-  return async (request: Request): Promise<NextResponse<ApiResponse<T>>> => {
+  return async (request: Request, context: RouteContext<P>): Promise<NextResponse<ApiResponse<T>>> => {
     try {
-      return await handler(request)
+      return await handler(request, context)
     } catch (err) {
       const appError = toAppError(err)
 

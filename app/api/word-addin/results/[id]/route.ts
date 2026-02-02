@@ -7,11 +7,12 @@
  * @module app/api/word-addin/results/[id]
  */
 
-import { NextResponse } from "next/server"
 import { db } from "@/db"
 import { analyses, clauseExtractions } from "@/db/schema"
 import { eq, and, desc } from "drizzle-orm"
 import { verifyAddInAuth } from "@/lib/word-addin-auth"
+import { withErrorHandling, success } from "@/lib/api-utils"
+import { ForbiddenError, NotFoundError, ConflictError } from "@/lib/errors"
 
 /**
  * Clause result shape for the Word Add-in
@@ -77,28 +78,16 @@ interface AnalysisResults {
  * @param request - HTTP request with Authorization header
  * @param params - Route params containing analysis ID
  */
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id: analysisId } = await params
+export const GET = withErrorHandling(
+  async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
+    const { id: analysisId } = await params
 
-  try {
-    // Authenticate the request
+    // Authenticate the request (throws UnauthorizedError/ForbiddenError if invalid)
     const authContext = await verifyAddInAuth(request)
-    const tenantId = authContext.tenantId
+    const tenantId = authContext.tenant.tenantId
 
     if (!tenantId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "FORBIDDEN",
-            message: "No organization selected",
-          },
-        },
-        { status: 403 }
-      )
+      throw new ForbiddenError("No organization selected")
     }
 
     // Fetch analysis with tenant check
@@ -107,29 +96,13 @@ export async function GET(
     })
 
     if (!analysis) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "NOT_FOUND",
-            message: "Analysis not found",
-          },
-        },
-        { status: 404 }
-      )
+      throw new NotFoundError("Analysis not found")
     }
 
     // Check if analysis is complete
     if (analysis.status !== "completed") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "CONFLICT",
-            message: `Analysis is not complete. Current status: ${analysis.status}`,
-          },
-        },
-        { status: 409 }
+      throw new ConflictError(
+        `Analysis is not complete. Current status: ${analysis.status}`
       )
     }
 
@@ -183,51 +156,6 @@ export async function GET(
       completedAt: analysis.completedAt?.toISOString() ?? null,
     }
 
-    return NextResponse.json({
-      success: true,
-      data: results,
-    })
-  } catch (error) {
-    // Handle known error types
-    if (error instanceof Error) {
-      if (error.name === "UnauthorizedError") {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              code: "UNAUTHORIZED",
-              message: error.message,
-            },
-          },
-          { status: 401 }
-        )
-      }
-
-      if (error.name === "ForbiddenError") {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              code: "FORBIDDEN",
-              message: error.message,
-            },
-          },
-          { status: 403 }
-        )
-      }
-    }
-
-    console.error("[GET /api/word-addin/results/[id]]", error)
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "Failed to fetch results",
-        },
-      },
-      { status: 500 }
-    )
+    return success(results)
   }
-}
+)
