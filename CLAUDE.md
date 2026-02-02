@@ -138,6 +138,18 @@ pnpm dlx shadcn@latest add <component-name>
 pnpm dlx shadcn@latest add <component-name> -r @ai-elements
 ```
 
+### ESLint
+- `components/ui/**` and `components/ai-elements/**` are excluded (shadcn-generated)
+- Underscore prefix (`_var`) marks intentionally unused variables
+
+### pnpm Workspace
+- Single-package projects need `packages: []` in `pnpm-workspace.yaml` for `actions/setup-node` cache to work
+
+## GitHub Actions
+
+- Claude Code action needs `write` permissions for `contents`, `pull-requests`, `issues`
+- Test workflow needs dummy env vars (modules like `db/client.ts` evaluate at load time)
+
 ## MCP Servers
 
 Project uses `.mcp.json` for MCP server configuration:
