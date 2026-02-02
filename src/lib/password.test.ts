@@ -33,7 +33,7 @@ describe("password utilities", () => {
 
   describe("validatePassword", () => {
     it("accepts valid password", () => {
-      const result = validatePassword("SecurePass123")
+      const result = validatePassword("SecurePass123!")
       expect(result.valid).toBe(true)
       expect(result.errors).toHaveLength(0)
     })
@@ -66,6 +66,20 @@ describe("password utilities", () => {
       expect(result.errors).toContain(
         "Password must contain at least one number"
       )
+    })
+
+    it("requires special character", () => {
+      const result = validatePassword("SecurePass123")
+      expect(result.valid).toBe(false)
+      expect(result.errors).toContain(
+        "Password must contain at least one special character"
+      )
+    })
+
+    it("accepts password with special character", () => {
+      const result = validatePassword("SecurePass123!")
+      expect(result.valid).toBe(true)
+      expect(result.errors).toHaveLength(0)
     })
   })
 })

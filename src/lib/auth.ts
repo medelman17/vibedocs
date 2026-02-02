@@ -1,6 +1,7 @@
 // src/lib/auth.ts
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
+import GitHub from "next-auth/providers/github"
 import Credentials from "next-auth/providers/credentials"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "@/db"
@@ -14,6 +15,8 @@ import {
 } from "@/db/schema"
 import { eq } from "drizzle-orm"
 import bcrypt from "bcryptjs"
+import { checkLoginRateLimit, recordLoginAttempt } from "./rate-limit"
+import { logSecurityEvent } from "./audit"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -22,7 +25,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  session: { strategy: "database" },
+  session: {
+    strategy: "database",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // Update session every 24 hours
+  },
   pages: {
     signIn: "/login",
     error: "/login",
@@ -32,21 +39,43 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientId: process.env.AUTH_GOOGLE_ID!,
       clientSecret: process.env.AUTH_GOOGLE_SECRET!,
     }),
+    GitHub({
+      clientId: process.env.AUTH_GITHUB_ID!,
+      clientSecret: process.env.AUTH_GITHUB_SECRET!,
+    }),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         if (!credentials?.email || !credentials?.password) {
           return null
         }
 
+        const email = credentials.email as string
+        const ip = request?.headers?.get?.("x-forwarded-for") ?? undefined
+
+        // Check rate limit before attempting auth
+        const rateLimit = await checkLoginRateLimit(email)
+        if (!rateLimit.allowed) {
+          await logSecurityEvent({
+            action: "LOGIN_BLOCKED",
+            metadata: { email, reason: "rate_limit", retryAfter: rateLimit.retryAfter },
+            ipAddress: ip,
+          })
+          throw new Error(
+            `Too many login attempts. Try again in ${rateLimit.retryAfter} seconds.`
+          )
+        }
+
         const user = await db.query.users.findFirst({
-          where: eq(users.email, credentials.email as string),
+          where: eq(users.email, email),
         })
 
         if (!user?.passwordHash) {
+          // Record failed attempt even for non-existent users (timing attack prevention)
+          await recordLoginAttempt(email, false)
           return null
         }
 
@@ -56,8 +85,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         )
 
         if (!isValid) {
+          await recordLoginAttempt(email, false)
+          await logSecurityEvent({
+            action: "LOGIN_FAILED",
+            metadata: { email, reason: "invalid_password" },
+            ipAddress: ip,
+          })
           return null
         }
+
+        // Record successful login
+        await recordLoginAttempt(email, true, ip)
+        await logSecurityEvent({
+          action: "LOGIN_SUCCESS",
+          userId: user.id,
+          metadata: { email },
+          ipAddress: ip,
+        })
 
         return {
           id: user.id,

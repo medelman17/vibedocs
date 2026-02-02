@@ -105,6 +105,32 @@ export const users = pgTable("users", {
    */
   passwordHash: text("password_hash"),
 
+  /**
+   * Number of consecutive failed login attempts.
+   * Reset to 0 on successful login or after lockout expires.
+   * Used for account lockout security measure.
+   */
+  failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
+
+  /**
+   * Timestamp until which the account is locked.
+   * Null when account is not locked.
+   * Account can attempt login again after this time.
+   */
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+
+  /**
+   * Timestamp of the user's last successful login.
+   * Useful for security auditing and detecting inactive accounts.
+   */
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+
+  /**
+   * IP address from the user's last successful login.
+   * Useful for detecting suspicious login patterns.
+   */
+  lastLoginIp: text("last_login_ip"),
+
   /** Audit timestamps: createdAt (auto-set), updatedAt (auto-updated) */
   ...timestamps,
 })

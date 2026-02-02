@@ -1,7 +1,7 @@
 // src/db/schema/reference.test.ts
 import { describe, it, expect } from "vitest"
 import { testDb } from "@/test/setup"
-import { eq, sql } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import {
   referenceDocuments,
   referenceEmbeddings,

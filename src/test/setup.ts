@@ -28,6 +28,10 @@ const createSchema = async () => {
       email_verified TIMESTAMPTZ,
       image TEXT,
       password_hash TEXT,
+      failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+      locked_until TIMESTAMPTZ,
+      last_login_at TIMESTAMPTZ,
+      last_login_ip TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
@@ -92,6 +96,17 @@ const createSchema = async () => {
       token TEXT NOT NULL,
       expires TIMESTAMPTZ NOT NULL,
       PRIMARY KEY(identifier, token)
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `)
 

@@ -26,6 +26,9 @@ pnpm db:studio    # Open Drizzle Studio
 # Testing
 pnpm test         # Run Vitest tests
 pnpm test:coverage # Run with coverage report
+
+# Worktree Setup
+pnpm install      # Required after creating worktree (node_modules not shared)
 ```
 
 ## Architecture
@@ -41,7 +44,7 @@ Will split into two physical databases later. Keep shared/tenant queries in sepa
 ### Auth & Multi-Tenancy
 
 - **Auth.js v5** with DrizzleAdapter, database sessions (not JWT)
-- **Providers**: Google OAuth + Email/Password (bcryptjs)
+- **Providers**: Google OAuth, GitHub OAuth + Email/Password (bcryptjs)
 - **Multi-org**: Users can belong to multiple organizations via `organization_members` junction table
 - **Session**: Includes `activeOrganizationId` for tenant context switching
 
@@ -116,12 +119,14 @@ Each agent runs inside an `inngest step.run()` for durability. LangGraph handles
 - Use `withTenant()` for tenant-scoped queries (sets RLS context)
 - Use `requireRole(["owner", "admin"])` for role-based access
 - Password utilities: `hashPassword()`, `verifyPassword()`, `validatePassword()`
+- **Zod 4**: Use `parsed.error.issues[0]` not `parsed.error.errors[0]` for safeParse errors
 
 ### Testing (Vitest + PGlite)
 - Tests use in-memory PGlite (WASM Postgres) - no Docker needed
 - Test files: `*.test.ts` in `src/` directory
 - Setup file: `src/test/setup.ts` creates schema before each test
 - Run: `pnpm test` or `pnpm test:coverage`
+- Use `vi.resetModules()` in `beforeEach` when mocks need fresh state between tests
 
 ### Inngest Patterns
 - Wrap each LangGraph agent in `step.run()` for durability
@@ -132,6 +137,7 @@ Each agent runs inside an `inngest step.run()` for durability. LangGraph handles
 - UI components use `data-slot` attributes for styling hooks
 - Use `cva` (class-variance-authority) for component variants
 - Use `cn()` from `@/lib/utils` for conditional classNames
+- **Motion**: Import from `motion/react` (not `framer-motion`)
 
 ### Adding Components
 ```bash
