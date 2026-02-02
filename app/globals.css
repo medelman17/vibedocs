@@ -4,39 +4,170 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* ═══════════════════════════════════════════════════════════════════════════
+     TYPOGRAPHY TOKENS
+     Using modular scale (1.25 ratio) for harmonious sizing
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Font Families */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
+
+  /* Font Sizes (modular scale, base 16px, ratio 1.25) */
+  --text-xs: 0.75rem;      /* 12px - captions, badges */
+  --text-sm: 0.875rem;     /* 14px - secondary text, labels */
+  --text-base: 1rem;       /* 16px - body text */
+  --text-lg: 1.125rem;     /* 18px - lead paragraphs */
+  --text-xl: 1.25rem;      /* 20px - section headers */
+  --text-2xl: 1.5rem;      /* 24px - card titles */
+  --text-3xl: 1.875rem;    /* 30px - page headers */
+  --text-4xl: 2.25rem;     /* 36px - hero text */
+  --text-5xl: 3rem;        /* 48px - display text */
+
+  /* Line Heights */
+  --leading-none: 1;
+  --leading-tight: 1.25;   /* headings */
+  --leading-snug: 1.375;   /* subheadings */
+  --leading-normal: 1.5;   /* body text */
+  --leading-relaxed: 1.625; /* long-form reading */
+  --leading-loose: 2;      /* spaced text */
+
+  /* Letter Spacing */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+
+  /* Font Weights */
+  --font-light: 300;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     SPACING TOKENS
+     4px base grid for consistent rhythm
+     ═══════════════════════════════════════════════════════════════════════════ */
+  --space-px: 1px;
+  --space-0: 0;
+  --space-0-5: 0.125rem;   /* 2px */
+  --space-1: 0.25rem;      /* 4px */
+  --space-1-5: 0.375rem;   /* 6px */
+  --space-2: 0.5rem;       /* 8px */
+  --space-2-5: 0.625rem;   /* 10px */
+  --space-3: 0.75rem;      /* 12px */
+  --space-3-5: 0.875rem;   /* 14px */
+  --space-4: 1rem;         /* 16px - base unit */
+  --space-5: 1.25rem;      /* 20px */
+  --space-6: 1.5rem;       /* 24px */
+  --space-7: 1.75rem;      /* 28px */
+  --space-8: 2rem;         /* 32px */
+  --space-9: 2.25rem;      /* 36px */
+  --space-10: 2.5rem;      /* 40px */
+  --space-11: 2.75rem;     /* 44px */
+  --space-12: 3rem;        /* 48px */
+  --space-14: 3.5rem;      /* 56px */
+  --space-16: 4rem;        /* 64px */
+  --space-20: 5rem;        /* 80px */
+  --space-24: 6rem;        /* 96px */
+  --space-28: 7rem;        /* 112px */
+  --space-32: 8rem;        /* 128px */
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     SHADOW / ELEVATION TOKENS
+     Layered shadows for depth hierarchy
+     ═══════════════════════════════════════════════════════════════════════════ */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     ANIMATION TOKENS
+     Consistent motion for interactions
+     ═══════════════════════════════════════════════════════════════════════════ */
+  --duration-instant: 0ms;
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     COLOR TOKENS - Semantic
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Core semantic colors (mapped from CSS variables) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Status colors - extended semantic palette */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* Risk level colors - NDA analysis specific */
+  --color-risk-standard: var(--risk-standard);
+  --color-risk-standard-foreground: var(--risk-standard-foreground);
+  --color-risk-cautious: var(--risk-cautious);
+  --color-risk-cautious-foreground: var(--risk-cautious-foreground);
+  --color-risk-aggressive: var(--risk-aggressive);
+  --color-risk-aggressive-foreground: var(--risk-aggressive-foreground);
+  --color-risk-unknown: var(--risk-unknown);
+  --color-risk-unknown-foreground: var(--risk-unknown-foreground);
+
+  /* Chart colors */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Sidebar colors */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     RADIUS TOKENS
+     ═══════════════════════════════════════════════════════════════════════════ */
+  --radius-none: 0;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -44,82 +175,285 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --radius-full: 9999px;
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     Z-INDEX SCALE
+     Predictable layering system
+     ═══════════════════════════════════════════════════════════════════════════ */
+  --z-behind: -1;
+  --z-base: 0;
+  --z-raised: 10;
+  --z-dropdown: 20;
+  --z-sticky: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+  --z-toast: 80;
+  --z-max: 9999;
 }
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     CORE COLORS - Light Mode
+     ───────────────────────────────────────────────────────────────────────── */
+  --background: oklch(0.995 0 0);
+  --foreground: oklch(0.145 0.014 285);
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.145 0.014 285);
+
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.145 0.014 285);
+
+  /* Primary - Modern Indigo */
+  --primary: oklch(0.511 0.262 276);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+
+  --secondary: oklch(0.967 0.001 285);
+  --secondary-foreground: oklch(0.235 0.014 285);
+
+  --muted: oklch(0.967 0.001 285);
+  --muted-foreground: oklch(0.45 0.014 285);
+
+  --accent: oklch(0.967 0.001 285);
+  --accent-foreground: oklch(0.235 0.014 285);
+
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --border: oklch(0.922 0.004 285);
+  --input: oklch(0.922 0.004 285);
+  --ring: oklch(0.511 0.262 276);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     STATUS COLORS - Light Mode
+     ───────────────────────────────────────────────────────────────────────── */
+  --success: oklch(0.527 0.154 150);
+  --success-foreground: oklch(0.985 0 0);
+
+  --warning: oklch(0.769 0.188 70);
+  --warning-foreground: oklch(0.235 0.014 285);
+
+  --info: oklch(0.588 0.158 241);
+  --info-foreground: oklch(0.985 0 0);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     RISK LEVEL COLORS - NDA Analysis (Light Mode)
+     Per PRD: standard | cautious | aggressive | unknown
+     ───────────────────────────────────────────────────────────────────────── */
+  --risk-standard: oklch(0.527 0.154 150);        /* Green - favorable terms */
+  --risk-standard-foreground: oklch(0.985 0 0);
+
+  --risk-cautious: oklch(0.769 0.164 75);         /* Amber - review needed */
+  --risk-cautious-foreground: oklch(0.235 0.014 285);
+
+  --risk-aggressive: oklch(0.628 0.258 29);       /* Red - unfavorable terms */
+  --risk-aggressive-foreground: oklch(0.985 0 0);
+
+  --risk-unknown: oklch(0.556 0.014 285);         /* Gray - insufficient info */
+  --risk-unknown-foreground: oklch(0.985 0 0);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     CHART COLORS - Light Mode
+     ───────────────────────────────────────────────────────────────────────── */
+  --chart-1: oklch(0.511 0.262 276);  /* Indigo */
+  --chart-2: oklch(0.588 0.158 241);  /* Cyan */
+  --chart-3: oklch(0.527 0.154 150);  /* Green */
+  --chart-4: oklch(0.769 0.188 70);   /* Amber */
+  --chart-5: oklch(0.628 0.258 29);   /* Red */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SIDEBAR COLORS - Light Mode
+     ───────────────────────────────────────────────────────────────────────── */
+  --sidebar: oklch(0.985 0.002 285);
+  --sidebar-foreground: oklch(0.145 0.014 285);
+  --sidebar-primary: oklch(0.511 0.262 276);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-accent: oklch(0.967 0.001 285);
+  --sidebar-accent-foreground: oklch(0.235 0.014 285);
+  --sidebar-border: oklch(0.922 0.004 285);
+  --sidebar-ring: oklch(0.511 0.262 276);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  /* ─────────────────────────────────────────────────────────────────────────
+     CORE COLORS - Dark Mode
+     ───────────────────────────────────────────────────────────────────────── */
+  --background: oklch(0.13 0.014 285);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+
+  --card: oklch(0.18 0.014 285);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+
+  --popover: oklch(0.18 0.014 285);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+
+  /* Primary - Modern Indigo (lighter for dark mode) */
+  --primary: oklch(0.707 0.165 276);
+  --primary-foreground: oklch(0.13 0.014 285);
+
+  --secondary: oklch(0.235 0.014 285);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+
+  --muted: oklch(0.235 0.014 285);
+  --muted-foreground: oklch(0.65 0.014 285);
+
+  --accent: oklch(0.235 0.014 285);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+
+  --destructive: oklch(0.704 0.191 22);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
+  --ring: oklch(0.707 0.165 276);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     STATUS COLORS - Dark Mode
+     ───────────────────────────────────────────────────────────────────────── */
+  --success: oklch(0.627 0.154 150);
+  --success-foreground: oklch(0.13 0.014 285);
+
+  --warning: oklch(0.828 0.164 75);
+  --warning-foreground: oklch(0.235 0.014 285);
+
+  --info: oklch(0.688 0.158 241);
+  --info-foreground: oklch(0.13 0.014 285);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     RISK LEVEL COLORS - NDA Analysis (Dark Mode)
+     ───────────────────────────────────────────────────────────────────────── */
+  --risk-standard: oklch(0.627 0.154 150);        /* Green - favorable */
+  --risk-standard-foreground: oklch(0.13 0.014 285);
+
+  --risk-cautious: oklch(0.828 0.164 75);         /* Amber - review needed */
+  --risk-cautious-foreground: oklch(0.235 0.014 285);
+
+  --risk-aggressive: oklch(0.704 0.191 22);       /* Red - unfavorable */
+  --risk-aggressive-foreground: oklch(0.985 0 0);
+
+  --risk-unknown: oklch(0.65 0.014 285);          /* Gray - insufficient info */
+  --risk-unknown-foreground: oklch(0.13 0.014 285);
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     CHART COLORS - Dark Mode
+     ───────────────────────────────────────────────────────────────────────── */
+  --chart-1: oklch(0.707 0.165 276);  /* Indigo */
+  --chart-2: oklch(0.688 0.158 241);  /* Cyan */
+  --chart-3: oklch(0.627 0.154 150);  /* Green */
+  --chart-4: oklch(0.828 0.164 75);   /* Amber */
+  --chart-5: oklch(0.704 0.191 22);   /* Red */
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     SIDEBAR COLORS - Dark Mode
+     ───────────────────────────────────────────────────────────────────────── */
+  --sidebar: oklch(0.16 0.014 285);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-primary: oklch(0.707 0.165 276);
+  --sidebar-primary-foreground: oklch(0.13 0.014 285);
+  --sidebar-accent: oklch(0.235 0.014 285);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.707 0.165 276);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  html {
+    /* Smooth scrolling for anchor links */
+    scroll-behavior: smooth;
+    /* Prevent text size adjustment on mobile */
+    text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
+    /* Optimal body text settings */
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Headings default styling */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+    text-wrap: balance;
+  }
+
+  /* Paragraph optimal reading width */
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Focus visible styling for accessibility */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+
+  /* Selection styling */
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITY CLASSES
+   Custom utilities that extend Tailwind
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  /* Typography utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Animation utilities */
+  .animate-in {
+    animation-duration: var(--duration-normal);
+    animation-timing-function: var(--ease-out);
+    animation-fill-mode: forwards;
+  }
+
+  .animate-out {
+    animation-duration: var(--duration-fast);
+    animation-timing-function: var(--ease-in);
+    animation-fill-mode: forwards;
+  }
+
+  /* Focus ring variants */
+  .focus-ring {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
+  }
+
+  .focus-ring-inset {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring;
+  }
+
+  /* Risk badge variants */
+  .badge-risk-standard {
+    @apply bg-risk-standard text-risk-standard-foreground;
+  }
+
+  .badge-risk-cautious {
+    @apply bg-risk-cautious text-risk-cautious-foreground;
+  }
+
+  .badge-risk-aggressive {
+    @apply bg-risk-aggressive text-risk-aggressive-foreground;
+  }
+
+  .badge-risk-unknown {
+    @apply bg-risk-unknown text-risk-unknown-foreground;
   }
 }
