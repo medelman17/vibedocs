@@ -130,3 +130,58 @@ export type AuthDialogResult =
 export type NavigationResult =
   | { success: true; navigated: true }
   | { success: false; error: string };
+
+// =============================================================================
+// Badge Configuration Constants
+// =============================================================================
+
+/**
+ * Badge configuration for risk levels
+ * Uses semantic color tokens from the design system
+ */
+export const RISK_BADGE_CONFIG: Record<
+  RiskLevel,
+  { label: string; className: string; strokeColor: string }
+> = {
+  standard: {
+    label: "Standard",
+    className: "bg-success-50 text-success-600 dark:bg-success-500/20 dark:text-success-400",
+    strokeColor: "oklch(var(--success-500))",
+  },
+  cautious: {
+    label: "Cautious",
+    className: "bg-warning-50 text-warning-600 dark:bg-warning-500/20 dark:text-warning-400",
+    strokeColor: "oklch(var(--warning-500))",
+  },
+  aggressive: {
+    label: "Aggressive",
+    className: "bg-error-50 text-error-600 dark:bg-error-500/20 dark:text-error-400",
+    strokeColor: "oklch(var(--error-500))",
+  },
+  unknown: {
+    label: "Unknown",
+    className: "bg-muted text-muted-foreground",
+    strokeColor: "oklch(var(--neutral-400))",
+  },
+}
+
+/**
+ * Priority badge configuration for gap analysis
+ */
+export const PRIORITY_BADGE_CONFIG: Record<
+  "low" | "medium" | "high",
+  { label: string; className: string }
+> = {
+  low: {
+    label: "Low",
+    className: "bg-success-50 text-success-600 dark:bg-success-500/20 dark:text-success-400",
+  },
+  medium: {
+    label: "Medium",
+    className: "bg-warning-50 text-warning-600 dark:bg-warning-500/20 dark:text-warning-400",
+  },
+  high: {
+    label: "High",
+    className: "bg-error-50 text-error-600 dark:bg-error-500/20 dark:text-error-400",
+  },
+}
