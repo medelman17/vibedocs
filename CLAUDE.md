@@ -155,9 +155,27 @@ pnpm dlx shadcn@latest add <component-name> -r @ai-elements
 Project uses `.mcp.json` for MCP server configuration:
 - `shadcn` - Component management via `npx shadcn@latest mcp`
 
+## Claude Code Automations
+
+Project-level automations in `.claude/` (shared via git):
+
+### Skills
+- `/drizzle-migration <description>` - Create Drizzle migrations following project conventions
+- `/inngest-function <description>` - Create durable Inngest workflows with rate limiting
+
+### Agents
+- `security-reviewer` - Reviews auth, multi-tenancy, and data protection
+
+### Hooks (automatic)
+- Auto-lint: Runs `pnpm lint --fix` after editing TS/JS files
+- Block .env: Prevents direct edits to `.env*` files
+
+Note: `.claude/settings.local.json` is gitignored (user-specific permissions)
+
 ## Ignored Files
 
 - `.serena/` - Serena MCP local project cache (do not commit)
+- `.claude/settings.local.json` - User-specific Claude permissions (do not commit)
 
 ## Documentation
 
