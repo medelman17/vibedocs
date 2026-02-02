@@ -1,0 +1,47 @@
+{
+  "name": "VibeDocs Design System",
+  "version": "1.0.0",
+  "created": "2026-02-02T00:00:00.000Z",
+  "preset": "integrated",
+  "framework": "tailwind-v4",
+  "tokens": {
+    "colors": {
+      "primary": {
+        "name": "Violet",
+        "hex": "#7C3AED",
+        "oklch": "oklch(0.541 0.281 293)"
+      },
+      "secondary": {
+        "name": "Teal",
+        "hex": "#14B8A6",
+        "oklch": "oklch(0.679 0.141 175)"
+      }
+    },
+    "typography": {
+      "fontFamily": {
+        "sans": "var(--font-geist-sans)",
+        "mono": "var(--font-geist-mono)"
+      }
+    },
+    "spacing": {
+      "scale": "compact",
+      "values": {
+        "0": "0",
+        "0.5": "0.125rem",
+        "1": "0.25rem",
+        "1.5": "0.375rem",
+        "2": "0.5rem",
+        "3": "0.75rem",
+        "4": "1rem",
+        "6": "1.5rem",
+        "8": "2rem"
+      }
+    },
+    "borderRadius": {
+      "base": "0.5rem",
+      "scale": "moderate"
+    }
+  },
+  "colorModes": ["light", "dark", "system"],
+  "outputFormats": ["css"]
+}

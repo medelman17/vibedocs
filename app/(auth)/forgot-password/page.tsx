@@ -49,8 +49,8 @@ export default function ForgotPasswordPage() {
         className="space-y-8"
       >
         <motion.div variants={itemVariants} className="space-y-2">
-          <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+          <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-success/10 border border-success/20 mb-6">
+            <CheckCircle2 className="w-8 h-8 text-success" />
           </div>
           <h1 className="text-3xl font-semibold tracking-tight text-center">
             Check your email
@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
       </motion.div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <motion.div variants={itemVariants} className="space-y-2">
           <Label htmlFor="email">Email address</Label>
           <Input

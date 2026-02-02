@@ -1,0 +1,23 @@
+{
+  "status": "completed",
+  "preset": "integrated",
+  "colors": {
+    "primary": {
+      "name": "Violet",
+      "hex": "#7C3AED"
+    },
+    "secondary": {
+      "name": "Teal",
+      "hex": "#14B8A6"
+    }
+  },
+  "colorModes": ["light", "dark", "system"],
+  "typography": {
+    "family": "Geist",
+    "unchanged": true
+  },
+  "spacing": "compact",
+  "radius": "moderate",
+  "outputFormats": ["css"],
+  "completedAt": "2026-02-02T00:00:00.000Z"
+}

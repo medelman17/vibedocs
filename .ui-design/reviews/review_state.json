@@ -1,0 +1,17 @@
+{
+  "review_id": "auth-pages_20260202",
+  "target": "app/(auth)/",
+  "focus_areas": ["visual", "usability"],
+  "context": "Auth flow (login, signup, password reset)",
+  "platform": "responsive",
+  "status": "complete",
+  "started_at": "2026-02-02T00:00:00.000Z",
+  "completed_at": "2026-02-02T00:00:00.000Z",
+  "issues_found": 14,
+  "severity_counts": {
+    "critical": 2,
+    "major": 4,
+    "minor": 4,
+    "suggestion": 4
+  }
+}
