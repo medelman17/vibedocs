@@ -19,7 +19,7 @@ pnpm start        # Production server
 
 # Database
 pnpm db:push      # Push Drizzle schema to database
-pnpm db:generate  # Generate Drizzle migrations
+pnpm db:generate  # Generate Drizzle migrations (output: ./drizzle/)
 pnpm db:migrate   # Run migrations
 pnpm db:studio    # Open Drizzle Studio
 
@@ -88,6 +88,7 @@ Each agent runs inside an `inngest step.run()` for durability. LangGraph handles
 - `app/` - Next.js App Router (pages, API routes including `/api/auth/[...nextauth]`)
 - `src/db/` - Drizzle schema and client
   - `schema/` - Table definitions (auth, organizations, documents, analyses, etc.)
+  - `queries/` - Prepared queries (documents, analyses, similarity)
   - `_columns.ts` - Reusable column helpers (timestamps, tenantId, etc.)
   - `client.ts` - Neon serverless connection
 - `src/lib/` - Core utilities
