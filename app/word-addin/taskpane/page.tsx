@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { TaskPaneShell } from "./components/TaskPaneShell"
 import { AuthGate } from "./components/AuthGate"
 import { AnalyzeButton } from "./components/AnalyzeButton"
+import { ResultsView } from "./components/ResultsView"
+import { useAnalysisStore } from "./store"
 
 // Office.js types
 declare global {
@@ -13,6 +15,9 @@ declare global {
 }
 
 export default function TaskPanePage() {
+  const status = useAnalysisStore((state) => state.status)
+  const results = useAnalysisStore((state) => state.results)
+
   const [officeState, setOfficeState] = useState<{
     isReady: boolean
     error: string | null
@@ -58,10 +63,14 @@ export default function TaskPanePage() {
     )
   }
 
+  // Determine if we should show results
+  const showResults = status === "completed" && results !== null
+
   return (
     <TaskPaneShell>
       <AuthGate>
         <AnalyzeButton />
+        {showResults && <ResultsView />}
       </AuthGate>
     </TaskPaneShell>
   )
