@@ -67,8 +67,9 @@ describe("Error Classes", () => {
     })
 
     it("ValidationError.fromZodError converts Zod errors", () => {
+      // Zod 4 uses .issues instead of .errors
       const zodError = {
-        errors: [
+        issues: [
           { path: ["user", "email"], message: "Invalid email" },
           { path: ["user", "name"], message: "Required" },
         ],
