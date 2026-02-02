@@ -169,6 +169,7 @@ pnpm dlx shadcn@latest add <component-name> -r @ai-elements
 
 Project uses `.mcp.json` for MCP server configuration:
 - `shadcn` - Component management via `npx shadcn@latest mcp`
+- `context7` - Live documentation lookup for libraries (Drizzle, Next.js, Auth.js, etc.)
 
 ## Claude Code Automations
 
@@ -177,9 +178,11 @@ Project-level automations in `.claude/` (shared via git):
 ### Skills
 - `/drizzle-migration <description>` - Create Drizzle migrations following project conventions
 - `/inngest-function <description>` - Create durable Inngest workflows with rate limiting
+- `error-response` (Claude-only) - Automatically apply error handling conventions
 
 ### Agents
 - `security-reviewer` - Reviews auth, multi-tenancy, and data protection
+- `test-writer` - Generates tests following Vitest + PGlite patterns
 
 ### Hooks (automatic)
 - Auto-lint: Runs `pnpm lint --fix` after editing TS/JS files
