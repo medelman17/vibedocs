@@ -28,6 +28,10 @@ const createSchema = async () => {
       email_verified TIMESTAMPTZ,
       image TEXT,
       password_hash TEXT,
+      failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+      locked_until TIMESTAMPTZ,
+      last_login_at TIMESTAMPTZ,
+      last_login_ip TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
