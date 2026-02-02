@@ -15,6 +15,7 @@ import { ok, err, type ApiResponse } from "@/lib/api-response"
 import { db } from "@/db"
 import { documents, documentChunks } from "@/db/schema"
 import { eq, and, isNull, ilike, desc, sql, count, isNotNull } from "drizzle-orm"
+import { uploadFile, deleteFile, computeContentHash } from "@/lib/blob"
 
 // ============================================================================
 // Types
@@ -98,16 +99,6 @@ const updateTitleInputSchema = z.object({
 // Helper Functions
 // ============================================================================
 
-/**
- * Compute SHA-256 hash of file content
- */
-async function computeFileHash(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer()
-  const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
-  return `sha256:${hashHex}`
-}
 
 /**
  * Extract title from filename (remove extension)
@@ -180,7 +171,7 @@ export async function uploadDocument(
 
   try {
     // Compute content hash for duplicate detection
-    const contentHash = await computeFileHash(file)
+    const contentHash = await computeContentHash(file)
 
     // Check for duplicate within tenant
     const [existingDoc] = await db
@@ -202,15 +193,9 @@ export async function uploadDocument(
       )
     }
 
-    // TODO: Upload file to Vercel Blob
-    // const blob = await put(file.name, file, {
-    //   access: 'private',
-    //   token: process.env.BLOB_READ_WRITE_TOKEN,
-    // })
-    // const fileUrl = blob.url
-
-    // Placeholder for Vercel Blob URL (to be implemented)
-    const fileUrl = `https://placeholder.blob.vercel-storage.com/${crypto.randomUUID()}/${file.name}`
+    // Upload file to Vercel Blob
+    const blob = await uploadFile(file, { folder: "documents" })
+    const fileUrl = blob.url
 
     // Create document record
     const [newDocument] = await db
@@ -630,6 +615,98 @@ export async function restoreDocument(
 }
 
 /**
+ * Permanently delete a document and its associated blob file.
+ *
+ * @description
+ * Performs a hard delete that:
+ * 1. Deletes the file from Vercel Blob storage
+ * 2. Deletes associated document chunks from the database
+ * 3. Permanently removes the document record from the database
+ *
+ * This action is irreversible. Use soft-delete (`deleteDocument`) for recoverable deletion.
+ * Only works on documents that have already been soft-deleted.
+ *
+ * @param input - Object containing documentId
+ * @returns Success message confirming deletion
+ *
+ * @example
+ * ```typescript
+ * // First soft-delete, then hard-delete
+ * await deleteDocument({ documentId: "uuid-here" })
+ * await hardDeleteDocument({ documentId: "uuid-here" })
+ * ```
+ */
+export async function hardDeleteDocument(
+  input: z.infer<typeof documentIdSchema>
+): Promise<ApiResponse<{ message: string }>> {
+  const { tenantId } = await withTenant()
+
+  const parsed = documentIdSchema.safeParse(input)
+  if (!parsed.success) {
+    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues)
+  }
+
+  const { documentId } = parsed.data
+
+  try {
+    // Find the soft-deleted document
+    const [doc] = await db
+      .select({
+        id: documents.id,
+        fileUrl: documents.fileUrl,
+        title: documents.title,
+        deletedAt: documents.deletedAt,
+      })
+      .from(documents)
+      .where(
+        and(
+          eq(documents.id, documentId),
+          eq(documents.tenantId, tenantId),
+          isNotNull(documents.deletedAt) // Only allow hard delete of soft-deleted docs
+        )
+      )
+      .limit(1)
+
+    if (!doc) {
+      return err(
+        "NOT_FOUND",
+        "Document not found or not in deleted state. Soft-delete the document first."
+      )
+    }
+
+    // Delete blob file if it exists
+    if (doc.fileUrl) {
+      try {
+        await deleteFile(doc.fileUrl)
+      } catch (blobError) {
+        // Log but don't fail if blob deletion fails (file may already be gone)
+        console.warn("[hardDeleteDocument] Failed to delete blob:", blobError)
+      }
+    }
+
+    // Delete associated chunks first (foreign key constraint)
+    await db
+      .delete(documentChunks)
+      .where(
+        and(
+          eq(documentChunks.documentId, documentId),
+          eq(documentChunks.tenantId, tenantId)
+        )
+      )
+
+    // Permanently delete the document record
+    await db
+      .delete(documents)
+      .where(eq(documents.id, documentId))
+
+    return ok({ message: `Document "${doc.title}" permanently deleted` })
+  } catch (error) {
+    console.error("[hardDeleteDocument]", error)
+    return err("INTERNAL_ERROR", "Failed to permanently delete document")
+  }
+}
+
+/**
  * Retry processing for a document in error state.
  *
  * @description
@@ -759,16 +836,8 @@ export async function getDocumentDownloadUrl(
       return err("BAD_REQUEST", "Document file not available")
     }
 
-    // TODO: Generate signed URL from Vercel Blob
-    // import { getDownloadUrl } from "@vercel/blob"
-    // const signedUrl = await getDownloadUrl(doc.fileUrl, {
-    //   expiresInSeconds: 3600, // 1 hour
-    //   downloadFilename: doc.fileName,
-    // })
-    // return ok({ url: signedUrl, fileName: doc.fileName })
-
-    // Placeholder: Return the stored URL directly
-    // In production, this should be a signed URL with expiration
+    // Vercel Blob URLs with public access are directly accessible
+    // No signed URL generation needed for public blobs
     return ok({ url: doc.fileUrl, fileName: doc.fileName })
   } catch (error) {
     console.error("[getDocumentDownloadUrl]", error)

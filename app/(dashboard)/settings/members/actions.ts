@@ -3,7 +3,8 @@
 import { z } from "zod"
 import { withTenant, requireRole } from "@/lib/dal"
 import { ok, err, type ApiResponse } from "@/lib/api-response"
-import { organizationMembers, users } from "@/db/schema"
+import { organizationMembers, users, organizations } from "@/db/schema"
+import { sendInvitationEmail } from "@/lib/email"
 import { eq, and, sql } from "drizzle-orm"
 import { db } from "@/db"
 
@@ -146,8 +147,26 @@ export async function inviteMember(
     })
     .returning()
 
-  // TODO: Send invitation email
-  // await sendInvitationEmail(email, organizationName, inviterName)
+  // Send invitation email
+  // Get inviter name and organization name for the email
+  const [inviter, organization] = await Promise.all([
+    db.query.users.findFirst({ where: eq(users.id, currentUserId) }),
+    db.query.organizations.findFirst({ where: eq(organizations.id, tenantId) }),
+  ])
+
+  const inviterName = inviter?.name || inviter?.email || "A team member"
+  const organizationName = organization?.name || "your organization"
+  const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invitations/${membership.id}`
+
+  // Send email (don't block on failure)
+  sendInvitationEmail({
+    to: email,
+    inviterName,
+    organizationName,
+    inviteUrl,
+  }).catch((error) => {
+    console.error("[inviteMember] Failed to send invitation email:", error)
+  })
 
   return ok({ membershipId: membership.id })
 }
@@ -159,7 +178,7 @@ export async function inviteMember(
 export async function resendInvitation(
   membershipId: string
 ): Promise<ApiResponse<void>> {
-  const { tenantId } = await requireRole(["admin", "owner"])
+  const { tenantId, userId: currentUserId } = await requireRole(["admin", "owner"])
 
   // Validate membership ID
   const uuidSchema = z.string().uuid()
@@ -191,9 +210,29 @@ export async function resendInvitation(
     .set({ invitedAt: new Date() })
     .where(eq(organizationMembers.id, membershipId))
 
-  // TODO: Send invitation email
-  // const user = await db.query.users.findFirst({ where: eq(users.id, membership.userId) })
-  // await sendInvitationEmail(user.email, organizationName, inviterName)
+  // Send invitation email
+  // Get invited user, inviter name, and organization name for the email
+  const [invitedUser, inviter, organization] = await Promise.all([
+    db.query.users.findFirst({ where: eq(users.id, membership.userId) }),
+    db.query.users.findFirst({ where: eq(users.id, currentUserId) }),
+    db.query.organizations.findFirst({ where: eq(organizations.id, tenantId) }),
+  ])
+
+  if (invitedUser?.email) {
+    const inviterName = inviter?.name || inviter?.email || "A team member"
+    const organizationName = organization?.name || "your organization"
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invitations/${membershipId}`
+
+    // Send email (don't block on failure)
+    sendInvitationEmail({
+      to: invitedUser.email,
+      inviterName,
+      organizationName,
+      inviteUrl,
+    }).catch((error) => {
+      console.error("[resendInvitation] Failed to send invitation email:", error)
+    })
+  }
 
   return ok(undefined)
 }
