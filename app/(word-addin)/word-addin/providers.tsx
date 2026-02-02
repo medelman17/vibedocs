@@ -1,6 +1,6 @@
 "use client"
 
-import { ReactNode, useEffect, useState } from "react"
+import { ReactNode, useMemo } from "react"
 import Script from "next/script"
 
 /**
@@ -14,26 +14,17 @@ import Script from "next/script"
  * its own Bearer token auth stored in Zustand, not next-auth sessions.
  */
 export function Providers({ children }: { children: ReactNode }) {
-  const [loadOfficeJs, setLoadOfficeJs] = useState(false)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
+  // Check dev mode once during render (safe since URL doesn't change)
+  const loadOfficeJs = useMemo(() => {
+    if (typeof window === "undefined") return false
     const params = new URLSearchParams(window.location.search)
     const isDevMode = params.get("dev") === "true"
-
     if (isDevMode) {
       console.log("[Word Add-in] Dev mode: Office.js will not be loaded")
-      setLoadOfficeJs(false)
-    } else {
-      setLoadOfficeJs(true)
+      return false
     }
-    setReady(true)
+    return true
   }, [])
-
-  // Wait until we've determined whether to load Office.js
-  if (!ready) {
-    return null
-  }
 
   return (
     <>

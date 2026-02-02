@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Script from "next/script"
 import "@/app/(main)/globals.css"
 import { Providers } from "./word-addin/providers"
 
