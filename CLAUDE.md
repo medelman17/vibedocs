@@ -13,6 +13,7 @@ Core features: upload NDAs → clause extraction (CUAD 41-category taxonomy) →
 ```bash
 # Development
 pnpm dev          # Start development server (http://localhost:3000)
+pnpm dev:inngest  # Start Inngest dev server (http://localhost:8288)
 pnpm build        # Production build
 pnpm lint         # ESLint
 pnpm start        # Production server
