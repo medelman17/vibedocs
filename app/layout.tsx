@@ -27,13 +27,13 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://vdocs.edel.sh',
     siteName: 'VibeDocs',
-    title: 'VibeDocs – Upload. Understand. Decide.',
-    description: 'AI-powered NDA analysis grounded in 13,000+ annotated legal clauses.',
+    title: 'VibeDocs – Intelligent Contract Review',
+    description: 'AI-powered NDA analysis that understands risk the way you do. Grounded in 13,000+ annotated legal clauses.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'VibeDocs – Upload. Understand. Decide.',
-    description: 'AI-powered NDA analysis grounded in 13,000+ annotated legal clauses.',
+    title: 'VibeDocs – Intelligent Contract Review',
+    description: 'AI-powered NDA analysis that understands risk the way you do. Grounded in 13,000+ annotated legal clauses.',
   },
   robots: {
     index: true,
