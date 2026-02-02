@@ -7,7 +7,8 @@ const mockInsert = vi.fn().mockReturnThis()
 const mockUpdate = vi.fn().mockReturnThis()
 const mockValues = vi.fn().mockResolvedValue([])
 const mockSet = vi.fn().mockReturnThis()
-const mockWhere = vi.fn().mockResolvedValue([])
+const mockWhere = vi.fn().mockReturnThis()
+const mockReturning = vi.fn().mockResolvedValue([])
 
 vi.mock("@/db/client", () => ({
   db: {
@@ -23,7 +24,7 @@ vi.mock("@/db/client", () => ({
 
 vi.mock("@/db/schema", () => ({
   users: { id: "id", email: "email" },
-  passwordResetTokens: { userId: "userId", token: "token", usedAt: "usedAt" },
+  passwordResetTokens: { userId: "userId", token: "token", usedAt: "usedAt", expiresAt: "expiresAt" },
 }))
 
 vi.mock("./password", () => ({
@@ -44,6 +45,8 @@ describe("password reset", () => {
     mockInsert.mockReturnValue({ values: mockValues })
     mockUpdate.mockReturnValue({ set: mockSet })
     mockSet.mockReturnValue({ where: mockWhere })
+    mockWhere.mockReturnValue({ returning: mockReturning })
+    mockReturning.mockResolvedValue([])
   })
 
   describe("generateResetToken", () => {
@@ -114,13 +117,11 @@ describe("password reset", () => {
 
   describe("resetPassword", () => {
     it("resets password with valid token", async () => {
-      // First call for validateResetToken
-      mockFindFirst.mockResolvedValueOnce({
+      // Mock atomic update returning consumed token
+      mockReturning.mockResolvedValueOnce([{
         userId: "user-123",
-        token: "valid-token",
         expiresAt: new Date(Date.now() + 3600000),
-        usedAt: null,
-      })
+      }])
 
       const { resetPassword } = await import("./password-reset")
       const result = await resetPassword("valid-token", "NewSecurePass123!")
@@ -129,13 +130,28 @@ describe("password reset", () => {
     })
 
     it("fails with invalid token", async () => {
-      mockFindFirst.mockResolvedValueOnce(null)
+      // Mock atomic update returning empty (token not found or already used)
+      mockReturning.mockResolvedValueOnce([])
 
       const { resetPassword } = await import("./password-reset")
       const result = await resetPassword("invalid-token", "NewSecurePass123!")
 
       expect(result.success).toBe(false)
-      expect(result.error).toBeDefined()
+      expect(result.error).toContain("Invalid or already used")
+    })
+
+    it("fails with expired token", async () => {
+      // Mock atomic update returning expired token
+      mockReturning.mockResolvedValueOnce([{
+        userId: "user-123",
+        expiresAt: new Date(Date.now() - 1000), // Expired
+      }])
+
+      const { resetPassword } = await import("./password-reset")
+      const result = await resetPassword("expired-token", "NewSecurePass123!")
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain("expired")
     })
   })
 })

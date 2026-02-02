@@ -18,7 +18,11 @@ function LoginForm() {
   const [oauthLoading, setOauthLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard"
+  // Validate callbackUrl to prevent open redirect attacks
+  const rawCallbackUrl = searchParams.get("callbackUrl")
+  const callbackUrl = rawCallbackUrl?.startsWith("/") && !rawCallbackUrl.startsWith("//")
+    ? rawCallbackUrl
+    : "/dashboard"
   const registered = searchParams.get("registered") === "true"
   const reset = searchParams.get("reset") === "true"
 

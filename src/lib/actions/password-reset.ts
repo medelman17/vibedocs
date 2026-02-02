@@ -14,10 +14,10 @@ export async function requestPasswordReset(email: string): Promise<{
 
   const result = await generateResetToken(email)
 
-  // In production, send email here with the token
-  // For now, just log it (remove in production!)
-  if (result.token) {
-    console.log(`[DEV] Password reset token for ${email}: ${result.token}`)
+  // TODO: Send email with reset link using Resend
+  // For now, only log in development
+  if (process.env.NODE_ENV === "development" && result.token) {
+    console.log(`[DEV] Password reset link: /reset-password?token=${result.token}`)
   }
 
   // Always return success to prevent email enumeration

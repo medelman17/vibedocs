@@ -76,15 +76,32 @@ export async function validateResetToken(
 
 /**
  * Reset password using a valid token
+ * Uses atomic token consumption to prevent race conditions
  */
 export async function resetPassword(
   token: string,
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> {
-  const validation = await validateResetToken(token)
+  // Atomically mark token as used and get userId in one operation
+  // This prevents TOCTOU race conditions where concurrent requests
+  // could both pass validation before either marks the token as used
+  const [consumedToken] = await db
+    .update(passwordResetTokens)
+    .set({ usedAt: new Date() })
+    .where(
+      and(
+        eq(passwordResetTokens.token, token),
+        isNull(passwordResetTokens.usedAt)
+      )
+    )
+    .returning({ userId: passwordResetTokens.userId, expiresAt: passwordResetTokens.expiresAt })
 
-  if (!validation.valid || !validation.userId) {
-    return { success: false, error: validation.error }
+  if (!consumedToken) {
+    return { success: false, error: "Invalid or already used token" }
+  }
+
+  if (consumedToken.expiresAt < new Date()) {
+    return { success: false, error: "Token has expired" }
   }
 
   // Hash new password
@@ -99,17 +116,11 @@ export async function resetPassword(
       lockedUntil: null,
       updatedAt: new Date(),
     })
-    .where(eq(users.id, validation.userId))
-
-  // Mark token as used
-  await db
-    .update(passwordResetTokens)
-    .set({ usedAt: new Date() })
-    .where(eq(passwordResetTokens.token, token))
+    .where(eq(users.id, consumedToken.userId))
 
   await logSecurityEvent({
     action: "PASSWORD_RESET_COMPLETED",
-    userId: validation.userId,
+    userId: consumedToken.userId,
   })
 
   return { success: true }
