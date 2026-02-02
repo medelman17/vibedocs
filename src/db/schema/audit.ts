@@ -1,7 +1,7 @@
 /**
  * @fileoverview Audit logging schema for compliance tracking and debugging.
  *
- * This module defines the audit trail infrastructure for the NDA Analyst application.
+ * This module defines the audit trail infrastructure for the VibeDocs application.
  * The audit log captures all data changes (INSERT, UPDATE, DELETE) to tenant-scoped
  * tables, providing a complete Change Data Capture (CDC) style history that supports:
  *

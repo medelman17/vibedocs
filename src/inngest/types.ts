@@ -1,7 +1,7 @@
 /**
  * @fileoverview Inngest Event Type Definitions
  *
- * Defines all event schemas for the NDA Analyst durable workflow system.
+ * Defines all event schemas for the VibeDocs durable workflow system.
  * Events follow the naming convention: `nda/<domain>.<action>`
  *
  * All events are validated at runtime using Zod schemas before processing.
@@ -80,7 +80,7 @@ export const comparisonRequestedPayload = baseTenantPayload.extend({
 })
 
 /**
- * All Inngest event types for the NDA Analyst application.
+ * All Inngest event types for the VibeDocs application.
  */
 export type InngestEvents = {
   "nda/uploaded": {

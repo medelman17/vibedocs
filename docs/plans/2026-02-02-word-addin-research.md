@@ -1,4 +1,4 @@
-# Microsoft Word Add-in for NDA Analyst: Technical Research
+# Microsoft Word Add-in for VibeDocs: Technical Research
 
 **Date:** February 2, 2026
 **Status:** Research Complete
@@ -8,9 +8,9 @@
 
 ## Executive Summary
 
-Creating a Microsoft Word Add-in for NDA Analyst would enable lawyers to analyze contracts received from opposing parties directly within Word—eliminating the need to upload documents to a web interface. This document provides comprehensive research on the technical requirements, architecture decisions, integration strategies, and estimated effort.
+Creating a Microsoft Word Add-in for VibeDocs would enable lawyers to analyze contracts received from opposing parties directly within Word—eliminating the need to upload documents to a web interface. This document provides comprehensive research on the technical requirements, architecture decisions, integration strategies, and estimated effort.
 
-**Key Finding:** This is achievable with moderate complexity. The Office.js API provides robust document access, Microsoft supports modern React/TypeScript development, and the existing NDA Analyst backend can be extended with minimal changes to support the add-in.
+**Key Finding:** This is achievable with moderate complexity. The Office.js API provides robust document access, Microsoft supports modern React/TypeScript development, and the existing VibeDocs backend can be extended with minimal changes to support the add-in.
 
 ---
 
@@ -19,7 +19,7 @@ Creating a Microsoft Word Add-in for NDA Analyst would enable lawyers to analyze
 1. [Office Add-in Architecture](#1-office-add-in-architecture)
 2. [Document Access Capabilities](#2-document-access-capabilities)
 3. [Authentication Strategies](#3-authentication-strategies)
-4. [Integration with NDA Analyst Backend](#4-integration-with-nda-analyst-backend)
+4. [Integration with VibeDocs Backend](#4-integration-with-nda-analyst-backend)
 5. [User Experience Design](#5-user-experience-design)
 6. [Development Environment](#6-development-environment)
 7. [Deployment Options](#7-deployment-options)
@@ -53,14 +53,14 @@ Office Add-ins are web applications that run inside Office applications (Word, E
                               │
                               ▼
                     ┌───────────────────┐
-                    │  NDA Analyst API  │
+                    │  VibeDocs API  │
                     │  (Your Backend)   │
                     └───────────────────┘
 ```
 
 ### 1.2 Add-in Types
 
-| Type | Description | Use Case for NDA Analyst |
+| Type | Description | Use Case for VibeDocs |
 |------|-------------|--------------------------|
 | **Task Pane** | Panel that opens alongside the document | Primary UI for analysis results, risk scores, clause list |
 | **Content** | Embedded directly in document | Could display inline risk indicators |
@@ -82,7 +82,7 @@ Microsoft now supports two manifest formats:
   "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
   "manifestVersion": "devPreview",
   "id": "{{APP_GUID}}",
-  "name": { "short": "NDA Analyst", "full": "NDA Analyst for Word" },
+  "name": { "short": "VibeDocs", "full": "VibeDocs for Word" },
   "description": {
     "short": "Analyze NDAs directly in Word",
     "full": "Extract clauses, score risks, and identify missing protections in NDAs"
@@ -281,7 +281,7 @@ async function getAuthToken(): Promise<string> {
       forMSGraphAccess: false  // We want our own backend
     });
 
-    // Exchange Office token for NDA Analyst token
+    // Exchange Office token for VibeDocs token
     return await exchangeTokenWithBackend(token);
   } catch (error) {
     if (requiresFallback(error)) {
@@ -320,14 +320,14 @@ Required configuration for SSO:
 ```json
 {
   "appId": "your-app-guid",
-  "displayName": "NDA Analyst Word Add-in",
+  "displayName": "VibeDocs Word Add-in",
   "signInAudience": "AzureADandPersonalMicrosoftAccount",
   "api": {
     "oauth2PermissionScopes": [
       {
         "value": "access_as_user",
         "type": "User",
-        "userConsentDisplayName": "Access NDA Analyst"
+        "userConsentDisplayName": "Access VibeDocs"
       }
     ],
     "preAuthorizedApplications": [
@@ -345,7 +345,7 @@ Required configuration for SSO:
 
 ---
 
-## 4. Integration with NDA Analyst Backend
+## 4. Integration with VibeDocs Backend
 
 ### 4.1 New API Endpoints Required
 
@@ -444,7 +444,7 @@ ALTER TABLE documents ADD COLUMN word_document_url TEXT;
 
 ```
 ┌─────────────────────────────────────┐
-│  NDA Analyst                    [×] │
+│  VibeDocs                    [×] │
 ├─────────────────────────────────────┤
 │  ┌─────────────────────────────────┐│
 │  │ 📄 Analyze Current Document     ││
@@ -483,7 +483,7 @@ ALTER TABLE documents ADD COLUMN word_document_url TEXT;
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ Home  Insert  Design  Layout  References  │ NDA Analyst │    │
+│ Home  Insert  Design  Layout  References  │ VibeDocs │    │
 ├──────────────────────────────────────────────────────────────┤
 │  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐             │
 │  │   📊   │  │   🔍   │  │   📑   │  │   ⚙️   │             │
@@ -665,11 +665,11 @@ Options for hosting the add-in's web assets:
 
 | Option | Pros | Cons |
 |--------|------|------|
-| **Same Vercel as NDA Analyst** | Simple, unified | May need separate project |
+| **Same Vercel as VibeDocs** | Simple, unified | May need separate project |
 | **Azure Static Web Apps** | Microsoft ecosystem, CDN | Another platform |
 | **Cloudflare Pages** | Fast, free tier | Separate deployment |
 
-**Recommendation:** Host as a route within the existing NDA Analyst Next.js app:
+**Recommendation:** Host as a route within the existing VibeDocs Next.js app:
 
 ```
 app/
@@ -696,7 +696,7 @@ app/
 | **goHeather** | ✅ Native | AI review, redlining | $100+/mo |
 | **Ivo** | ✅ Native | Playbook matching | Enterprise |
 
-### 8.2 NDA Analyst Differentiators
+### 8.2 VibeDocs Differentiators
 
 1. **Open Source** - No vendor lock-in, transparent methodology
 2. **Evidence-Based** - Grounded in CUAD dataset with citations
@@ -705,7 +705,7 @@ app/
 
 ### 8.3 Feature Comparison
 
-| Feature | Spellbook | Kira | NDA Analyst (Proposed) |
+| Feature | Spellbook | Kira | VibeDocs (Proposed) |
 |---------|-----------|------|------------------------|
 | Clause extraction | ✅ | ✅ | ✅ |
 | Risk scoring | ✅ | ✅ | ✅ (with citations) |
@@ -734,11 +734,11 @@ app/
 
 ### Phase 2: Backend Integration (1-2 weeks)
 
-**Goal:** Connect add-in to NDA Analyst analysis pipeline
+**Goal:** Connect add-in to VibeDocs analysis pipeline
 
 - [ ] New API endpoints for Word Add-in
 - [ ] Authentication (SSO with Azure AD + fallback)
-- [ ] Token exchange between Office and NDA Analyst
+- [ ] Token exchange between Office and VibeDocs
 - [ ] Document submission to analysis pipeline
 - [ ] Progress tracking via SSE
 - [ ] Result fetching and display
@@ -857,7 +857,7 @@ app/
 | Differentiation | ✅ Open source + evidence-based |
 | Maintenance Burden | ⚠️ Ongoing but manageable |
 
-**Recommendation: GO** - The Word Add-in significantly enhances NDA Analyst's value proposition for lawyers who work directly in Word with contracts from opposing parties.
+**Recommendation: GO** - The Word Add-in significantly enhances VibeDocs's value proposition for lawyers who work directly in Word with contracts from opposing parties.
 
 ### 12.2 Implementation Strategy
 
@@ -881,7 +881,7 @@ app/
 
 1. **Scope:** Should the add-in support document generation, or analysis only?
 2. **Pricing:** Will there be a Word Add-in specific tier?
-3. **Branding:** Same branding as web app, or "NDA Analyst for Word"?
+3. **Branding:** Same branding as web app, or "VibeDocs for Word"?
 4. **Support:** Who handles Word-specific support issues?
 
 ---
@@ -976,7 +976,7 @@ export async function getAuthToken(): Promise<string> {
       allowConsentPrompt: true
     });
 
-    // Exchange for NDA Analyst token
+    // Exchange for VibeDocs token
     const response = await fetch(`${API_BASE}/api/word-addin/auth/exchange`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1087,7 +1087,7 @@ export function App() {
   return (
     <div className="taskpane">
       <header className="taskpane-header">
-        <h1>NDA Analyst</h1>
+        <h1>VibeDocs</h1>
       </header>
 
       <main className="taskpane-body">
@@ -1128,4 +1128,4 @@ export function App() {
 
 ---
 
-*Document generated from comprehensive research on Microsoft Word Add-in development for legal contract analysis integration with NDA Analyst.*
+*Document generated from comprehensive research on Microsoft Word Add-in development for legal contract analysis integration with VibeDocs.*

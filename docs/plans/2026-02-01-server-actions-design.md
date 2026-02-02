@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document defines the complete Server Actions API for the NDA Analyst application. Server Actions are the preferred pattern for UI-triggered operations, providing type-safe RPC with automatic revalidation.
+This document defines the complete Server Actions API for the VibeDocs application. Server Actions are the preferred pattern for UI-triggered operations, providing type-safe RPC with automatic revalidation.
 
 ### Design Principles
 

@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document defines advanced TypeScript patterns to improve type safety across the VibeDocs NDA Analyst codebase. The design prioritizes practical value over theoretical elegance, focusing on patterns that prevent real bugs.
+This document defines advanced TypeScript patterns to improve type safety across the VibeDocs VibeDocs codebase. The design prioritizes practical value over theoretical elegance, focusing on patterns that prevent real bugs.
 
 ## Areas Covered
 

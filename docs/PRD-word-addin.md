@@ -1,11 +1,11 @@
-# Product Requirements Document: NDA Analyst Word Add-in
+# Product Requirements Document: VibeDocs Word Add-in
 
-**Project Codename:** NDA Analyst for Word
+**Project Codename:** VibeDocs for Word
 **Version:** 1.0.0-draft
 **Last Updated:** February 2, 2026
 **Author:** Claude (AI Assistant)
 **Status:** Research Complete — Pre-Implementation
-**Parent PRD:** [NDA Analyst PRD](./PRD.md)
+**Parent PRD:** [VibeDocs PRD](./PRD.md)
 
 ---
 
@@ -40,9 +40,9 @@
 
 ## 1. Executive Summary
 
-NDA Analyst for Word is a Microsoft Word Add-in that brings NDA analysis capabilities directly into the lawyer's native document editing environment. When a lawyer receives a contract from opposing counsel as a Word document, they can analyze it in-place without leaving Word, exporting, or uploading to a separate web interface.
+VibeDocs for Word is a Microsoft Word Add-in that brings NDA analysis capabilities directly into the lawyer's native document editing environment. When a lawyer receives a contract from opposing counsel as a Word document, they can analyze it in-place without leaving Word, exporting, or uploading to a separate web interface.
 
-The add-in leverages the existing NDA Analyst backend infrastructure (Inngest pipelines, Claude API, Voyage AI embeddings, CUAD dataset) while providing a Word-native experience with content controls for clause marking, synchronized scrolling for clause navigation, and real-time progress updates during analysis.
+The add-in leverages the existing VibeDocs backend infrastructure (Inngest pipelines, Claude API, Voyage AI embeddings, CUAD dataset) while providing a Word-native experience with content controls for clause marking, synchronized scrolling for clause navigation, and real-time progress updates during analysis.
 
 ### Core Value Proposition
 
@@ -50,7 +50,7 @@ The add-in leverages the existing NDA Analyst backend infrastructure (Inngest pi
 
 ### Strategic Positioning
 
-This add-in transforms NDA Analyst from a standalone web tool into an integrated workflow solution. Lawyers spend 60%+ of their contract review time in Word; meeting them there reduces friction, increases adoption, and differentiates NDA Analyst from competitors that require document upload to separate platforms.
+This add-in transforms VibeDocs from a standalone web tool into an integrated workflow solution. Lawyers spend 60%+ of their contract review time in Word; meeting them there reduces friction, increases adoption, and differentiates VibeDocs from competitors that require document upload to separate platforms.
 
 ---
 
@@ -58,10 +58,10 @@ This add-in transforms NDA Analyst from a standalone web tool into an integrated
 
 ### Primary Problem
 
-Lawyers receive NDAs from opposing counsel as Microsoft Word documents (.docx). Their current workflow for using NDA Analyst requires:
+Lawyers receive NDAs from opposing counsel as Microsoft Word documents (.docx). Their current workflow for using VibeDocs requires:
 
 1. Save the Word document locally
-2. Open NDA Analyst web interface in browser
+2. Open VibeDocs web interface in browser
 3. Upload the document
 4. Wait for analysis
 5. View results in browser while switching back to Word to understand context
@@ -129,7 +129,7 @@ This context-switching workflow is friction-heavy and breaks the lawyer's concen
 Sarah reviews 20+ NDAs per month, primarily received as Word documents from opposing counsel. Her workflow is Word-centric: she redlines in Word, shares via Word, and archives Word files.
 
 **Current Pain:**
-- Opens NDA Analyst web interface → uploads DOCX → views results → switches back to Word → tries to remember which clause was flagged → manually adds comments
+- Opens VibeDocs web interface → uploads DOCX → views results → switches back to Word → tries to remember which clause was flagged → manually adds comments
 
 **With Word Add-in:**
 - Opens NDA in Word → clicks "Analyze" in ribbon → sees risk-highlighted clauses directly in document → clicks clause in task pane → document scrolls to clause → adds her own redline right there
@@ -137,7 +137,7 @@ Sarah reviews 20+ NDAs per month, primarily received as Word documents from oppo
 **Key Requirements:**
 - Must integrate into her existing Word workflow, not replace it
 - Needs to see analysis results alongside the document, not in a separate window
-- Wants to share annotated documents with colleagues who don't have NDA Analyst
+- Wants to share annotated documents with colleagues who don't have VibeDocs
 
 ### Secondary: Michael — BigLaw Associate
 
@@ -151,7 +151,7 @@ Michael works at a large law firm with strict IT policies. All software must be 
 **With Word Add-in:**
 - IT can deploy via Microsoft 365 Admin Center with one click
 - Authentication uses existing Azure AD/Entra credentials
-- Documents never leave the firm's environment (sent to NDA Analyst API, but not stored in third-party cloud storage the firm doesn't control)
+- Documents never leave the firm's environment (sent to VibeDocs API, but not stored in third-party cloud storage the firm doesn't control)
 
 **Key Requirements:**
 - Must be deployable via centralized deployment
@@ -164,7 +164,7 @@ Michael works at a large law firm with strict IT policies. All software must be 
 Alex receives NDAs occasionally (2-3 per month) and wants a quick sanity check. He's not a power user but wants minimal friction.
 
 **With Word Add-in:**
-- Receives NDA as email attachment → opens in Word → notices "NDA Analyst" tab → clicks "Analyze" → gets results in 60 seconds → makes informed decision
+- Receives NDA as email attachment → opens in Word → notices "VibeDocs" tab → clicks "Analyze" → gets results in 60 seconds → makes informed decision
 
 **Key Requirements:**
 - Must be discoverable (ribbon tab, not hidden in menus)
@@ -194,7 +194,7 @@ Alex receives NDAs occasionally (2-3 per month) and wants a quick sanity check. 
 | WA-008 | As a lawyer, I can see content controls marking each identified clause | P1 | Color-coded boxes around clause text in document |
 | WA-009 | As a lawyer, I can hover over a content control to see quick risk info | P1 | Tooltip shows: "Non-Compete · Aggressive · 92nd percentile duration" |
 | WA-010 | As a lawyer, content controls persist after I close/reopen the document | P2 | Reopening analyzed document shows saved content controls |
-| WA-011 | As a lawyer, I can clear all content controls added by NDA Analyst | P1 | "Clear Annotations" button removes all NDA Analyst markers |
+| WA-011 | As a lawyer, I can clear all content controls added by VibeDocs | P1 | "Clear Annotations" button removes all VibeDocs markers |
 
 ### Authentication
 
@@ -209,7 +209,7 @@ Alex receives NDAs occasionally (2-3 per month) and wants a quick sanity check. 
 
 | ID | Story | Priority | Acceptance Criteria |
 |----|-------|----------|---------------------|
-| WA-016 | As a user, I see an "NDA Analyst" tab in the Word ribbon | P1 | Custom ribbon tab with analysis commands |
+| WA-016 | As a user, I see an "VibeDocs" tab in the Word ribbon | P1 | Custom ribbon tab with analysis commands |
 | WA-017 | As a user, I can click "Analyze NDA" in the ribbon to start analysis | P1 | Single-click analysis initiation |
 | WA-018 | As a user, I can click "Show Task Pane" if I closed it | P1 | Toggle task pane visibility |
 | WA-019 | As a user, I can access settings from the ribbon | P2 | Settings gear → preferences dialog |
@@ -257,7 +257,7 @@ Alex receives NDAs occasionally (2-3 per month) and wants a quick sanity check. 
                                     │ HTTPS
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         NDA Analyst Backend (Vercel)                         │
+│                         VibeDocs Backend (Vercel)                         │
 │                                                                             │
 │  ┌─────────────────────────┐  ┌─────────────────────────────────────────┐  │
 │  │  Word Add-in API Routes │  │           Existing Infrastructure        │  │
@@ -502,7 +502,7 @@ async function navigateToClause(clauseId: string): Promise<void> {
 #### Clearing All Markers
 
 ```typescript
-async function clearAllNDAAnalystMarkers(): Promise<number> {
+async function clearAllVibeDocsMarkers(): Promise<number> {
   return Word.run(async (context) => {
     const contentControls = context.document.contentControls;
     contentControls.load("items");
@@ -716,7 +716,7 @@ async function authenticateWithSSO(): Promise<AuthResult> {
       forMSGraphAccess: false  // We're not calling MS Graph
     });
 
-    // Exchange Office token for NDA Analyst token
+    // Exchange Office token for VibeDocs token
     const response = await fetch(`${API_BASE}/api/word-addin/auth/exchange`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -842,17 +842,17 @@ Required app registration configuration:
 
 ```json
 {
-  "displayName": "NDA Analyst for Word",
+  "displayName": "VibeDocs for Word",
   "signInAudience": "AzureADandPersonalMicrosoftAccount",
   "api": {
     "requestedAccessTokenVersion": 2,
     "oauth2PermissionScopes": [
       {
         "id": "unique-guid-here",
-        "adminConsentDescription": "Allow the application to access NDA Analyst on behalf of the signed-in user.",
-        "adminConsentDisplayName": "Access NDA Analyst",
-        "userConsentDescription": "Allow the application to access NDA Analyst on your behalf.",
-        "userConsentDisplayName": "Access NDA Analyst",
+        "adminConsentDescription": "Allow the application to access VibeDocs on behalf of the signed-in user.",
+        "adminConsentDisplayName": "Access VibeDocs",
+        "userConsentDescription": "Allow the application to access VibeDocs on your behalf.",
+        "userConsentDisplayName": "Access VibeDocs",
         "isEnabled": true,
         "type": "User",
         "value": "access_as_user"
@@ -968,7 +968,7 @@ interface ProgressEvent {
 3. Content control title shows clause category
 4. Content control tag contains clause ID for lookup
 5. Clicking a clause in task pane scrolls document to that clause
-6. User can clear all NDA Analyst markers with one action
+6. User can clear all VibeDocs markers with one action
 7. Markers persist when document is saved and reopened
 
 **Technical Constraints:**
@@ -1057,15 +1057,15 @@ interface ClauseResult {
 
 ### F-WA-006: Ribbon Commands
 
-**Description:** Add NDA Analyst commands to the Word ribbon.
+**Description:** Add VibeDocs commands to the Word ribbon.
 
 **Acceptance Criteria:**
 
-1. New "NDA Analyst" tab in ribbon (or group in existing tab)
+1. New "VibeDocs" tab in ribbon (or group in existing tab)
 2. Commands:
    - **Analyze NDA:** Start analysis of current document
    - **Show Panel:** Toggle task pane visibility
-   - **Clear Markers:** Remove all NDA Analyst content controls
+   - **Clear Markers:** Remove all VibeDocs content controls
    - **Settings:** Open settings dialog
 3. Icons are clear and professional
 4. Keyboard shortcuts:
@@ -1205,7 +1205,7 @@ export async function POST(request: Request) {
     user = await createUserFromOffice(officeUser);
   }
 
-  // Generate NDA Analyst session token
+  // Generate VibeDocs session token
   const token = await createSessionToken(user);
 
   return successResponse({
@@ -1244,7 +1244,7 @@ import { authenticate } from "../helpers/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://nda-analyst.vercel.app";
 
-class NDAAnalystClient {
+class VibeDocsClient {
   private token: string | null = null;
 
   async ensureAuthenticated(): Promise<void> {
@@ -1314,7 +1314,7 @@ class NDAAnalystClient {
   }
 }
 
-export const apiClient = new NDAAnalystClient();
+export const apiClient = new VibeDocsClient();
 ```
 
 ---
@@ -1325,7 +1325,7 @@ export const apiClient = new NDAAnalystClient();
 
 ```
 ┌─────────────────────────────────────────┐
-│  NDA Analyst                    [≡] [×] │
+│  VibeDocs                    [≡] [×] │
 ├─────────────────────────────────────────┤
 │                                         │
 │  ┌─────────────────────────────────────┐│
@@ -1342,7 +1342,7 @@ export const apiClient = new NDAAnalystClient();
         ↓ After clicking Analyze ↓
 
 ┌─────────────────────────────────────────┐
-│  NDA Analyst                    [≡] [×] │
+│  VibeDocs                    [≡] [×] │
 ├─────────────────────────────────────────┤
 │                                         │
 │  Analyzing Document...                  │
@@ -1366,7 +1366,7 @@ export const apiClient = new NDAAnalystClient();
         ↓ After completion ↓
 
 ┌─────────────────────────────────────────┐
-│  NDA Analyst                    [≡] [×] │
+│  VibeDocs                    [≡] [×] │
 ├─────────────────────────────────────────┤
 │                                         │
 │  📊 OVERALL RISK                        │
@@ -1509,15 +1509,15 @@ export const apiClient = new NDAAnalystClient();
   "version": "1.0.0",
   "manifestVersion": "1.1",
   "name": {
-    "short": "NDA Analyst",
-    "full": "NDA Analyst for Microsoft Word"
+    "short": "VibeDocs",
+    "full": "VibeDocs for Microsoft Word"
   },
   "description": {
     "short": "Analyze NDAs for risks and missing clauses",
-    "full": "NDA Analyst brings AI-powered contract analysis directly into Microsoft Word. Identify risky clauses, missing protections, and get evidence-based recommendations without leaving your document."
+    "full": "VibeDocs brings AI-powered contract analysis directly into Microsoft Word. Identify risky clauses, missing protections, and get evidence-based recommendations without leaving your document."
   },
   "developer": {
-    "name": "NDA Analyst",
+    "name": "VibeDocs",
     "websiteUrl": "https://nda-analyst.vercel.app",
     "privacyUrl": "https://nda-analyst.vercel.app/privacy",
     "termsOfUseUrl": "https://nda-analyst.vercel.app/terms"
@@ -1586,8 +1586,8 @@ export const apiClient = new NDAAnalystClient();
               "builtInTabId": "TabHome",
               "groups": [
                 {
-                  "id": "NDAAnalystGroup",
-                  "label": "NDA Analyst",
+                  "id": "VibeDocsGroup",
+                  "label": "VibeDocs",
                   "icons": [
                     {
                       "size": 16,
@@ -1635,7 +1635,7 @@ export const apiClient = new NDAAnalystClient();
                       ],
                       "supertip": {
                         "title": "Show Analysis Panel",
-                        "description": "Open the NDA Analyst task pane to view analysis results."
+                        "description": "Open the VibeDocs task pane to view analysis results."
                       },
                       "actionId": "showTaskPane"
                     }
@@ -1667,9 +1667,9 @@ For environments that don't support the unified manifest:
 
   <Id>00000000-0000-0000-0000-000000000000</Id>
   <Version>1.0.0.0</Version>
-  <ProviderName>NDA Analyst</ProviderName>
+  <ProviderName>VibeDocs</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="NDA Analyst"/>
+  <DisplayName DefaultValue="VibeDocs"/>
   <Description DefaultValue="Analyze NDAs for risks and missing clauses"/>
 
   <IconUrl DefaultValue="https://nda-analyst.vercel.app/word-addin/assets/icon-32.png"/>
@@ -1708,7 +1708,7 @@ For environments that don't support the unified manifest:
           <FunctionFile resid="Commands.Url"/>
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
-              <Group id="NDAAnalystGroup">
+              <Group id="VibeDocsGroup">
                 <Label resid="Group.Label"/>
                 <Icon>
                   <bt:Image size="16" resid="Icon.16x16"/>
@@ -1771,7 +1771,7 @@ For environments that don't support the unified manifest:
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://nda-analyst.vercel.app/docs/word-addin"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="Group.Label" DefaultValue="NDA Analyst"/>
+        <bt:String id="Group.Label" DefaultValue="VibeDocs"/>
         <bt:String id="Analyze.Label" DefaultValue="Analyze NDA"/>
         <bt:String id="Analyze.Title" DefaultValue="Analyze NDA"/>
         <bt:String id="ShowPanel.Label" DefaultValue="Show Panel"/>
@@ -1780,7 +1780,7 @@ For environments that don't support the unified manifest:
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="Analyze.Description" DefaultValue="Extract clauses, assess risks, and identify missing protections."/>
-        <bt:String id="ShowPanel.Description" DefaultValue="Open the NDA Analyst task pane to view analysis results."/>
+        <bt:String id="ShowPanel.Description" DefaultValue="Open the VibeDocs task pane to view analysis results."/>
         <bt:String id="GetStarted.Description" DefaultValue="Click Analyze NDA to start analyzing the current document."/>
       </bt:LongStrings>
     </Resources>
@@ -2030,7 +2030,7 @@ For public distribution:
 
 ### 14.4 Hosting Configuration
 
-The add-in's web assets are hosted as part of the main NDA Analyst Next.js application:
+The add-in's web assets are hosted as part of the main VibeDocs Next.js application:
 
 ```
 app/
@@ -2083,14 +2083,14 @@ app/
 │  │  ─────────────────────────────────────────────────────   │   │
 │  │  • Document stays in user's environment                  │   │
 │  │  • Only text content extracted (not file itself)         │   │
-│  │  • No raw file upload to NDA Analyst servers             │   │
+│  │  • No raw file upload to VibeDocs servers             │   │
 │  └───────────────────────────┬─────────────────────────────┘   │
 │                              │                                  │
 │                              │ Extracted text only              │
 │                              │ (HTTPS/TLS 1.3)                  │
 │                              ▼                                  │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │  NDA Analyst API (Vercel)                               │   │
+│  │  VibeDocs API (Vercel)                               │   │
 │  │  ─────────────────────────────────────────────────────   │   │
 │  │  • Text stored in tenant-isolated database              │   │
 │  │  • Row-Level Security enforced                          │   │
@@ -2154,7 +2154,7 @@ This analysis is generated by AI and does not constitute legal advice.
 The information provided is for general informational purposes only.
 Consult a qualified attorney for legal guidance specific to your situation.
 
-NDA Analyst uses AI models that may make errors. Always verify important
+VibeDocs uses AI models that may make errors. Always verify important
 findings by reviewing the original document text.
 ```
 
@@ -2268,7 +2268,7 @@ test.describe("Word Add-in E2E", () => {
     // Open add-in (sideloaded for testing)
     await page.click("[data-testid='insert-tab']");
     await page.click("[data-testid='my-add-ins']");
-    await page.click("text=NDA Analyst");
+    await page.click("text=VibeDocs");
 
     // Wait for task pane
     await page.waitForSelector("[data-testid='taskpane']");
@@ -2445,7 +2445,7 @@ Same as web application:
 
 - [ ] Word Add-in project scaffolding (Yeoman + React + TypeScript)
 - [ ] Unified manifest with basic configuration
-- [ ] Task pane shell with NDA Analyst branding
+- [ ] Task pane shell with VibeDocs branding
 - [ ] Document text extraction via Office.js
 - [ ] Development environment with sideloading
 - [ ] Basic state management (Zustand)
@@ -2524,7 +2524,7 @@ Same as web application:
 
 **Rationale:**
 
-- NDA Analyst web app already uses React + shadcn/ui
+- VibeDocs web app already uses React + shadcn/ui
 - Consistent design language across web and add-in
 - Smaller bundle size (no Fluent UI dependency)
 - Team familiarity with existing component library
@@ -2566,7 +2566,7 @@ Same as web application:
 - TypeScript-first design
 - Small bundle size (~1KB)
 - Persist middleware for localStorage token storage
-- Already used in main NDA Analyst web app (consistency)
+- Already used in main VibeDocs web app (consistency)
 
 ### TDR-WA-004: Unified Manifest over XML
 
@@ -2638,9 +2638,9 @@ Same as web application:
 | **goHeather** | Native add-in | GPT-4 | $100+/mo | Consumer-friendly |
 | **Ivo** | Native add-in | Proprietary | Enterprise | Benchmark analysis |
 
-### 22.2 NDA Analyst Differentiators
+### 22.2 VibeDocs Differentiators
 
-| Feature | NDA Analyst | Competitors |
+| Feature | VibeDocs | Competitors |
 |---------|-------------|-------------|
 | **Open source** | ✅ Full codebase | ❌ All proprietary |
 | **Free tier** | ✅ Available | ❌ Limited/none |

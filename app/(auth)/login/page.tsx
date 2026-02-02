@@ -80,7 +80,7 @@ function LoginForm() {
       <motion.div variants={itemVariants} className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Welcome back</h1>
         <p className="text-muted-foreground">
-          Sign in to continue to NDA Analyst
+          Sign in to continue to VibeDocs
         </p>
       </motion.div>
 

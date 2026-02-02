@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-This plan outlines the path to SOC 2 Type I certification for NDA Analyst. Type I validates that security controls are *designed* correctly at a point in time. The scope includes Security (mandatory) and Confidentiality (relevant for legal document handling).
+This plan outlines the path to SOC 2 Type I certification for VibeDocs. Type I validates that security controls are *designed* correctly at a point in time. The scope includes Security (mandatory) and Confidentiality (relevant for legal document handling).
 
 **Key advantages:**
 - Managed infrastructure (Vercel, Neon) means inherited controls
@@ -53,7 +53,7 @@ Create these written policies. For a solo developer, each can be 2-5 pages.
 **Purpose:** Sets the tone and scope for the entire security program.
 
 **Contents:**
-- Scope: What systems and data are covered (NDA Analyst application, all user data)
+- Scope: What systems and data are covered (VibeDocs application, all user data)
 - Roles: Security responsibilities (you wear all hats as solo developer)
 - Principles: Defense in depth, least privilege, secure by default
 - References: Pointers to all other policies
@@ -93,7 +93,7 @@ Create these written policies. For a solo developer, each can be 2-5 pages.
 
 **Purpose:** Categorizes data and defines handling rules.
 
-**Classification levels for NDA Analyst:**
+**Classification levels for VibeDocs:**
 
 | Level | Description | Examples | Handling |
 |-------|-------------|----------|----------|

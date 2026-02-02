@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Set up Drizzle ORM, Auth.js v5, multi-tenant organizations, and testing infrastructure for NDA Analyst.
+**Goal:** Set up Drizzle ORM, Auth.js v5, multi-tenant organizations, and testing infrastructure for VibeDocs.
 
 **Architecture:** Single Neon database with schema separation (shared/tenant). Auth.js with database sessions. DAL pattern for tenant-scoped queries. PGlite for testing.
 

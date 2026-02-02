@@ -1,5 +1,5 @@
 /**
- * @fileoverview Multi-tenant organization schema for NDA Analyst
+ * @fileoverview Multi-tenant organization schema for VibeDocs
  *
  * This module defines the core multi-tenancy structure for the application.
  * Organizations serve as the primary tenant boundary, with all tenant-scoped

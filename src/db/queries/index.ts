@@ -1,7 +1,7 @@
 /**
  * Database Query Functions - Barrel Export
  *
- * This module consolidates all pre-built query functions for the NDA Analyst
+ * This module consolidates all pre-built query functions for the VibeDocs
  * application. Query functions provide a clean abstraction over raw Drizzle
  * queries with built-in tenant isolation and common patterns.
  *

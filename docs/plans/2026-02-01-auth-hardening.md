@@ -901,7 +901,7 @@ export default function SignupPage() {
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
         <CardDescription>
-          Enter your details to create your NDA Analyst account
+          Enter your details to create your VibeDocs account
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -1041,7 +1041,7 @@ export default function LoginPage() {
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
         <CardDescription>
-          Sign in to your NDA Analyst account
+          Sign in to your VibeDocs account
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

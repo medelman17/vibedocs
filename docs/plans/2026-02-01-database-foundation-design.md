@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document defines the database foundation for NDA Analyst, including Drizzle ORM setup, Auth.js integration, multi-tenancy with RLS, and testing infrastructure.
+This document defines the database foundation for VibeDocs, including Drizzle ORM setup, Auth.js integration, multi-tenancy with RLS, and testing infrastructure.
 
 ---
 

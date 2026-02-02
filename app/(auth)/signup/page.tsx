@@ -143,7 +143,7 @@ export default function SignupPage() {
       <motion.div variants={itemVariants} className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Create an account</h1>
         <p className="text-muted-foreground">
-          Get started with NDA Analyst today
+          Get started with VibeDocs today
         </p>
       </motion.div>
 

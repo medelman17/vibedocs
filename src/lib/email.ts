@@ -1,5 +1,5 @@
 /**
- * @fileoverview Email utilities for NDA Analyst using Resend
+ * @fileoverview Email utilities for VibeDocs using Resend
  *
  * This module provides email sending functionality for various application
  * events including organization invitations, password resets, and analysis
@@ -16,7 +16,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Email from address - use env var if available, otherwise default
 const FROM_ADDRESS =
-  process.env.EMAIL_FROM_ADDRESS || "NDA Analyst <noreply@ndaanalyst.com>"
+  process.env.EMAIL_FROM_ADDRESS || "VibeDocs <noreply@vibedocs.app>"
 
 // ============================================================================
 // Types
@@ -63,7 +63,7 @@ function generateInvitationEmail(data: {
 }): { subject: string; html: string; text: string } {
   const { inviterName, organizationName, inviteUrl } = data
 
-  const subject = `You've been invited to join ${organizationName} on NDA Analyst`
+  const subject = `You've been invited to join ${organizationName} on VibeDocs`
 
   const html = `
 <!DOCTYPE html>
@@ -77,10 +77,10 @@ function generateInvitationEmail(data: {
   <div style="background-color: #f8f9fa; border-radius: 8px; padding: 32px; margin-bottom: 24px;">
     <h1 style="margin: 0 0 16px; font-size: 24px; color: #111;">You're Invited!</h1>
     <p style="margin: 0 0 16px; font-size: 16px;">
-      <strong>${inviterName}</strong> has invited you to join <strong>${organizationName}</strong> on NDA Analyst.
+      <strong>${inviterName}</strong> has invited you to join <strong>${organizationName}</strong> on VibeDocs.
     </p>
     <p style="margin: 0 0 24px; font-size: 14px; color: #666;">
-      NDA Analyst helps legal teams analyze, compare, and generate NDAs with AI-powered insights.
+      VibeDocs helps legal teams analyze, compare, and generate NDAs with AI-powered insights.
     </p>
     <a href="${inviteUrl}" style="display: inline-block; background-color: #2563eb; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500; font-size: 16px;">
       Accept Invitation
@@ -94,7 +94,7 @@ function generateInvitationEmail(data: {
 `.trim()
 
   const text = `
-You've been invited to join ${organizationName} on NDA Analyst
+You've been invited to join ${organizationName} on VibeDocs
 
 ${inviterName} has invited you to join ${organizationName}.
 
@@ -115,7 +115,7 @@ function generatePasswordResetEmail(data: {
 }): { subject: string; html: string; text: string } {
   const { resetUrl, expiresIn } = data
 
-  const subject = "Reset your NDA Analyst password"
+  const subject = "Reset your VibeDocs password"
 
   const html = `
 <!DOCTYPE html>
@@ -146,7 +146,7 @@ function generatePasswordResetEmail(data: {
 `.trim()
 
   const text = `
-Reset your NDA Analyst password
+Reset your VibeDocs password
 
 We received a request to reset your password.
 
@@ -206,7 +206,7 @@ function generateAnalysisCompleteEmail(data: {
     </a>
   </div>
   <p style="font-size: 12px; color: #999; margin: 0;">
-    You received this email because you submitted a document for analysis on NDA Analyst.
+    You received this email because you submitted a document for analysis on VibeDocs.
   </p>
 </body>
 </html>
@@ -222,7 +222,7 @@ Overall Risk Assessment: ${riskLevel}
 
 View the full analysis at: ${analysisUrl}
 
-You received this email because you submitted a document for analysis on NDA Analyst.
+You received this email because you submitted a document for analysis on VibeDocs.
 `.trim()
 
   return { subject, html, text }
@@ -236,7 +236,7 @@ function generateWelcomeEmail(data: {
 }): { subject: string; html: string; text: string } {
   const { userName } = data
 
-  const subject = "Welcome to NDA Analyst"
+  const subject = "Welcome to VibeDocs"
   const greeting = userName ? `Hi ${userName},` : "Hi there,"
 
   const html = `
@@ -249,12 +249,12 @@ function generateWelcomeEmail(data: {
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background-color: #f8f9fa; border-radius: 8px; padding: 32px; margin-bottom: 24px;">
-    <h1 style="margin: 0 0 16px; font-size: 24px; color: #111;">Welcome to NDA Analyst!</h1>
+    <h1 style="margin: 0 0 16px; font-size: 24px; color: #111;">Welcome to VibeDocs!</h1>
     <p style="margin: 0 0 16px; font-size: 16px;">
       ${greeting}
     </p>
     <p style="margin: 0 0 16px; font-size: 16px;">
-      Thank you for signing up. NDA Analyst helps you analyze, compare, and generate NDAs with AI-powered insights.
+      Thank you for signing up. VibeDocs helps you analyze, compare, and generate NDAs with AI-powered insights.
     </p>
     <p style="margin: 0 0 24px; font-size: 14px; color: #666;">
       Get started by uploading your first NDA for analysis.
@@ -268,11 +268,11 @@ function generateWelcomeEmail(data: {
 `.trim()
 
   const text = `
-Welcome to NDA Analyst!
+Welcome to VibeDocs!
 
 ${greeting}
 
-Thank you for signing up. NDA Analyst helps you analyze, compare, and generate NDAs with AI-powered insights.
+Thank you for signing up. VibeDocs helps you analyze, compare, and generate NDAs with AI-powered insights.
 
 Get started by uploading your first NDA for analysis.
 
@@ -299,7 +299,7 @@ Need help? Reply to this email or check out our documentation.
  *   data: {
  *     inviterName: "John Doe",
  *     organizationName: "Acme Corp",
- *     inviteUrl: "https://app.ndaanalyst.com/invitations/abc123"
+ *     inviteUrl: "https://app.vibedocs.app/invitations/abc123"
  *   }
  * })
  */
@@ -369,7 +369,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<EmailResult>
  *   to: "newmember@example.com",
  *   inviterName: "John Doe",
  *   organizationName: "Acme Corp",
- *   inviteUrl: "https://app.ndaanalyst.com/invitations/abc123"
+ *   inviteUrl: "https://app.vibedocs.app/invitations/abc123"
  * })
  */
 export async function sendInvitationEmail(params: {
@@ -400,7 +400,7 @@ export async function sendInvitationEmail(params: {
  * @example
  * await sendPasswordResetEmail({
  *   to: "user@example.com",
- *   resetUrl: "https://app.ndaanalyst.com/reset-password?token=abc123",
+ *   resetUrl: "https://app.vibedocs.app/reset-password?token=abc123",
  *   expiresIn: "1 hour"
  * })
  */
@@ -431,7 +431,7 @@ export async function sendPasswordResetEmail(params: {
  * await sendAnalysisCompleteEmail({
  *   to: "user@example.com",
  *   documentTitle: "Vendor NDA - Acme Corp",
- *   analysisUrl: "https://app.ndaanalyst.com/analyses/abc123",
+ *   analysisUrl: "https://app.vibedocs.app/analyses/abc123",
  *   riskLevel: "cautious"
  * })
  */

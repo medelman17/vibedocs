@@ -1,7 +1,7 @@
 /**
  * @fileoverview Document storage and chunking schema for NDA analysis pipeline.
  *
- * This module defines the core document storage tables for the NDA Analyst application.
+ * This module defines the core document storage tables for the VibeDocs application.
  * It handles both the raw uploaded documents and their processed chunks used for
  * vector similarity search and clause extraction.
  *
@@ -46,7 +46,7 @@ import { users } from "./auth"
 /**
  * Documents table storing uploaded NDA files and their processing state.
  *
- * This is the primary table for document management in the NDA Analyst application.
+ * This is the primary table for document management in the VibeDocs application.
  * Each record represents a single uploaded document (typically PDF or DOCX) and tracks
  * its journey through the analysis pipeline.
  *

@@ -1,7 +1,7 @@
 /**
  * @fileoverview Vector Similarity Search Layer for NDA Analysis
  *
- * This module provides the core vector similarity search functionality for the NDA Analyst
+ * This module provides the core vector similarity search functionality for the VibeDocs
  * application, enabling semantic search across document chunks and reference corpora using
  * pgvector's HNSW-indexed cosine distance operations.
  *

@@ -36,7 +36,7 @@ A specialized agent for reviewing code changes for security vulnerabilities, wit
 
 ## Focus Areas for This Project
 
-Based on the NDA Analyst architecture:
+Based on the VibeDocs architecture:
 
 1. **Document uploads**: Validate file types, scan for malicious content
 2. **Analysis results**: Ensure tenant isolation in analysis storage

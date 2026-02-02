@@ -2,7 +2,7 @@
 
 **Date:** February 2, 2026
 **Subject:** Exhaustive competitive research on Spellbook (spellbook.legal)
-**Purpose:** Inform NDA Analyst Word Add-in strategy and positioning
+**Purpose:** Inform VibeDocs Word Add-in strategy and positioning
 
 ---
 
@@ -17,7 +17,7 @@
 7. [Market Position](#7-market-position)
 8. [Strengths & Weaknesses](#8-strengths--weaknesses)
 9. [User Feedback Analysis](#9-user-feedback-analysis)
-10. [Competitive Implications for NDA Analyst](#10-competitive-implications-for-nda-analyst)
+10. [Competitive Implications for VibeDocs](#10-competitive-implications-for-nda-analyst)
 11. [Feature Comparison Matrix](#11-feature-comparison-matrix)
 12. [Strategic Recommendations](#12-strategic-recommendations)
 13. [Sources](#13-sources)
@@ -45,9 +45,9 @@
 
 Spellbook positions itself as "the most complete legal AI suite for commercial lawyers" with a "Cursor for contracts" analogy. Their core differentiator is **deep Microsoft Word integration** combined with **preference learning** that adapts to each lawyer's style.
 
-### Implications for NDA Analyst
+### Implications for VibeDocs
 
-Spellbook is a formidable competitor with significant funding, market traction, and a comprehensive feature set. However, their focus on general commercial contracts (not NDA-specific), closed-source methodology, and premium pricing ($179+/user/month) creates opportunities for NDA Analyst to differentiate through:
+Spellbook is a formidable competitor with significant funding, market traction, and a comprehensive feature set. However, their focus on general commercial contracts (not NDA-specific), closed-source methodology, and premium pricing ($179+/user/month) creates opportunities for VibeDocs to differentiate through:
 
 1. **NDA specialization** with evidence-based analysis
 2. **Open-source transparency**
@@ -460,7 +460,7 @@ Spellbook uses **custom quote-based pricing** without public price tiers.
 
 ### Weaknesses
 
-| Weakness | Opportunity for NDA Analyst |
+| Weakness | Opportunity for VibeDocs |
 |----------|----------------------------|
 | **Opaque pricing** | Transparent, accessible pricing |
 | **General-purpose LLMs** | NDA-specialized models/data |
@@ -530,11 +530,11 @@ Spellbook uses **custom quote-based pricing** without public price tiers.
 
 ---
 
-## 10. Competitive Implications for NDA Analyst
+## 10. Competitive Implications for VibeDocs
 
 ### Where Spellbook is Strong (Avoid Head-to-Head)
 
-| Spellbook Strength | NDA Analyst Strategy |
+| Spellbook Strength | VibeDocs Strategy |
 |--------------------|---------------------|
 | General contract coverage | Focus on NDA depth |
 | Enterprise sales motion | Community/PLG motion |
@@ -542,9 +542,9 @@ Spellbook uses **custom quote-based pricing** without public price tiers.
 | $80M funding | Capital-efficient growth |
 | Preference learning | Evidence-based consistency |
 
-### Where NDA Analyst Can Win
+### Where VibeDocs Can Win
 
-| NDA Analyst Advantage | How to Leverage |
+| VibeDocs Advantage | How to Leverage |
 |----------------------|-----------------|
 | **NDA Specialization** | Deep CUAD taxonomy, NDA-specific benchmarks |
 | **Evidence Citations** | Every finding backed by corpus data |
@@ -564,9 +564,9 @@ Spellbook uses **custom quote-based pricing** without public price tiers.
 
 ### Feature Parity Requirements (MVP)
 
-To be competitive with Spellbook's Word add-in, NDA Analyst needs:
+To be competitive with Spellbook's Word add-in, VibeDocs needs:
 
-| Feature | Spellbook | NDA Analyst MVP | Priority |
+| Feature | Spellbook | VibeDocs MVP | Priority |
 |---------|-----------|-----------------|----------|
 | Clause extraction | Yes | Yes | P0 |
 | Risk scoring | Yes | Yes | P0 |
@@ -584,7 +584,7 @@ To be competitive with Spellbook's Word add-in, NDA Analyst needs:
 
 ### Differentiation Matrix
 
-| Dimension | Spellbook | NDA Analyst |
+| Dimension | Spellbook | VibeDocs |
 |-----------|-----------|-------------|
 | **Focus** | All commercial contracts | NDAs specifically |
 | **AI Model** | GPT-5 (general) | Claude + RAG (legal corpus) |
@@ -600,10 +600,10 @@ To be competitive with Spellbook's Word add-in, NDA Analyst needs:
 
 ### Core Features
 
-| Feature | Spellbook | NDA Analyst (Planned) | Notes |
+| Feature | Spellbook | VibeDocs (Planned) | Notes |
 |---------|-----------|----------------------|-------|
 | **Clause Extraction** | Yes | Yes | Both extract clauses |
-| **CUAD Categories** | Generic | Yes (41 categories) | NDA Analyst uses standard taxonomy |
+| **CUAD Categories** | Generic | Yes (41 categories) | VibeDocs uses standard taxonomy |
 | **Risk Scoring** | Yes | Yes | Different methodologies |
 | **Evidence Citations** | No | Yes | Key differentiator |
 | **Gap Analysis** | Yes | Yes | Missing clause detection |
@@ -613,7 +613,7 @@ To be competitive with Spellbook's Word add-in, NDA Analyst needs:
 
 ### Word Integration
 
-| Feature | Spellbook | NDA Analyst (Planned) | Notes |
+| Feature | Spellbook | VibeDocs (Planned) | Notes |
 |---------|-----------|----------------------|-------|
 | **Task Pane** | Yes | Yes | Primary UI surface |
 | **Ribbon Commands** | Yes | Yes | Quick access buttons |
@@ -624,7 +624,7 @@ To be competitive with Spellbook's Word add-in, NDA Analyst needs:
 
 ### AI Capabilities
 
-| Feature | Spellbook | NDA Analyst (Planned) | Notes |
+| Feature | Spellbook | VibeDocs (Planned) | Notes |
 |---------|-----------|----------------------|-------|
 | **Model** | GPT-5 | Claude Sonnet | Different providers |
 | **RAG** | Limited (Library) | Full corpus RAG | Key architecture difference |
@@ -634,7 +634,7 @@ To be competitive with Spellbook's Word add-in, NDA Analyst needs:
 
 ### Business Features
 
-| Feature | Spellbook | NDA Analyst (Planned) | Notes |
+| Feature | Spellbook | VibeDocs (Planned) | Notes |
 |---------|-----------|----------------------|-------|
 | **Free Tier** | 7-day trial | Yes (permanent) | Accessibility |
 | **Open Source** | No | Yes | Transparency |

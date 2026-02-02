@@ -5,7 +5,7 @@
  *
  * This module provides utilities for file storage using Vercel Blob.
  * All functions are server-only and handle document uploads, deletions,
- * and metadata retrieval for the NDA Analyst application.
+ * and metadata retrieval for the VibeDocs application.
  *
  * @module src/lib/blob
  */

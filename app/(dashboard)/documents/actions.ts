@@ -3,7 +3,7 @@
 /**
  * @fileoverview Document Server Actions
  *
- * This module provides Server Actions for document management in the NDA Analyst
+ * This module provides Server Actions for document management in the VibeDocs
  * application. All actions enforce tenant isolation via the DAL's `withTenant()`.
  *
  * @module app/(dashboard)/documents/actions

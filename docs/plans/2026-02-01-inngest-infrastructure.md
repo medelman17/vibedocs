@@ -47,7 +47,7 @@ This plan establishes the core Inngest infrastructure:
 /**
  * @fileoverview Inngest Event Type Definitions
  *
- * Defines all event schemas for the NDA Analyst durable workflow system.
+ * Defines all event schemas for the VibeDocs durable workflow system.
  * Events follow the naming convention: `nda/<domain>.<action>`
  *
  * All events are validated at runtime using Zod schemas before processing.
@@ -163,7 +163,7 @@ export const embeddingsGeneratePayload = z.object({
 })
 
 /**
- * All Inngest event types for the NDA Analyst application.
+ * All Inngest event types for the VibeDocs application.
  */
 export type InngestEvents = {
   "nda/document.uploaded": {
@@ -216,7 +216,7 @@ export const eventSchemas = {
 /**
  * @fileoverview Inngest Client Configuration
  *
- * Singleton Inngest client instance for the NDA Analyst application.
+ * Singleton Inngest client instance for the VibeDocs application.
  * All durable workflow functions are created using this client.
  *
  * @module inngest/client
@@ -227,7 +227,7 @@ import { Inngest, EventSchemas } from "inngest"
 import type { InngestEvents } from "./types"
 
 /**
- * Inngest client instance configured for the NDA Analyst application.
+ * Inngest client instance configured for the VibeDocs application.
  *
  * Features:
  * - Type-safe event schemas via InngestEvents

@@ -17,7 +17,7 @@
 ## Section 1: Header & First Impression
 
 ```markdown
-# NDA Analyst
+# VibeDocs
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/)

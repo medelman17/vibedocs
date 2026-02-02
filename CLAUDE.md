@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NDA Analyst is an LLM-powered NDA analysis tool. See `docs/PRD.md` for full specification.
+VibeDocs is an LLM-powered NDA analysis tool. See `docs/PRD.md` for full specification.
 
 Core features: upload NDAs → clause extraction (CUAD 41-category taxonomy) → risk scoring with cited evidence → gap analysis → side-by-side comparison → NDA generation from templates.
 
