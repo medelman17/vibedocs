@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { AppError, isAppError, toAppError, type SerializedError } from "./errors"
+import { AppError, toAppError, type SerializedError } from "./errors"
 
 /**
  * Standard API response shape for all endpoints.

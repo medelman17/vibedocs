@@ -136,7 +136,10 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 - Use `withTenant()` for tenant-scoped queries (sets RLS context)
 - Use `requireRole(["owner", "admin"])` for role-based access
 - Password utilities: `hashPassword()`, `verifyPassword()`, `validatePassword()`
-- **Zod 4**: Use `parsed.error.issues[0]` not `parsed.error.errors[0]` for safeParse errors
+- **Zod 4 Compatibility** (IMPORTANT):
+  - Use `.issues` not `.errors` for error arrays: `parsed.error.issues[0]`
+  - `ValidationError.fromZodError()` expects `{ issues: [...] }` not `{ errors: [...] }`
+  - Zod 4 renamed `ZodError.errors` → `ZodError.issues` for clarity
 
 ### Error Handling
 - Use custom errors from `src/lib/errors.ts`: `NotFoundError`, `ValidationError`, `ForbiddenError`, etc.

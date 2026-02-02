@@ -21,9 +21,14 @@ export type ErrorCode =
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "CONFLICT"
+  | "DUPLICATE"
   | "RATE_LIMITED"
   | "INTERNAL_ERROR"
   | "SERVICE_UNAVAILABLE"
+  // Domain-specific error codes for NDA analysis pipeline
+  | "ANALYSIS_FAILED"
+  | "EMBEDDING_FAILED"
+  | "LLM_FAILED"
 
 export interface ErrorDetail {
   field?: string
@@ -82,8 +87,8 @@ export class ValidationError extends AppError {
     super("VALIDATION_ERROR", message, 400, details)
   }
 
-  static fromZodError(error: { errors: Array<{ path: (string | number)[]; message: string }> }): ValidationError {
-    const details = error.errors.map((e) => ({
+  static fromZodError(error: { issues: Array<{ path: (string | number)[]; message: string }> }): ValidationError {
+    const details = error.issues.map((e) => ({
       field: e.path.join("."),
       message: e.message,
     }))
@@ -154,6 +159,42 @@ export class InternalError extends AppError {
 export class ServiceUnavailableError extends AppError {
   constructor(message = "Service temporarily unavailable") {
     super("SERVICE_UNAVAILABLE", message, 503)
+  }
+}
+
+/**
+ * 409 Duplicate - Resource already exists (more specific than Conflict)
+ */
+export class DuplicateError extends AppError {
+  constructor(message = "Resource already exists") {
+    super("DUPLICATE", message, 409)
+  }
+}
+
+/**
+ * 500 Analysis Failed - NDA analysis pipeline error
+ */
+export class AnalysisFailedError extends AppError {
+  constructor(message = "Analysis failed", details?: ErrorDetail[]) {
+    super("ANALYSIS_FAILED", message, 500, details)
+  }
+}
+
+/**
+ * 500 Embedding Failed - Vector embedding generation error
+ */
+export class EmbeddingFailedError extends AppError {
+  constructor(message = "Embedding generation failed") {
+    super("EMBEDDING_FAILED", message, 500)
+  }
+}
+
+/**
+ * 500 LLM Failed - Language model API error
+ */
+export class LlmFailedError extends AppError {
+  constructor(message = "Language model request failed") {
+    super("LLM_FAILED", message, 500)
   }
 }
 
