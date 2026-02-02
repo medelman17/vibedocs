@@ -186,8 +186,8 @@ export default function Home() {
                   className="group relative overflow-hidden rounded-full p-[1px] transition-all duration-500"
                   style={{
                     background: isHovering
-                      ? "linear-gradient(135deg, oklch(0.55 0.15 55) 0%, oklch(0.45 0.12 70) 100%)"
-                      : "oklch(0.85 0.03 60)",
+                      ? "linear-gradient(135deg, oklch(0.55 0.24 293) 0%, oklch(0.60 0.16 175) 100%)"
+                      : "oklch(0.90 0.02 293)",
                   }}
                 >
                   <div className="relative flex items-center rounded-full bg-white/90 backdrop-blur-sm">
@@ -197,10 +197,10 @@ export default function Home() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
                       required
-                      className="flex-1 bg-transparent px-6 py-4 text-base outline-none placeholder:text-[oklch(0.60_0.02_50)]"
+                      className="flex-1 bg-transparent px-6 py-4 text-base outline-none placeholder:text-[oklch(0.60_0.01_280)]"
                       style={{
-                        fontFamily: "var(--font-body)",
-                        color: "oklch(0.25 0.03 50)",
+                        fontFamily: "var(--font-geist-sans)",
+                        color: "oklch(0.20 0.02 280)",
                       }}
                       onFocus={() => setIsHovering(true)}
                       onBlur={() => setIsHovering(false)}
@@ -210,9 +210,9 @@ export default function Home() {
                       disabled={isSubmitting}
                       className="m-1.5 rounded-full px-6 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
                       style={{
-                        fontFamily: "var(--font-body)",
-                        background: "linear-gradient(135deg, oklch(0.45 0.12 55) 0%, oklch(0.35 0.10 50) 100%)",
-                        boxShadow: "0 2px 12px oklch(0.35 0.10 50 / 0.3)",
+                        fontFamily: "var(--font-geist-sans)",
+                        background: "linear-gradient(135deg, oklch(0.50 0.24 293) 0%, oklch(0.55 0.18 200) 100%)",
+                        boxShadow: "0 2px 12px oklch(0.45 0.20 293 / 0.3)",
                       }}
                       onMouseEnter={() => setIsHovering(true)}
                       onMouseLeave={() => setIsHovering(false)}
@@ -226,7 +226,7 @@ export default function Home() {
                   <p
                     className="mt-4 text-sm"
                     style={{
-                      fontFamily: "var(--font-body)",
+                      fontFamily: "var(--font-geist-sans)",
                       color: "oklch(0.55 0.20 25)",
                     }}
                   >
@@ -236,8 +236,8 @@ export default function Home() {
                   <p
                     className="mt-4 text-sm"
                     style={{
-                      fontFamily: "var(--font-body)",
-                      color: "oklch(0.55 0.02 50)",
+                      fontFamily: "var(--font-geist-sans)",
+                      color: "oklch(0.55 0.01 280)",
                     }}
                   >
                     No spam, ever. Unsubscribe anytime.
