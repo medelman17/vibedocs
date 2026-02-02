@@ -10,17 +10,10 @@ import { db } from "@/db"
 import { sessions, users, organizationMembers } from "@/db/schema"
 import { eq, and, gt } from "drizzle-orm"
 import { ForbiddenError, UnauthorizedError } from "./errors"
+import type { AddInAuthContext, OrgRole, TenantContext } from "@/types/word-addin"
 
-interface AddInAuthContext {
-  userId: string
-  user: {
-    id: string
-    email: string
-    name: string | null
-  }
-  tenantId: string | null
-  role: string | null
-}
+// Re-export types for convenience
+export type { AddInAuthContext, OrgRole, TenantContext }
 
 /**
  * Extracts the Bearer token from an Authorization header
@@ -70,8 +63,7 @@ export async function verifyAddInAuth(request: Request): Promise<AddInAuthContex
   }
 
   // Get tenant context (if activeOrganizationId is set)
-  let tenantId: string | null = null
-  let role: string | null = null
+  let tenant: TenantContext = { tenantId: null, role: null }
 
   if (session.activeOrganizationId) {
     const membership = await db.query.organizationMembers.findFirst({
@@ -82,8 +74,10 @@ export async function verifyAddInAuth(request: Request): Promise<AddInAuthContex
     })
 
     if (membership) {
-      tenantId = session.activeOrganizationId
-      role = membership.role
+      tenant = {
+        tenantId: session.activeOrganizationId,
+        role: membership.role as OrgRole,
+      }
     }
   }
 
@@ -94,8 +88,7 @@ export async function verifyAddInAuth(request: Request): Promise<AddInAuthContex
       email: user.email,
       name: user.name,
     },
-    tenantId,
-    role,
+    tenant,
   }
 }
 
@@ -107,7 +100,7 @@ export async function verifyAddInAuth(request: Request): Promise<AddInAuthContex
  * ```typescript
  * export async function GET(request: Request) {
  *   return withAddInAuth(request, async (authContext) => {
- *     // authContext.userId, authContext.tenantId are available
+ *     // authContext.userId, authContext.tenant.tenantId are available
  *     return Response.json({ data: "..." })
  *   })
  * }

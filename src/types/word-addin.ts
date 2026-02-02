@@ -80,18 +80,45 @@ export type AnalysisStatus =
   | "completed"
   | "failed";
 
-// Tenant context - discriminated union for type safety
+// =============================================================================
+// Auth Context Types
+// =============================================================================
+
+// Organization roles
+export type OrgRole = "owner" | "admin" | "member" | "viewer";
+
+// Server-side tenant context - discriminated union for type safety
+// Used by API routes and auth utilities
 export type TenantContext =
+  | { tenantId: null; role: null }
+  | { tenantId: string; role: OrgRole };
+
+// Server-side auth context (verified, non-null user)
+// Returned by verifyAddInAuth() after successful authentication
+export interface AddInAuthContext {
+  userId: string;
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+  };
+  tenant: TenantContext;
+}
+
+// Client-side tenant context for UI state
+// Used by stores and components
+export type ClientTenantContext =
   | { hasTenant: true; tenantId: string; tenantName: string }
   | { hasTenant: false; tenantId: null; tenantName: null };
 
-// Auth context for Word Add-in
-export interface AddInAuthContext {
+// Client-side auth context for UI state
+// Used by auth store for tracking authentication state
+export interface ClientAuthContext {
   isAuthenticated: boolean;
   userId: string | null;
   userEmail: string | null;
   userName: string | null;
-  tenant: TenantContext;
+  tenant: ClientTenantContext;
 }
 
 // Auth dialog result - discriminated union
