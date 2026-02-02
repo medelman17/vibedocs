@@ -98,7 +98,8 @@ export type ClauseMetadata = z.infer<typeof clauseMetadataSchema>
 
 /**
  * Risk level for clauses and documents.
+ * Uses PRD-aligned values (not low/medium/high).
  */
-export const riskLevelSchema = z.enum(["low", "medium", "high", "critical"])
+export const riskLevelSchema = z.enum(["standard", "cautious", "aggressive", "unknown"])
 
 export type RiskLevel = z.infer<typeof riskLevelSchema>

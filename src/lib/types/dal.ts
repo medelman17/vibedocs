@@ -20,10 +20,11 @@ export type Role = (typeof ROLES)[number]
 
 /**
  * Session user shape from Auth.js.
+ * Matches the augmented Session type in auth.ts.
  */
 export interface SessionUser {
   id: string
-  email?: string | null
+  email: string // Required after session verification (matches auth.ts)
   name?: string | null
   image?: string | null
 }
