@@ -3,7 +3,7 @@ import "@/app/(main)/globals.css"
 import { Providers } from "./word-addin/providers"
 
 export const metadata: Metadata = {
-  title: "NDA Analyst - Word Add-in",
+  title: "VibeDocs - Word Add-in",
   description: "Analyze NDAs directly in Microsoft Word",
 }
 

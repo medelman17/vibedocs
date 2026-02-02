@@ -9,7 +9,7 @@
   <Version>1.0.0.0</Version>
   <ProviderName>VibeDocs</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="NDA Analyst"/>
+  <DisplayName DefaultValue="VibeDocs"/>
   <Description DefaultValue="Analyze NDAs for risks and missing clauses"/>
 
   <IconUrl DefaultValue="https://localhost:3000/word-addin/assets/icon-32.png"/>
@@ -88,8 +88,8 @@
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://localhost:3000"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="Get started with NDA Analyst"/>
-        <bt:String id="CommandsGroup.Label" DefaultValue="NDA Analyst"/>
+        <bt:String id="GetStarted.Title" DefaultValue="Get started with VibeDocs"/>
+        <bt:String id="CommandsGroup.Label" DefaultValue="VibeDocs"/>
         <bt:String id="TaskpaneButton.Label" DefaultValue="Analyze NDA"/>
       </bt:ShortStrings>
       <bt:LongStrings>

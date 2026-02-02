@@ -4,8 +4,8 @@
   "id": "7c39cc9c-6bb3-40b8-949b-a0f8e7d641fb",
   "version": "1.0.0",
   "name": {
-    "short": "NDA Analyst",
-    "full": "NDA Analyst for Word"
+    "short": "VibeDocs",
+    "full": "VibeDocs for Word"
   },
   "description": {
     "short": "Analyze NDAs for risks and missing clauses",
@@ -68,7 +68,7 @@
               "groups": [
                 {
                   "id": "NDAAnalystGroup",
-                  "label": "NDA Analyst",
+                  "label": "VibeDocs",
                   "controls": [
                     {
                       "id": "AnalyzeButton",

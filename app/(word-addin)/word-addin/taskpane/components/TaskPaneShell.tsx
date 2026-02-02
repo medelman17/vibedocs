@@ -21,7 +21,7 @@ export function TaskPaneShell({ children }: TaskPaneShellProps) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <FileText className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="font-semibold">NDA Analyst</span>
+          <span className="font-semibold">VibeDocs</span>
         </div>
         <Button variant="ghost" size="icon" className="h-8 w-8">
           <Settings className="h-4 w-4" />

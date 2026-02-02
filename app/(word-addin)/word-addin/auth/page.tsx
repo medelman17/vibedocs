@@ -49,7 +49,7 @@ export default function WordAddInAuthPage() {
       <div className="w-full max-w-sm space-y-6 text-center">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Sign in to NDA Analyst
+            Sign in to VibeDocs
           </h1>
           <p className="text-sm text-muted-foreground">
             Connect your account to analyze documents
