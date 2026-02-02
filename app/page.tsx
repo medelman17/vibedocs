@@ -115,22 +115,22 @@ export default function Home() {
               <div
                 className="absolute inset-0 rounded-lg"
                 style={{
-                  background: "linear-gradient(135deg, oklch(0.45 0.12 55) 0%, oklch(0.35 0.10 45) 100%)",
+                  background: "linear-gradient(135deg, oklch(0.50 0.24 293) 0%, oklch(0.40 0.20 293) 100%)",
                 }}
               />
               <div className="absolute inset-[3px] rounded-md bg-gradient-to-br from-white/90 to-white/70" />
               <div
                 className="absolute inset-[6px] rounded"
                 style={{
-                  background: "linear-gradient(135deg, oklch(0.55 0.14 60) 0%, oklch(0.45 0.12 50) 100%)",
+                  background: "linear-gradient(135deg, oklch(0.60 0.20 293) 0%, oklch(0.50 0.18 293) 100%)",
                 }}
               />
             </div>
             <span
-              className="text-xl tracking-[0.2em] uppercase"
+              className="text-xl tracking-wide uppercase"
               style={{
-                fontFamily: "var(--font-body)",
-                color: "oklch(0.35 0.05 50)",
+                fontFamily: "var(--font-geist-sans)",
+                color: "oklch(0.35 0.02 280)",
                 fontWeight: 500,
               }}
             >
