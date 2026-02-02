@@ -18,7 +18,8 @@ import { referenceDocuments, referenceEmbeddings } from "./reference"
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
-  organizationMemberships: many(organizationMembers),
+  organizationMemberships: many(organizationMembers, { relationName: "member" }),
+  invitedMemberships: many(organizationMembers, { relationName: "inviter" }),
   uploadedDocuments: many(documents),
   generatedNdas: many(generatedNdas),
 }))
@@ -60,6 +61,7 @@ export const organizationMembersRelations = relations(
     user: one(users, {
       fields: [organizationMembers.userId],
       references: [users.id],
+      relationName: "member",
     }),
     inviter: one(users, {
       fields: [organizationMembers.invitedBy],
