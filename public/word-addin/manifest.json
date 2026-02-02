@@ -21,7 +21,7 @@
     "outline": "assets/icon-outline.png",
     "color": "assets/icon-color.png"
   },
-  "accentColor": "#22c55e",
+  "accentColor": "#8b5cf6",
   "authorization": {
     "permissions": {
       "resourceSpecific": [
@@ -34,7 +34,8 @@
   },
   "validDomains": [
     "vdocs.edel.sh",
-    "localhost:3000"
+    "localhost:3000",
+    "*.vercel.app"
   ],
   "extensions": [
     {
@@ -53,7 +54,7 @@
           "id": "TaskPaneRuntime",
           "type": "general",
           "code": {
-            "page": "https://vdocs.edel.sh/word-addin/taskpane"
+            "page": "https://localhost:3000/word-addin/taskpane"
           },
           "lifetime": "short"
         }
@@ -76,15 +77,15 @@
                       "icons": [
                         {
                           "size": 16,
-                          "url": "https://vdocs.edel.sh/word-addin/assets/icon-16.png"
+                          "url": "https://localhost:3000/word-addin/assets/icon-16.png"
                         },
                         {
                           "size": 32,
-                          "url": "https://vdocs.edel.sh/word-addin/assets/icon-32.png"
+                          "url": "https://localhost:3000/word-addin/assets/icon-32.png"
                         },
                         {
                           "size": 80,
-                          "url": "https://vdocs.edel.sh/word-addin/assets/icon-80.png"
+                          "url": "https://localhost:3000/word-addin/assets/icon-80.png"
                         }
                       ],
                       "supertip": {
