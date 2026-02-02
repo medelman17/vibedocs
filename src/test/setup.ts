@@ -111,7 +111,162 @@ const createSchema = async () => {
       error_message TEXT,
       metadata JSONB DEFAULT '{}',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      deleted_at TIMESTAMPTZ
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS document_chunks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL,
+      document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+      chunk_index INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      section_path TEXT[],
+      embedding TEXT,
+      token_count INTEGER,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE(document_id, chunk_index)
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS analyses (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL,
+      document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'pending',
+      overall_risk_score REAL,
+      overall_risk_level TEXT,
+      summary TEXT,
+      gap_analysis JSONB,
+      token_usage JSONB,
+      processing_time_ms INTEGER,
+      inngest_run_id TEXT,
+      completed_at TIMESTAMPTZ,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS clause_extractions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL,
+      analysis_id UUID NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+      document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+      chunk_id UUID REFERENCES document_chunks(id),
+      category TEXT NOT NULL,
+      secondary_categories TEXT[],
+      clause_text TEXT NOT NULL,
+      start_position INTEGER,
+      end_position INTEGER,
+      confidence REAL NOT NULL,
+      risk_level TEXT NOT NULL,
+      risk_explanation TEXT,
+      evidence JSONB,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS comparisons (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL,
+      document_a_id UUID NOT NULL REFERENCES documents(id),
+      document_b_id UUID NOT NULL REFERENCES documents(id),
+      status TEXT NOT NULL DEFAULT 'pending',
+      summary TEXT,
+      clause_alignments JSONB,
+      key_differences JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS generated_ndas (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL,
+      created_by UUID REFERENCES users(id),
+      title TEXT NOT NULL,
+      template_source TEXT NOT NULL,
+      parameters JSONB NOT NULL,
+      content TEXT NOT NULL,
+      content_html TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL,
+      table_name TEXT NOT NULL,
+      record_id UUID NOT NULL,
+      action TEXT NOT NULL,
+      old_values JSONB,
+      new_values JSONB,
+      user_id UUID,
+      ip_address TEXT,
+      performed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS reference_documents (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      source TEXT NOT NULL,
+      source_id TEXT,
+      title TEXT NOT NULL,
+      raw_text TEXT,
+      metadata JSONB DEFAULT '{}',
+      content_hash TEXT UNIQUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS reference_embeddings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      document_id UUID NOT NULL REFERENCES reference_documents(id) ON DELETE CASCADE,
+      parent_id UUID,
+      granularity TEXT NOT NULL,
+      content TEXT NOT NULL,
+      section_path TEXT[],
+      category TEXT,
+      hypothesis_id INTEGER,
+      nli_label TEXT,
+      embedding TEXT NOT NULL,
+      metadata JSONB DEFAULT '{}',
+      content_hash TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS cuad_categories (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      risk_weight REAL DEFAULT 1.0,
+      is_nda_relevant BOOLEAN DEFAULT true
+    )
+  `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS contract_nli_hypotheses (
+      id INTEGER PRIMARY KEY,
+      text TEXT NOT NULL,
+      category TEXT
     )
   `)
 }
