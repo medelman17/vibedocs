@@ -11,6 +11,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      # Dummy values for CI - tests use PGlite, not real database
+      DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+      AUTH_SECRET: "dummy-secret-for-ci-testing-only"
+      AUTH_GOOGLE_ID: "dummy-google-id"
+      AUTH_GOOGLE_SECRET: "dummy-google-secret"
+      RESEND_API_KEY: "re_dummy_key"
+      BLOB_READ_WRITE_TOKEN: "dummy-blob-token"
+      NODE_ENV: "test"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -28,8 +38,6 @@ jobs:
 
       - name: Run tests
         run: pnpm test
-        env:
-          NODE_ENV: test
 
       - name: Run linter
         run: pnpm lint
