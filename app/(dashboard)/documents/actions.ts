@@ -12,7 +12,6 @@
 import { z } from "zod"
 import { withTenant } from "@/lib/dal"
 import { ok, err, type ApiResponse } from "@/lib/api-response"
-import { db } from "@/db"
 import { documents, documentChunks } from "@/db/schema"
 import { eq, and, isNull, ilike, desc, sql, count, isNotNull } from "drizzle-orm"
 import { uploadFile, deleteFile, computeContentHash } from "@/lib/blob"
@@ -136,7 +135,7 @@ function extractTitleFromFilename(fileName: string): string {
 export async function uploadDocument(
   formData: FormData
 ): Promise<ApiResponse<Document>> {
-  const { db: _db, tenantId, userId } = await withTenant()
+  const { db, tenantId, userId } = await withTenant()
 
   // Extract form data
   const file = formData.get("file")
@@ -246,7 +245,7 @@ export async function uploadDocument(
 export async function getDocuments(
   input: z.input<typeof getDocumentsInputSchema> = {}
 ): Promise<ApiResponse<Document[]>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const parsed = getDocumentsInputSchema.safeParse(input)
   if (!parsed.success) {
@@ -298,7 +297,7 @@ export async function getDocuments(
 export async function searchDocuments(
   input: z.infer<typeof searchDocumentsInputSchema>
 ): Promise<ApiResponse<Document[]>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const parsed = searchDocumentsInputSchema.safeParse(input)
   if (!parsed.success) {
@@ -349,7 +348,7 @@ export async function searchDocuments(
 export async function getDocument(
   input: z.infer<typeof documentIdSchema>
 ): Promise<ApiResponse<Document>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const parsed = documentIdSchema.safeParse(input)
   if (!parsed.success) {
@@ -403,7 +402,7 @@ export async function getDocument(
 export async function getDocumentWithChunks(
   input: z.infer<typeof documentIdSchema>
 ): Promise<ApiResponse<DocumentWithChunks>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const parsed = documentIdSchema.safeParse(input)
   if (!parsed.success) {
@@ -469,7 +468,7 @@ export async function getDocumentWithChunks(
 export async function updateDocumentTitle(
   input: z.infer<typeof updateTitleInputSchema>
 ): Promise<ApiResponse<Document>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const parsed = updateTitleInputSchema.safeParse(input)
   if (!parsed.success) {
@@ -523,7 +522,7 @@ export async function updateDocumentTitle(
 export async function deleteDocument(
   input: z.infer<typeof documentIdSchema>
 ): Promise<ApiResponse<Document>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const parsed = documentIdSchema.safeParse(input)
   if (!parsed.success) {
@@ -577,7 +576,7 @@ export async function deleteDocument(
 export async function restoreDocument(
   input: z.infer<typeof documentIdSchema>
 ): Promise<ApiResponse<Document>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const parsed = documentIdSchema.safeParse(input)
   if (!parsed.success) {
@@ -639,7 +638,7 @@ export async function restoreDocument(
 export async function hardDeleteDocument(
   input: z.infer<typeof documentIdSchema>
 ): Promise<ApiResponse<{ message: string }>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const parsed = documentIdSchema.safeParse(input)
   if (!parsed.success) {
@@ -724,7 +723,7 @@ export async function hardDeleteDocument(
 export async function retryDocumentProcessing(
   input: z.infer<typeof documentIdSchema>
 ): Promise<ApiResponse<Document>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const parsed = documentIdSchema.safeParse(input)
   if (!parsed.success) {
@@ -803,7 +802,7 @@ export async function retryDocumentProcessing(
 export async function getDocumentDownloadUrl(
   input: z.infer<typeof documentIdSchema>
 ): Promise<ApiResponse<{ url: string; fileName: string }>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const parsed = documentIdSchema.safeParse(input)
   if (!parsed.success) {
@@ -864,7 +863,7 @@ export async function getDocumentDownloadUrl(
  * ```
  */
 export async function getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   try {
     // Get all status counts in a single query using conditional aggregation

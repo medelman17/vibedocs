@@ -13,7 +13,9 @@
 import { z } from "zod"
 import { withTenant, verifySession } from "@/lib/dal"
 import { ok, err, wrapError, type ApiResponse } from "@/lib/api-response"
-import { db } from "@/db"
+// Note: db import is ONLY for shared reference data queries (templates)
+// All tenant-scoped queries MUST use db from withTenant()
+import { db as sharedDb } from "@/db"
 import { generatedNdas, referenceDocuments } from "@/db/schema"
 import { eq, and, desc, inArray } from "drizzle-orm"
 import type { GeneratedNda, NewGeneratedNda } from "@/db/schema/generated"
@@ -155,7 +157,7 @@ export async function getTemplates(
 
     const templateSources = source ? [source] : ["bonterms", "commonaccord"]
 
-    const templates = await db
+    const templates = await sharedDb
       .select({
         id: referenceDocuments.id,
         source: referenceDocuments.source,
@@ -197,7 +199,7 @@ export async function getTemplate(
       return err("VALIDATION_ERROR", "Invalid template ID format")
     }
 
-    const template = await db
+    const template = await sharedDb
       .select({
         id: referenceDocuments.id,
         source: referenceDocuments.source,
@@ -243,7 +245,7 @@ export async function generateNda(
   input: z.infer<typeof generateNdaSchema>
 ): Promise<ApiResponse<GeneratedNda>> {
   try {
-    const { userId, tenantId } = await withTenant()
+    const { db, userId, tenantId } = await withTenant()
 
     // Validate input
     const parseResult = generateNdaSchema.safeParse(input)
@@ -292,7 +294,7 @@ export async function getGeneratedNda(
   id: string
 ): Promise<ApiResponse<GeneratedNda>> {
   try {
-    const { tenantId } = await withTenant()
+    const { db, tenantId } = await withTenant()
 
     // Validate UUID format
     const parseResult = z.string().uuid().safeParse(id)
@@ -328,7 +330,7 @@ export async function getGeneratedNdas(
   options?: z.infer<typeof listNdasSchema>
 ): Promise<ApiResponse<GeneratedNdaSummary[]>> {
   try {
-    const { tenantId } = await withTenant()
+    const { db, tenantId } = await withTenant()
 
     // Validate options
     const parseResult = listNdasSchema.safeParse(options ?? {})
@@ -377,7 +379,7 @@ export async function updateGeneratedNda(
   input: z.infer<typeof updateNdaSchema>
 ): Promise<ApiResponse<GeneratedNda>> {
   try {
-    const { tenantId } = await withTenant()
+    const { db, tenantId } = await withTenant()
 
     // Validate input
     const parseResult = updateNdaSchema.safeParse(input)
@@ -459,7 +461,7 @@ export async function duplicateGeneratedNda(
   id: string
 ): Promise<ApiResponse<GeneratedNda>> {
   try {
-    const { userId, tenantId } = await withTenant()
+    const { db, userId, tenantId } = await withTenant()
 
     // Validate UUID format
     const parseResult = z.string().uuid().safeParse(id)
@@ -517,7 +519,7 @@ export async function finalizeNda(
   id: string
 ): Promise<ApiResponse<GeneratedNda>> {
   try {
-    const { tenantId } = await withTenant()
+    const { db, tenantId } = await withTenant()
 
     // Validate UUID format
     const parseResult = z.string().uuid().safeParse(id)
@@ -574,7 +576,7 @@ export async function archiveGeneratedNda(
   id: string
 ): Promise<ApiResponse<GeneratedNda>> {
   try {
-    const { tenantId } = await withTenant()
+    const { db, tenantId } = await withTenant()
 
     // Validate UUID format
     const parseResult = z.string().uuid().safeParse(id)
@@ -628,7 +630,7 @@ export async function deleteGeneratedNda(
   id: string
 ): Promise<ApiResponse<{ deleted: true }>> {
   try {
-    const { tenantId } = await withTenant()
+    const { db, tenantId } = await withTenant()
 
     // Validate UUID format
     const parseResult = z.string().uuid().safeParse(id)
@@ -674,7 +676,7 @@ export async function exportGeneratedNda(
   input: z.infer<typeof exportNdaSchema>
 ): Promise<ApiResponse<ExportResult>> {
   try {
-    const { tenantId } = await withTenant()
+    const { db, tenantId } = await withTenant()
 
     // Validate input
     const parseResult = exportNdaSchema.safeParse(input)

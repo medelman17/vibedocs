@@ -6,7 +6,6 @@ import { ok, err, type ApiResponse } from "@/lib/api-response"
 import { organizationMembers, users, organizations } from "@/db/schema"
 import { sendInvitationEmail } from "@/lib/email"
 import { eq, and, sql } from "drizzle-orm"
-import { db } from "@/db"
 
 // ============================================================================
 // Types
@@ -50,7 +49,7 @@ const updateMemberRoleSchema = z.object({
 export async function getOrganizationMembers(): Promise<
   ApiResponse<OrganizationMember[]>
 > {
-  const { tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant()
 
   const members = await db
     .select({
@@ -90,7 +89,7 @@ export async function getOrganizationMembers(): Promise<
 export async function inviteMember(
   input: z.infer<typeof inviteMemberSchema>
 ): Promise<ApiResponse<{ membershipId: string }>> {
-  const { tenantId, userId: currentUserId } = await requireRole([
+  const { db, tenantId, userId: currentUserId } = await requireRole([
     "admin",
     "owner",
   ])
@@ -178,7 +177,7 @@ export async function inviteMember(
 export async function resendInvitation(
   membershipId: string
 ): Promise<ApiResponse<void>> {
-  const { tenantId, userId: currentUserId } = await requireRole(["admin", "owner"])
+  const { db, tenantId, userId: currentUserId } = await requireRole(["admin", "owner"])
 
   // Validate membership ID
   const uuidSchema = z.string().uuid()
@@ -244,7 +243,7 @@ export async function resendInvitation(
 export async function cancelInvitation(
   membershipId: string
 ): Promise<ApiResponse<void>> {
-  const { tenantId } = await requireRole(["admin", "owner"])
+  const { db, tenantId } = await requireRole(["admin", "owner"])
 
   // Validate membership ID
   const uuidSchema = z.string().uuid()
@@ -288,7 +287,7 @@ export async function cancelInvitation(
 export async function updateMemberRole(
   input: z.infer<typeof updateMemberRoleSchema>
 ): Promise<ApiResponse<void>> {
-  const { tenantId } = await requireRole(["owner"])
+  const { db, tenantId } = await requireRole(["owner"])
 
   const parsed = updateMemberRoleSchema.safeParse(input)
   if (!parsed.success) {
@@ -333,7 +332,7 @@ export async function updateMemberRole(
 // ============================================================================
 
 export async function removeMember(userId: string): Promise<ApiResponse<void>> {
-  const { tenantId, userId: currentUserId } = await requireRole([
+  const { db, tenantId, userId: currentUserId } = await requireRole([
     "admin",
     "owner",
   ])
@@ -403,7 +402,7 @@ export async function removeMember(userId: string): Promise<ApiResponse<void>> {
 // ============================================================================
 
 export async function leaveOrganization(): Promise<ApiResponse<void>> {
-  const { tenantId, userId } = await withTenant()
+  const { db, tenantId, userId } = await withTenant()
 
   // Find the membership
   const membership = await db.query.organizationMembers.findFirst({
