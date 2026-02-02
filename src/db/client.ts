@@ -6,6 +6,19 @@
  * for serverless and edge runtime environments (Vercel Edge Functions,
  * Cloudflare Workers, etc.) where traditional TCP connections are not available.
  *
+ * ## IMPORTANT: RLS Context Limitation
+ *
+ * This client uses the HTTP driver (`neon-http`), where each query is an independent
+ * HTTP request. This means PostgreSQL session variables (like `app.tenant_id` for RLS)
+ * do NOT persist across queries.
+ *
+ * **Tenant isolation is enforced via application-layer filtering:**
+ * - All query functions in `src/db/queries/*.ts` include explicit `WHERE tenant_id = ?`
+ * - The `withTenant()` DAL function still calls `set_config()` for forward compatibility
+ * - If migrating to `neon-serverless` (WebSocket), RLS policies will automatically enforce
+ *
+ * See `src/lib/dal.ts` for full documentation on this known limitation.
+ *
  * @remarks
  * The Neon serverless driver uses HTTP to communicate with the database,
  * making it compatible with edge runtimes that don't support raw TCP sockets.
@@ -14,6 +27,7 @@
  *
  * @see {@link https://neon.tech/docs/serverless/serverless-driver} Neon Serverless Driver
  * @see {@link https://orm.drizzle.team/docs/get-started-postgresql#neon} Drizzle + Neon Setup
+ * @see {@link file://../lib/dal.ts} DAL with RLS limitation documentation
  *
  * @module db/client
  */

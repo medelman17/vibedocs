@@ -10,7 +10,9 @@
 | Tier | Purpose | Connection | Driver | RLS |
 |------|---------|------------|--------|-----|
 | **Shared Reference** | CUAD, ContractNLI, Bonterms, CommonAccord, Kleister | Read-only | `neon-http` (Edge-compatible) | None — public reads |
-| **Tenant-Scoped** | User documents, analyses, generated NDAs | Read/write | `neon-serverless` (WebSocket) | Yes — `tenant_id` isolation |
+| **Tenant-Scoped** | User documents, analyses, generated NDAs | Read/write | `neon-http`* | Yes — `tenant_id` isolation |
+
+> **\*MVP Note:** Currently uses `neon-http` (not `neon-serverless`). RLS policies exist but session variables don't persist across HTTP requests. Tenant isolation is enforced via explicit `WHERE tenant_id = ?` clauses in all queries (defense-in-depth pattern). See CLAUDE.md "RLS Limitation" section.
 
 > **Current Implementation:** Single Neon database with logical schema separation for MVP. Will split into two physical databases when scaling requires it. See `docs/plans/2026-02-01-database-foundation-design.md` for architecture decisions.
 
@@ -302,6 +304,8 @@ CREATE POLICY tenant_isolation ON documents
 
 **Defense in depth:** Application layer wraps all queries with explicit `WHERE tenant_id = ?` via a tenant-scoped Drizzle wrapper, independent of RLS.
 
+> **⚠️ Known Limitation:** The current implementation uses the Neon HTTP driver (`neon-http`), which executes each query as an independent HTTP request. This means RLS session variables set via `set_config('app.tenant_id', ...)` do NOT persist across queries. **Tenant isolation is enforced entirely by the application-layer `WHERE tenant_id = ?` filtering.** The RLS policies exist for forward compatibility—if migrating to `neon-serverless` (WebSocket driver), RLS will automatically begin enforcing as a secondary protection layer. See `src/lib/dal.ts` for full documentation.
+
 ### Tenant DB Indexes
 
 ```sql
@@ -346,10 +350,12 @@ src/db/
 
 ### Connection Patterns
 
-| Database  | Driver            | Use Case                          |
-| --------- | ----------------- | --------------------------------- |
-| Shared    | `neon-http`       | Edge-compatible, read-only, no TX |
-| Tenant    | `neon-serverless` | WebSocket, transactions, RLS      |
+| Database  | Documented Driver | Current Driver | Use Case                          |
+| --------- | ----------------- | -------------- | --------------------------------- |
+| Shared    | `neon-http`       | `neon-http`    | Edge-compatible, read-only, no TX |
+| Tenant    | `neon-serverless` | `neon-http`*   | WebSocket, transactions, RLS      |
+
+> **\*Current State:** MVP uses `neon-http` for both databases for simplicity. Tenant isolation is enforced via application-layer filtering (defense-in-depth). Migrate to `neon-serverless` for proper RLS enforcement when needed.
 
 ### Key Conventions
 

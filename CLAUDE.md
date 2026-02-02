@@ -48,6 +48,18 @@ Will split into two physical databases later. Keep shared/tenant queries in sepa
 - **Multi-org**: Users can belong to multiple organizations via `organization_members` junction table
 - **Session**: Includes `activeOrganizationId` for tenant context switching
 
+#### RLS Limitation (Known Issue)
+
+The current implementation uses the Neon HTTP driver (`neon-http`), which makes each query an independent HTTP request. This means:
+
+1. **RLS session variables don't persist across queries.** The `set_config('app.tenant_id', ...)` in `withTenant()` only affects that single request—subsequent queries may execute without the RLS context.
+
+2. **Tenant isolation relies on application-layer filtering (defense-in-depth).** All query functions in `src/db/queries/*.ts` include explicit `WHERE tenant_id = ?` clauses, providing actual isolation regardless of RLS state.
+
+3. **The `set_config` call is kept for forward compatibility.** If we migrate to `neon-serverless` WebSocket driver, RLS policies will automatically begin enforcing as a secondary protection layer.
+
+This is acceptable for MVP. For stricter RLS enforcement, migrate to `neon-serverless` driver with transaction-wrapped queries.
+
 ### Data Access Layer (DAL)
 
 ```typescript
@@ -136,6 +148,7 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 - Use `withTenant()` for tenant-scoped queries (sets RLS context)
 - Use `requireRole(["owner", "admin"])` for role-based access
 - Password utilities: `hashPassword()`, `verifyPassword()`, `validatePassword()`
+- **CRITICAL**: All tenant-scoped queries MUST include explicit `WHERE tenant_id = ?` clause (defense-in-depth, see "RLS Limitation" above)
 - **Zod 4 Compatibility** (IMPORTANT):
   - Use `.issues` not `.errors` for error arrays: `parsed.error.issues[0]`
   - `ValidationError.fromZodError()` expects `{ issues: [...] }` not `{ errors: [...] }`
