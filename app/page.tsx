@@ -1,19 +1,15 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Cormorant_Garamond, Outfit } from "next/font/google"
+import { Cormorant_Garamond } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
 import { cn } from "@/lib/utils"
 import { joinWaitlist } from "./actions/waitlist"
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["300", "400", "500"],
   variable: "--font-display",
-})
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-body",
 })
 
 export default function Home() {
@@ -63,7 +59,7 @@ export default function Home() {
       ref={containerRef}
       className={cn(
         cormorant.variable,
-        outfit.variable,
+        GeistSans.variable,
         "relative min-h-screen overflow-hidden"
       )}
       style={{
