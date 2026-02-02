@@ -7,12 +7,13 @@
  * @module app/api/word-addin/analyze
  */
 
-import { NextResponse } from "next/server"
 import { z } from "zod"
 import { db } from "@/db"
 import { documents, analyses } from "@/db/schema"
 import { verifyAddInAuth } from "@/lib/word-addin-auth"
-import { inngest } from "@/inngest/client"
+import { inngest } from "@/inngest"
+import { withErrorHandling, success } from "@/lib/api-utils"
+import { ValidationError, ForbiddenError } from "@/lib/errors"
 import { createHash } from "crypto"
 
 /**
@@ -77,151 +78,90 @@ function computeContentHash(content: string): string {
  * })
  * ```
  */
-export async function POST(request: Request) {
-  try {
-    // Authenticate the request
-    const authContext = await verifyAddInAuth(request)
+export const POST = withErrorHandling(async (request: Request) => {
+  // Authenticate the request (throws UnauthorizedError/ForbiddenError if invalid)
+  const authContext = await verifyAddInAuth(request)
 
-    // Parse and validate request body
-    const body = await request.json()
-    const parsed = analyzeRequestSchema.safeParse(body)
+  // Parse and validate request body
+  const body = await request.json()
+  const parsed = analyzeRequestSchema.safeParse(body)
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "VALIDATION_ERROR",
-            message: parsed.error.issues[0]?.message ?? "Invalid request body",
-            details: parsed.error.issues,
-          },
-        },
-        { status: 400 }
-      )
-    }
+  if (!parsed.success) {
+    const details = parsed.error.issues.map((issue) => ({
+      field: issue.path.map(String).join("."),
+      message: issue.message,
+    }))
+    throw new ValidationError("Invalid request body", details)
+  }
 
-    const { content, paragraphs, metadata } = parsed.data
-    const tenantId = authContext.tenantId
+  const { content, paragraphs, metadata } = parsed.data
+  const tenantId = authContext.tenant.tenantId
 
-    // Tenant context is required for document creation
-    if (!tenantId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "FORBIDDEN",
-            message:
-              "No organization selected. Please select an organization in the main app first.",
-          },
-        },
-        { status: 403 }
-      )
-    }
-
-    // Compute content hash for duplicate detection
-    const contentHash = computeContentHash(content)
-
-    // Generate title from first heading or first line
-    const title =
-      metadata?.title ||
-      paragraphs?.find((p) => p.isHeading)?.text ||
-      content.slice(0, 50).trim() + "..."
-
-    // Create document record
-    const [document] = await db
-      .insert(documents)
-      .values({
-        tenantId,
-        uploadedBy: authContext.userId,
-        title,
-        fileName: `${title.slice(0, 50)}.docx`,
-        fileType:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        fileSize: new TextEncoder().encode(content).length,
-        fileUrl: null, // No file URL for Word Add-in content
-        rawText: content,
-        contentHash,
-        status: "ready", // Already parsed, ready for analysis
-        metadata: {
-          source: "word-addin",
-          paragraphCount: paragraphs?.length ?? 0,
-          paragraphs: paragraphs ?? [],
-        },
-      })
-      .returning()
-
-    // Create analysis record
-    const [analysis] = await db
-      .insert(analyses)
-      .values({
-        tenantId,
-        documentId: document.id,
-        status: "pending",
-        version: 1,
-        inngestRunId: `pending_${Date.now()}`, // Will be updated by Inngest
-      })
-      .returning()
-
-    // Trigger Inngest analysis pipeline
-    await inngest.send({
-      name: "nda/analysis.requested",
-      data: {
-        tenantId,
-        userId: authContext.userId,
-        documentId: document.id,
-        analysisId: analysis.id,
-      },
-    })
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        analysisId: analysis.id,
-        documentId: document.id,
-        status: "queued",
-      },
-    })
-  } catch (error) {
-    // Handle known error types
-    if (error instanceof Error) {
-      if (error.name === "UnauthorizedError") {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              code: "UNAUTHORIZED",
-              message: error.message,
-            },
-          },
-          { status: 401 }
-        )
-      }
-
-      if (error.name === "ForbiddenError") {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              code: "FORBIDDEN",
-              message: error.message,
-            },
-          },
-          { status: 403 }
-        )
-      }
-    }
-
-    console.error("[POST /api/word-addin/analyze]", error)
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "Failed to start analysis",
-        },
-      },
-      { status: 500 }
+  // Tenant context is required for document creation
+  if (!tenantId) {
+    throw new ForbiddenError(
+      "No organization selected. Please select an organization in the main app first."
     )
   }
-}
+
+  // Compute content hash for duplicate detection
+  const contentHash = computeContentHash(content)
+
+  // Generate title from first heading or first line
+  const title =
+    metadata?.title ||
+    paragraphs?.find((p) => p.isHeading)?.text ||
+    content.slice(0, 50).trim() + "..."
+
+  // Create document record
+  const [document] = await db
+    .insert(documents)
+    .values({
+      tenantId,
+      uploadedBy: authContext.userId,
+      title,
+      fileName: `${title.slice(0, 50)}.docx`,
+      fileType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      fileSize: new TextEncoder().encode(content).length,
+      fileUrl: null, // No file URL for Word Add-in content
+      rawText: content,
+      contentHash,
+      status: "ready", // Already parsed, ready for analysis
+      metadata: {
+        source: "word-addin",
+        paragraphCount: paragraphs?.length ?? 0,
+        paragraphs: paragraphs ?? [],
+      },
+    })
+    .returning()
+
+  // Create analysis record
+  const [analysis] = await db
+    .insert(analyses)
+    .values({
+      tenantId,
+      documentId: document.id,
+      status: "pending",
+      version: 1,
+      inngestRunId: `pending_${Date.now()}`, // Will be updated by Inngest
+    })
+    .returning()
+
+  // Trigger Inngest analysis pipeline
+  await inngest.send({
+    name: "nda/analysis.requested",
+    data: {
+      tenantId,
+      userId: authContext.userId,
+      documentId: document.id,
+      analysisId: analysis.id,
+    },
+  })
+
+  return success({
+    analysisId: analysis.id,
+    documentId: document.id,
+    status: "queued",
+  })
+})
