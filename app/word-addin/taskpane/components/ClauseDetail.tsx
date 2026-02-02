@@ -1,10 +1,12 @@
 "use client"
 
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { ArrowLeft, MapPin, FileText } from "lucide-react"
+import { ArrowLeft, MapPin, FileText, Loader2 } from "lucide-react"
 import { useAnalysisStore } from "../store"
+import { useDocumentNavigation } from "../hooks"
 
 /**
  * Risk level type from PRD
@@ -71,6 +73,9 @@ export function ClauseDetail() {
   const selectedClauseId = useAnalysisStore((state) => state.selectedClauseId)
   const selectClause = useAnalysisStore((state) => state.selectClause)
 
+  const { navigateToClause, isNavigating } = useDocumentNavigation()
+  const [navigationError, setNavigationError] = useState<string | null>(null)
+
   // Don't render if no clause selected
   if (!selectedClauseId || !results) {
     return null
@@ -90,14 +95,17 @@ export function ClauseDetail() {
     selectClause(null)
   }
 
-  const handleNavigateToClause = () => {
-    // Placeholder for Office.js navigation - will be wired up in a later task
-    // This will call Word.run() to select the text at startPosition/endPosition
-    console.log("Navigate to clause:", {
-      clauseId: clause.id,
-      startPosition: clause.startPosition,
-      endPosition: clause.endPosition,
-    })
+  const handleNavigateToClause = async () => {
+    setNavigationError(null)
+    const result = await navigateToClause(
+      clause.clauseText,
+      clause.startPosition,
+      clause.endPosition
+    )
+
+    if (!result.success) {
+      setNavigationError(result.error ?? "Failed to navigate to clause")
+    }
   }
 
   return (
@@ -179,15 +187,26 @@ export function ClauseDetail() {
       )}
 
       {/* Navigate to clause button */}
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={handleNavigateToClause}
-        disabled={clause.startPosition === null || clause.endPosition === null}
-      >
-        <MapPin className="h-4 w-4" />
-        Navigate to Clause in Document
-      </Button>
+      <div className="space-y-2">
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleNavigateToClause}
+          disabled={isNavigating || !clause.clauseText}
+        >
+          {isNavigating ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <MapPin className="h-4 w-4" />
+          )}
+          {isNavigating ? "Navigating..." : "Navigate to Clause in Document"}
+        </Button>
+        {navigationError && (
+          <p className="text-xs text-destructive text-center">
+            {navigationError}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
