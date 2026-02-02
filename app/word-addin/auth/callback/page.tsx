@@ -3,51 +3,58 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 
-// Office.js types for dialog communication
-declare global {
-  interface Window {
-    Office?: typeof Office
-  }
-}
-
 export default function WordAddInAuthCallbackPage() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const [messageSent, setMessageSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (status !== "authenticated" || !session || messageSent) {
+    if (status !== "authenticated" || messageSent) {
       return
     }
 
-    // Send session info back to the parent task pane
-    if (window.Office?.context?.ui) {
-      window.Office.context.ui.messageParent(
-        JSON.stringify({
+    // Fetch the session token from our API
+    async function fetchAndSendToken() {
+      try {
+        const response = await fetch("/api/word-addin/session")
+        if (!response.ok) {
+          setError("Failed to get session token")
+          return
+        }
+
+        const data = await response.json()
+
+        // Send token and user info back to the parent task pane
+        const message = JSON.stringify({
           type: "auth-success",
-          user: {
-            id: session.user.id,
-            email: session.user.email,
-            name: session.user.name,
-          },
+          token: data.token,
+          user: data.user,
         })
-      )
-    } else {
-      // Fallback: store in localStorage for task pane to read
-      localStorage.setItem(
-        "word-addin-auth",
-        JSON.stringify({
-          user: session.user,
-          timestamp: Date.now(),
-        })
-      )
-      // Close the window after a brief delay
-      setTimeout(() => window.close(), 100)
+
+        if (window.Office?.context?.ui) {
+          window.Office.context.ui.messageParent(message)
+        } else {
+          // Fallback: store in localStorage for task pane to read
+          localStorage.setItem(
+            "word-addin-auth",
+            JSON.stringify({
+              token: data.token,
+              user: data.user,
+              timestamp: Date.now(),
+            })
+          )
+          // Close the window after a brief delay
+          setTimeout(() => window.close(), 100)
+        }
+
+        setMessageSent(true)
+      } catch {
+        setError("Failed to complete authentication")
+      }
     }
 
-    // Use a ref or callback to avoid eslint warning
-    const timer = setTimeout(() => setMessageSent(true), 0)
-    return () => clearTimeout(timer)
-  }, [session, status, messageSent])
+    fetchAndSendToken()
+  }, [status, messageSent])
 
   if (status === "loading") {
     return (
@@ -60,7 +67,17 @@ export default function WordAddInAuthCallbackPage() {
   if (status === "unauthenticated") {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-destructive">Sign in failed. Please close this window and try again.</p>
+        <p className="text-destructive">
+          Sign in failed. Please close this window and try again.
+        </p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-destructive">{error}</p>
       </div>
     )
   }
