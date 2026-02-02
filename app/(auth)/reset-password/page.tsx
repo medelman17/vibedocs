@@ -150,6 +150,11 @@ function ResetPasswordForm() {
     e.preventDefault()
     setError(null)
 
+    if (!token) {
+      setError("Invalid reset token")
+      return
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match")
       return
