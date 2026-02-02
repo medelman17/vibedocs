@@ -136,7 +136,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   /** Active authentication sessions for this user across devices */
   sessions: many(sessions),
   /** Organization memberships with role information */
-  organizationMemberships: many(organizationMembers),
+  organizationMemberships: many(organizationMembers, { relationName: "member" }),
+  /** Memberships where this user was the inviter */
+  invitedMemberships: many(organizationMembers, { relationName: "inviter" }),
   /** Documents uploaded by this user across all organizations */
   uploadedDocuments: many(documents),
   /** NDAs generated/created by this user */
@@ -345,6 +347,7 @@ export const organizationMembersRelations = relations(
     user: one(users, {
       fields: [organizationMembers.userId],
       references: [users.id],
+      relationName: "member",
     }),
     /**
      * The user who invited this member to the organization.
