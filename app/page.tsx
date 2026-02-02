@@ -1,19 +1,15 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Cormorant_Garamond, Outfit } from "next/font/google"
+import { Cormorant_Garamond } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
 import { cn } from "@/lib/utils"
 import { joinWaitlist } from "./actions/waitlist"
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["300", "400", "500"],
   variable: "--font-display",
-})
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-body",
 })
 
 export default function Home() {
@@ -63,16 +59,16 @@ export default function Home() {
       ref={containerRef}
       className={cn(
         cormorant.variable,
-        outfit.variable,
+        GeistSans.variable,
         "relative min-h-screen overflow-hidden"
       )}
       style={{
         background: `
           radial-gradient(
             ellipse 80% 50% at ${50 + mousePosition.x * 10}% ${40 + mousePosition.y * 10}%,
-            oklch(0.92 0.05 75) 0%,
-            oklch(0.96 0.03 80) 40%,
-            oklch(0.98 0.01 60) 100%
+            oklch(0.95 0.025 293) 0%,
+            oklch(0.97 0.015 290) 40%,
+            oklch(0.99 0.005 285) 100%
           )
         `,
       }}
@@ -89,21 +85,21 @@ export default function Home() {
       <div
         className="absolute top-1/4 left-1/4 h-[500px] w-[500px] rounded-full opacity-40 blur-3xl transition-transform duration-[3000ms] ease-out"
         style={{
-          background: "oklch(0.85 0.08 70)",
+          background: "oklch(0.75 0.12 293)",
           transform: `translate(${mousePosition.x * 30}px, ${mousePosition.y * 30}px)`,
         }}
       />
       <div
         className="absolute bottom-1/4 right-1/4 h-[400px] w-[400px] rounded-full opacity-30 blur-3xl transition-transform duration-[4000ms] ease-out"
         style={{
-          background: "oklch(0.88 0.06 50)",
+          background: "oklch(0.80 0.10 175)",
           transform: `translate(${-mousePosition.x * 40}px, ${-mousePosition.y * 40}px)`,
         }}
       />
       <div
         className="absolute top-1/2 right-1/3 h-[300px] w-[300px] rounded-full opacity-25 blur-3xl transition-transform duration-[5000ms] ease-out"
         style={{
-          background: "oklch(0.82 0.09 85)",
+          background: "oklch(0.70 0.14 280)",
           transform: `translate(${mousePosition.x * 20}px, ${-mousePosition.y * 20}px)`,
         }}
       />
@@ -119,22 +115,22 @@ export default function Home() {
               <div
                 className="absolute inset-0 rounded-lg"
                 style={{
-                  background: "linear-gradient(135deg, oklch(0.45 0.12 55) 0%, oklch(0.35 0.10 45) 100%)",
+                  background: "linear-gradient(135deg, oklch(0.50 0.24 293) 0%, oklch(0.40 0.20 293) 100%)",
                 }}
               />
               <div className="absolute inset-[3px] rounded-md bg-gradient-to-br from-white/90 to-white/70" />
               <div
                 className="absolute inset-[6px] rounded"
                 style={{
-                  background: "linear-gradient(135deg, oklch(0.55 0.14 60) 0%, oklch(0.45 0.12 50) 100%)",
+                  background: "linear-gradient(135deg, oklch(0.60 0.20 293) 0%, oklch(0.50 0.18 293) 100%)",
                 }}
               />
             </div>
             <span
-              className="text-xl tracking-[0.2em] uppercase"
+              className="text-xl tracking-wide uppercase"
               style={{
-                fontFamily: "var(--font-body)",
-                color: "oklch(0.35 0.05 50)",
+                fontFamily: "var(--font-geist-sans)",
+                color: "oklch(0.35 0.02 280)",
                 fontWeight: 500,
               }}
             >
@@ -150,7 +146,7 @@ export default function Home() {
             style={{
               fontFamily: "var(--font-display)",
               fontWeight: 300,
-              color: "oklch(0.25 0.03 50)",
+              color: "oklch(0.20 0.02 280)",
             }}
           >
             Something{" "}
@@ -158,7 +154,7 @@ export default function Home() {
               className="italic"
               style={{
                 fontWeight: 400,
-                background: "linear-gradient(135deg, oklch(0.50 0.15 55) 0%, oklch(0.40 0.12 70) 100%)",
+                background: "linear-gradient(135deg, oklch(0.55 0.24 293) 0%, oklch(0.65 0.16 175) 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
@@ -173,8 +169,8 @@ export default function Home() {
           <p
             className="mx-auto mb-12 max-w-xl text-lg leading-relaxed opacity-0 animate-[fadeSlideUp_1s_ease-out_0.6s_forwards] sm:text-xl"
             style={{
-              fontFamily: "var(--font-body)",
-              color: "oklch(0.45 0.02 50)",
+              fontFamily: "var(--font-geist-sans)",
+              color: "oklch(0.40 0.01 280)",
               fontWeight: 400,
             }}
           >
@@ -190,8 +186,8 @@ export default function Home() {
                   className="group relative overflow-hidden rounded-full p-[1px] transition-all duration-500"
                   style={{
                     background: isHovering
-                      ? "linear-gradient(135deg, oklch(0.55 0.15 55) 0%, oklch(0.45 0.12 70) 100%)"
-                      : "oklch(0.85 0.03 60)",
+                      ? "linear-gradient(135deg, oklch(0.55 0.24 293) 0%, oklch(0.60 0.16 175) 100%)"
+                      : "oklch(0.90 0.02 293)",
                   }}
                 >
                   <div className="relative flex items-center rounded-full bg-white/90 backdrop-blur-sm">
@@ -201,10 +197,10 @@ export default function Home() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
                       required
-                      className="flex-1 bg-transparent px-6 py-4 text-base outline-none placeholder:text-[oklch(0.60_0.02_50)]"
+                      className="flex-1 bg-transparent px-6 py-4 text-base outline-none placeholder:text-[oklch(0.60_0.01_280)]"
                       style={{
-                        fontFamily: "var(--font-body)",
-                        color: "oklch(0.25 0.03 50)",
+                        fontFamily: "var(--font-geist-sans)",
+                        color: "oklch(0.20 0.02 280)",
                       }}
                       onFocus={() => setIsHovering(true)}
                       onBlur={() => setIsHovering(false)}
@@ -214,9 +210,9 @@ export default function Home() {
                       disabled={isSubmitting}
                       className="m-1.5 rounded-full px-6 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
                       style={{
-                        fontFamily: "var(--font-body)",
-                        background: "linear-gradient(135deg, oklch(0.45 0.12 55) 0%, oklch(0.35 0.10 50) 100%)",
-                        boxShadow: "0 2px 12px oklch(0.35 0.10 50 / 0.3)",
+                        fontFamily: "var(--font-geist-sans)",
+                        background: "linear-gradient(135deg, oklch(0.50 0.24 293) 0%, oklch(0.55 0.18 200) 100%)",
+                        boxShadow: "0 2px 12px oklch(0.45 0.20 293 / 0.3)",
                       }}
                       onMouseEnter={() => setIsHovering(true)}
                       onMouseLeave={() => setIsHovering(false)}
@@ -230,7 +226,7 @@ export default function Home() {
                   <p
                     className="mt-4 text-sm"
                     style={{
-                      fontFamily: "var(--font-body)",
+                      fontFamily: "var(--font-geist-sans)",
                       color: "oklch(0.55 0.20 25)",
                     }}
                   >
@@ -240,8 +236,8 @@ export default function Home() {
                   <p
                     className="mt-4 text-sm"
                     style={{
-                      fontFamily: "var(--font-body)",
-                      color: "oklch(0.55 0.02 50)",
+                      fontFamily: "var(--font-geist-sans)",
+                      color: "oklch(0.55 0.01 280)",
                     }}
                   >
                     No spam, ever. Unsubscribe anytime.
@@ -252,14 +248,14 @@ export default function Home() {
               <div
                 className="mx-auto max-w-md rounded-2xl p-8 animate-[scaleIn_0.5s_ease-out_forwards]"
                 style={{
-                  background: "linear-gradient(135deg, oklch(0.96 0.03 70) 0%, oklch(0.98 0.02 60) 100%)",
-                  border: "1px solid oklch(0.90 0.04 65)",
+                  background: "linear-gradient(135deg, oklch(0.97 0.02 175) 0%, oklch(0.99 0.01 200) 100%)",
+                  border: "1px solid oklch(0.92 0.04 175)",
                 }}
               >
                 <div
                   className="mb-4 mx-auto flex h-16 w-16 items-center justify-center rounded-full"
                   style={{
-                    background: "linear-gradient(135deg, oklch(0.50 0.15 55) 0%, oklch(0.40 0.12 70) 100%)",
+                    background: "linear-gradient(135deg, oklch(0.60 0.14 175) 0%, oklch(0.55 0.12 185) 100%)",
                   }}
                 >
                   <svg
@@ -281,7 +277,7 @@ export default function Home() {
                   style={{
                     fontFamily: "var(--font-display)",
                     fontWeight: 500,
-                    color: "oklch(0.25 0.03 50)",
+                    color: "oklch(0.20 0.02 280)",
                   }}
                 >
                   You&apos;re on the list
@@ -289,8 +285,8 @@ export default function Home() {
                 <p
                   className="text-base"
                   style={{
-                    fontFamily: "var(--font-body)",
-                    color: "oklch(0.45 0.02 50)",
+                    fontFamily: "var(--font-geist-sans)",
+                    color: "oklch(0.40 0.01 280)",
                   }}
                 >
                   We&apos;ll let you know when we launch.
@@ -307,11 +303,11 @@ export default function Home() {
           <p
             className="text-sm"
             style={{
-              fontFamily: "var(--font-body)",
-              color: "oklch(0.55 0.02 50)",
+              fontFamily: "var(--font-geist-sans)",
+              color: "oklch(0.55 0.01 280)",
             }}
           >
-            2025 VibeDocs. Crafted with care.
+            2026 VibeDocs. Crafted with care.
           </p>
         </div>
       </div>
