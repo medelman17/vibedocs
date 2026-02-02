@@ -30,9 +30,13 @@ import { revalidatePath } from "next/cache";
 export type AnalysisStatus = "pending" | "processing" | "completed" | "failed";
 
 /**
- * Risk level classification for clauses.
+ * Risk level classification for clauses (PRD-aligned taxonomy).
+ * - standard: Typical NDA terms, acceptable risk
+ * - cautious: Requires review, potentially unfavorable
+ * - aggressive: Significantly one-sided, legal review recommended
+ * - unknown: Unable to classify risk level
  */
-export type RiskLevel = "low" | "medium" | "high" | "critical";
+export type RiskLevel = "standard" | "cautious" | "aggressive" | "unknown";
 
 /**
  * Analysis record type inferred from schema with proper typing.
@@ -91,7 +95,7 @@ const getAnalysisClausesSchema = z.object({
   filters: z
     .object({
       category: z.string().optional(),
-      riskLevel: z.enum(["low", "medium", "high", "critical"]).optional(),
+      riskLevel: z.enum(["standard", "cautious", "aggressive", "unknown"]).optional(),
       minConfidence: z.number().min(0).max(1).optional(),
     })
     .optional(),

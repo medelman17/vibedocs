@@ -29,7 +29,9 @@
 import { z } from "zod"
 import { verifySession, requireRole, withTenant } from "@/lib/dal"
 import { ok, err, wrapError, type ApiResponse } from "@/lib/api-response"
-import { db } from "@/db"
+// Note: sharedDb is ONLY for operations without tenant context (e.g., createOrganization)
+// All tenant-scoped queries MUST use db from withTenant()/requireRole()
+import { db as sharedDb } from "@/db"
 import { organizations, organizationMembers } from "@/db/schema"
 import { eq, and, isNull } from "drizzle-orm"
 
@@ -151,7 +153,8 @@ export async function createOrganization(
     const { name, slug } = parsed.data
 
     // Check slug uniqueness (excluding soft-deleted orgs)
-    const existing = await db.query.organizations.findFirst({
+    // Note: Using sharedDb because user may not have a tenant context yet
+    const existing = await sharedDb.query.organizations.findFirst({
       where: and(eq(organizations.slug, slug), isNull(organizations.deletedAt)),
     })
 
@@ -160,7 +163,7 @@ export async function createOrganization(
     }
 
     // Create the organization
-    const [org] = await db
+    const [org] = await sharedDb
       .insert(organizations)
       .values({
         name,
@@ -174,7 +177,7 @@ export async function createOrganization(
     }
 
     // Add current user as owner with immediate acceptance
-    await db.insert(organizationMembers).values({
+    await sharedDb.insert(organizationMembers).values({
       organizationId: org.id,
       userId,
       role: "owner",
@@ -213,7 +216,7 @@ export async function getOrganization(): Promise<
 > {
   try {
     // withTenant verifies auth and org membership
-    const { tenantId, role } = await withTenant()
+    const { db, tenantId, role } = await withTenant()
 
     // Fetch the full organization record
     const org = await db.query.organizations.findFirst({
@@ -270,7 +273,7 @@ export async function updateOrganization(input: {
 }): Promise<ApiResponse<Organization>> {
   try {
     // Requires admin or owner role
-    const { tenantId } = await requireRole(["admin", "owner"])
+    const { db, tenantId } = await requireRole(["admin", "owner"])
 
     // Validate input
     const parsed = updateOrgSchema.safeParse(input)
@@ -350,7 +353,7 @@ export async function updateOrganization(input: {
 export async function deleteOrganization(): Promise<ApiResponse<Organization>> {
   try {
     // Requires owner role
-    const { tenantId } = await requireRole(["owner"])
+    const { db, tenantId } = await requireRole(["owner"])
 
     // Soft delete by setting deletedAt
     const [deleted] = await db
