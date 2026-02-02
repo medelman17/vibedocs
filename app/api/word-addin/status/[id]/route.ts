@@ -11,6 +11,8 @@ import { db } from "@/db"
 import { analyses } from "@/db/schema"
 import { eq, and } from "drizzle-orm"
 import { verifyAddInAuth } from "@/lib/word-addin-auth"
+import { ForbiddenError, NotFoundError, toAppError } from "@/lib/errors"
+import { error } from "@/lib/api-utils"
 
 /**
  * Progress stages with their corresponding percentages
@@ -53,16 +55,10 @@ export async function GET(
   try {
     // Authenticate the request
     const authContext = await verifyAddInAuth(request)
-    const tenantId = authContext.tenantId
+    const tenantId = authContext.tenant.tenantId
 
     if (!tenantId) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: { code: "FORBIDDEN", message: "No organization selected" },
-        }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      )
+      throw new ForbiddenError("No organization selected")
     }
 
     // Verify analysis exists and belongs to tenant
@@ -74,13 +70,7 @@ export async function GET(
     })
 
     if (!analysis) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: { code: "NOT_FOUND", message: "Analysis not found" },
-        }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      )
+      throw new NotFoundError("Analysis not found")
     }
 
     // Create SSE stream
@@ -175,38 +165,19 @@ export async function GET(
         "X-Accel-Buffering": "no", // Disable nginx buffering
       },
     })
-  } catch (error) {
-    // Handle known error types
-    if (error instanceof Error) {
-      if (error.name === "UnauthorizedError") {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: { code: "UNAUTHORIZED", message: error.message },
-          }),
-          { status: 401, headers: { "Content-Type": "application/json" } }
-        )
-      }
+  } catch (err) {
+    // Use AppError classes for consistent error responses
+    const appError = toAppError(err)
 
-      if (error.name === "ForbiddenError") {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: { code: "FORBIDDEN", message: error.message },
-          }),
-          { status: 403, headers: { "Content-Type": "application/json" } }
-        )
-      }
+    // Log non-operational or server errors
+    if (!appError.isOperational || appError.statusCode >= 500) {
+      console.error("[GET /api/word-addin/status/[id]]", {
+        code: appError.code,
+        message: appError.message,
+        stack: err instanceof Error ? err.stack : undefined,
+      })
     }
 
-    console.error("[GET /api/word-addin/status/[id]]", error)
-
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: { code: "INTERNAL_ERROR", message: "Failed to get status" },
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    )
+    return error(appError)
   }
 }
