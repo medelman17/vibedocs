@@ -5,78 +5,24 @@
  */
 
 import { create } from "zustand"
+import type {
+  ClauseResult,
+  GapAnalysisResult,
+  AnalysisResults,
+  ProgressState,
+  AnalysisStatus,
+  AnalysisStage,
+} from "@/types/word-addin"
 
-/**
- * Clause result from analysis
- */
-export interface ClauseResult {
-  id: string
-  category: string
-  clauseText: string
-  confidence: number
-  riskLevel: string
-  riskExplanation: string | null
-  startPosition: number | null
-  endPosition: number | null
+// Re-export types for consumers who import from the store
+export type {
+  ClauseResult,
+  GapAnalysisResult,
+  AnalysisResults,
+  ProgressState,
+  AnalysisStatus,
+  AnalysisStage,
 }
-
-/**
- * Gap analysis result
- */
-export interface GapAnalysisResult {
-  missingClauses: string[]
-  weakClauses: Array<{
-    category: string
-    reason: string
-  }>
-  recommendations: Array<{
-    category: string
-    recommendation: string
-    priority: "low" | "medium" | "high"
-  }>
-}
-
-/**
- * Full analysis results
- */
-export interface AnalysisResults {
-  analysisId: string
-  documentId: string
-  status: string
-  version: number
-  overallRiskScore: number | null
-  overallRiskLevel: string | null
-  summary: string | null
-  clauses: ClauseResult[]
-  gapAnalysis: GapAnalysisResult | null
-  tokenUsage: {
-    input: number
-    output: number
-    total: number
-  } | null
-  processingTimeMs: number | null
-  completedAt: string | null
-}
-
-/**
- * Progress state
- */
-export interface ProgressState {
-  stage: string
-  percent: number
-  message: string
-}
-
-/**
- * Analysis status
- */
-export type AnalysisStatus =
-  | "idle"
-  | "extracting"
-  | "submitting"
-  | "analyzing"
-  | "completed"
-  | "failed"
 
 /**
  * Analysis store state

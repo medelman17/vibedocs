@@ -6,15 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useAuthStore } from "../store/auth"
-
-/**
- * Progress event from the SSE stream (matches ProgressState in store)
- */
-export interface ProgressEvent {
-  stage: string
-  percent: number
-  message: string
-}
+import type { ProgressState, AnalysisStage } from "@/types/word-addin"
 
 /**
  * Raw SSE event format (from the API)
@@ -29,7 +21,7 @@ interface RawSSEEvent {
  * Hook state
  */
 interface UseAnalysisProgressState {
-  progress: ProgressEvent | null
+  progress: ProgressState | null
   isConnected: boolean
   error: string | null
 }
@@ -136,8 +128,8 @@ export function useAnalysisProgress(
               try {
                 const rawData = JSON.parse(line.slice(6)) as RawSSEEvent
                 // Transform SSE 'progress' field to 'percent' for consistency with store
-                const data: ProgressEvent = {
-                  stage: rawData.stage,
+                const data: ProgressState = {
+                  stage: rawData.stage as AnalysisStage,
                   percent: rawData.progress,
                   message: rawData.message,
                 }
