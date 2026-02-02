@@ -1,6 +1,6 @@
 "use client"
 
-import { ReactNode, useEffect, useState } from "react"
+import { ReactNode, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { LogIn, User, Loader2 } from "lucide-react"
 import { useAuth } from "../hooks/useAuth"
@@ -13,16 +13,13 @@ interface AuthGateProps {
  * Wraps content that requires authentication.
  * Shows a sign-in prompt if the user is not authenticated.
  * Uses the Zustand auth store via useAuth hook.
+ *
+ * Note: This component assumes StoreHydration has already run,
+ * ensuring the auth store is hydrated from localStorage.
  */
 export function AuthGate({ children }: AuthGateProps) {
   const { user, isAuthenticated, login } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
-  const [isHydrated, setIsHydrated] = useState(false)
-
-  // Wait for hydration to avoid SSR mismatch with localStorage
-  useEffect(() => {
-    setIsHydrated(true)
-  }, [])
 
   const handleSignIn = async () => {
     setIsLoading(true)
@@ -31,15 +28,6 @@ export function AuthGate({ children }: AuthGateProps) {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  // Show loading during hydration
-  if (!isHydrated) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
   }
 
   if (!isAuthenticated) {

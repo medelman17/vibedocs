@@ -14,6 +14,7 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   expiresAt: number | null
+  _hasHydrated: boolean
 
   // Actions
   setAuth: (token: string, user: User, expiresIn?: number) => void
@@ -31,6 +32,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       expiresAt: null,
+      _hasHydrated: false,
 
       // Set auth after successful login
       setAuth: (token, user, expiresIn = TOKEN_EXPIRY_MS) => {
@@ -70,6 +72,8 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         expiresAt: state.expiresAt,
       }),
+      // Skip automatic hydration - we'll trigger it manually after mount
+      skipHydration: true,
     }
   )
 )

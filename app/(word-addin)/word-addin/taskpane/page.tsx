@@ -5,6 +5,7 @@ import { TaskPaneShell } from "./components/TaskPaneShell"
 import { AuthGate } from "./components/AuthGate"
 import { AnalyzeButton } from "./components/AnalyzeButton"
 import { ResultsView } from "./components/ResultsView"
+import { StoreHydration } from "./components/StoreHydration"
 import { useAnalysisStore } from "./store"
 
 // Office.js types
@@ -29,6 +30,20 @@ export default function TaskPanePage() {
   })
 
   useEffect(() => {
+    // Check for dev mode bypass via query param
+    const params = new URLSearchParams(window.location.search)
+    const devMode = params.get("dev") === "true"
+
+    // In dev mode without Office.js, bypass the check
+    if (devMode && (!window.Office || !window.Office.context)) {
+      setOfficeState({
+        isReady: true,
+        error: null,
+        host: "DevMode",
+      })
+      return
+    }
+
     // Wait for Office.js to be ready
     if (typeof window !== "undefined" && window.Office) {
       window.Office.onReady((info) => {
@@ -67,11 +82,13 @@ export default function TaskPanePage() {
   const showResults = status === "completed" && results !== null
 
   return (
-    <TaskPaneShell>
-      <AuthGate>
-        <AnalyzeButton />
-        {showResults && <ResultsView />}
-      </AuthGate>
-    </TaskPaneShell>
+    <StoreHydration>
+      <TaskPaneShell>
+        <AuthGate>
+          <AnalyzeButton />
+          {showResults && <ResultsView />}
+        </AuthGate>
+      </TaskPaneShell>
+    </StoreHydration>
   )
 }

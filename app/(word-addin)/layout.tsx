@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Script from "next/script"
-import "@/app/globals.css"
-import { Providers } from "./providers"
+import "@/app/(main)/globals.css"
+import { Providers } from "./word-addin/providers"
 
 export const metadata: Metadata = {
   title: "NDA Analyst - Word Add-in",
@@ -12,16 +12,28 @@ export const metadata: Metadata = {
  * History API polyfill for Office.js sandboxed iframe.
  * Office Add-ins run in a restricted iframe that doesn't support
  * window.history.pushState/replaceState, which Next.js App Router needs.
+ * We use Object.defineProperty to ensure the methods are properly defined
+ * and bound to the history object.
  */
 const historyPolyfill = `
 (function() {
-  if (typeof window !== 'undefined') {
-    // Check if we're in an Office Add-in context (history APIs may be restricted)
-    if (typeof window.history.pushState !== 'function') {
-      window.history.pushState = function() {};
-    }
-    if (typeof window.history.replaceState !== 'function') {
-      window.history.replaceState = function() {};
+  if (typeof window !== 'undefined' && window.history) {
+    var noop = function(state, title, url) { return undefined; };
+    try {
+      Object.defineProperty(window.history, 'pushState', {
+        value: noop,
+        writable: true,
+        configurable: true
+      });
+      Object.defineProperty(window.history, 'replaceState', {
+        value: noop,
+        writable: true,
+        configurable: true
+      });
+    } catch (e) {
+      // Fallback for environments where defineProperty fails
+      window.history.pushState = noop;
+      window.history.replaceState = noop;
     }
   }
 })();
