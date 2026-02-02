@@ -5,3 +5,4 @@
 
 export * from "./dal"
 export * from "./blob"
+export * from "./email"

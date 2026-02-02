@@ -40,7 +40,12 @@ export async function createTestOrg(overrides: Partial<typeof organizations.$inf
 export async function createTestMembership(
   orgId: string,
   userId: string,
-  role = "member"
+  role = "member",
+  overrides: Partial<{
+    acceptedAt: Date | null
+    invitedAt: Date | null
+    invitedBy: string | null
+  }> = {}
 ) {
   const [membership] = await testDb
     .insert(organizationMembers)
@@ -48,6 +53,10 @@ export async function createTestMembership(
       organizationId: orgId,
       userId,
       role,
+      // Default to accepted membership (acceptedAt set)
+      acceptedAt: overrides.acceptedAt !== undefined ? overrides.acceptedAt : new Date(),
+      invitedAt: overrides.invitedAt ?? null,
+      invitedBy: overrides.invitedBy ?? null,
     })
     .returning()
   return membership
