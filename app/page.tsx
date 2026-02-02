@@ -303,11 +303,11 @@ export default function Home() {
           <p
             className="text-sm"
             style={{
-              fontFamily: "var(--font-body)",
-              color: "oklch(0.55 0.02 50)",
+              fontFamily: "var(--font-geist-sans)",
+              color: "oklch(0.55 0.01 280)",
             }}
           >
-            2025 VibeDocs. Crafted with care.
+            2026 VibeDocs. Crafted with care.
           </p>
         </div>
       </div>
