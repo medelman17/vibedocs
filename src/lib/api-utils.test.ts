@@ -1,5 +1,5 @@
 // src/lib/api-utils.test.ts
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import {
   success,
   error,
@@ -8,7 +8,7 @@ import {
   actionError,
   withActionErrorHandling,
 } from "./api-utils"
-import { AppError, NotFoundError, ValidationError } from "./errors"
+import { NotFoundError, ValidationError } from "./errors"
 
 describe("api-utils", () => {
   describe("success", () => {
