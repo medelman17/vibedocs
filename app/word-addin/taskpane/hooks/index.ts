@@ -1,3 +1,5 @@
 export { useOfficeReady } from "./useOfficeReady"
 export { useDocumentContent } from "./useDocumentContent"
 export { useAuth } from "./useAuth"
+export { useAnalysisProgress } from "./useAnalysisProgress"
+export type { ProgressEvent } from "./useAnalysisProgress"
