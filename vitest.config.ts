@@ -12,7 +12,12 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: ["node_modules", ".next", "src/test/**"],
+      exclude: [
+        "node_modules",
+        ".next",
+        "src/test/**",
+        "src/db/schema/index.ts", // Re-export barrel file
+      ],
     },
   },
   resolve: {
