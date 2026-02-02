@@ -79,6 +79,26 @@ export const comparisonRequestedPayload = baseTenantPayload.extend({
   documentBId: z.string().uuid(),
 })
 
+// =============================================================================
+// Demo Events (for testing Inngest setup)
+// =============================================================================
+
+/**
+ * Demo process event - simulates document processing.
+ */
+export const demoProcessPayload = z.object({
+  documentId: z.string(),
+  message: z.string().optional(),
+})
+
+/**
+ * Demo multi-step event - runs configurable steps with delays.
+ */
+export const demoMultiStepPayload = z.object({
+  steps: z.number().int().positive().optional().default(3),
+  delayMs: z.number().int().nonnegative().optional().default(1000),
+})
+
 /**
  * All Inngest event types for the NDA Analyst application.
  */
@@ -94,6 +114,13 @@ export type InngestEvents = {
   }
   "nda/comparison.requested": {
     data: z.infer<typeof comparisonRequestedPayload>
+  }
+  // Demo events
+  "demo/process": {
+    data: z.infer<typeof demoProcessPayload>
+  }
+  "demo/multi-step": {
+    data: z.infer<typeof demoMultiStepPayload>
   }
 }
 
