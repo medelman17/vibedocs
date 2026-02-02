@@ -155,11 +155,79 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 - Use `vi.resetModules()` in `beforeEach` when mocks need fresh state between tests
 
 ### Inngest Patterns
-- Wrap each agent in `step.run()` for durability
-- Use `step.sleep()` for rate limiting between API calls
-- Concurrency limits: 5 analyses, 3 embedding batches
-- **Progress events**: Emit `nda/analysis.progress` at each stage for real-time UI
-- **Partial persistence**: Save results after each agent for resume capability
+
+**Imports**: Use the barrel export for all Inngest utilities:
+```typescript
+import {
+  inngest,
+  CONCURRENCY,
+  RATE_LIMITS,
+  RETRY_CONFIG,
+  withTenantContext,
+  withRateLimit,
+  RetriableError,
+  NonRetriableError,
+} from "@/inngest"
+```
+
+**Function Creation**:
+```typescript
+export const analyzeNda = inngest.createFunction(
+  {
+    id: "nda-analyze",
+    concurrency: CONCURRENCY.analysis,
+    retries: RETRY_CONFIG.default.retries,
+  },
+  { event: "nda/analysis.requested" },
+  async ({ event, step }) => {
+    const { tenantId, documentId, analysisId } = event.data
+
+    await withTenantContext(tenantId, async (ctx) => {
+      const result = await step.run("process-document", async () => {
+        return await processDocument(ctx, documentId)
+      })
+
+      await step.sleep("rate-limit", getRateLimitDelay("claude"))
+
+      await step.run("analyze-clauses", async () => {
+        return await analyzeClauses(ctx, result)
+      })
+    })
+  }
+)
+```
+
+**Rate Limiting**: Use `step.sleep()` with `getRateLimitDelay()`:
+- Claude: 60 RPM → 1000ms delay
+- Voyage AI: 300 RPM → 200ms delay, batch size 128
+
+**Tenant Context**: Always wrap tenant-scoped operations:
+```typescript
+await withTenantContext(tenantId, async (ctx) => {
+  // ctx.db has RLS context set
+  // ctx.tenantId for reference
+})
+```
+
+**Error Classes**: Use Inngest-specific errors (different from `src/lib/errors.ts`):
+- `RetriableError` - Inngest will retry (network issues, rate limits)
+- `NonRetriableError` - No retry (validation, not found)
+- `ApiError` - Auto-determines retriability from HTTP status
+
+**Event Naming**: `nda/<domain>.<action>` (e.g., `nda/analysis.requested`)
+
+**Progress Events**: Emit for real-time UI updates:
+```typescript
+await step.sendEvent("emit-progress", {
+  name: "nda/analysis.progress",
+  data: { analysisId, step: "parsing", percent: 25 }
+})
+```
+
+**Testing**: Import test helpers directly (not from barrel):
+```typescript
+import { createMockEvent, createMockStep, testEventData } from "@/inngest/utils/test-helpers"
+```
 
 ### Caching (LRU)
 - **Embedding cache**: 1-hour TTL, 10K entries - `src/lib/cache/embedding-cache.ts`
@@ -247,3 +315,5 @@ See `.env.example` for required variables:
 - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` - Google OAuth credentials
 - `RESEND_API_KEY` - Email provider for password reset
 - `BLOB_READ_WRITE_TOKEN` - Vercel Blob for file uploads
+- `INNGEST_EVENT_KEY` - Inngest event key for sending events
+- `INNGEST_SIGNING_KEY` - Inngest webhook signature verification
