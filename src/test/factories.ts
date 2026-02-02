@@ -207,6 +207,90 @@ export async function createTestTenantContext(options: {
   return { user, org, membership }
 }
 
+export async function createTestComparison(
+  tenantId: string,
+  documentAId: string,
+  documentBId: string,
+  overrides: Partial<{
+    status: string
+    summary: string | null
+    clauseAlignments: unknown
+    keyDifferences: unknown
+  }> = {}
+) {
+  const { comparisons } = await import("@/db/schema")
+  const [comparison] = await testDb
+    .insert(comparisons)
+    .values({
+      tenantId,
+      documentAId,
+      documentBId,
+      status: overrides.status ?? "pending",
+      summary: overrides.summary ?? null,
+      clauseAlignments: overrides.clauseAlignments ?? null,
+      keyDifferences: overrides.keyDifferences ?? null,
+    })
+    .returning()
+  return comparison
+}
+
+export async function createTestReferenceDocument(
+  overrides: Partial<{
+    source: string
+    title: string
+    rawText: string | null
+    metadata: unknown
+  }> = {}
+) {
+  const { referenceDocuments } = await import("@/db/schema")
+  const [doc] = await testDb
+    .insert(referenceDocuments)
+    .values({
+      source: overrides.source ?? "bonterms",
+      title: overrides.title ?? `Test Template ${uniqueId()}`,
+      rawText: overrides.rawText ?? "Test template content",
+      metadata: overrides.metadata ?? {},
+    })
+    .returning()
+  return doc
+}
+
+export async function createTestGeneratedNda(
+  tenantId: string,
+  createdBy: string,
+  overrides: Partial<{
+    title: string
+    templateSource: string
+    parameters: unknown
+    content: string
+    contentHtml: string | null
+    status: "draft" | "finalized" | "archived"
+  }> = {}
+) {
+  const { generatedNdas } = await import("@/db/schema")
+  const [nda] = await testDb
+    .insert(generatedNdas)
+    .values({
+      tenantId,
+      createdBy,
+      title: overrides.title ?? `Test NDA ${uniqueId()}`,
+      templateSource: overrides.templateSource ?? "bonterms",
+      parameters: overrides.parameters ?? {
+        disclosingParty: { name: "Acme Corp" },
+        receivingParty: { name: "Test Inc" },
+        effectiveDate: "2024-01-01",
+        termYears: 2,
+        mutual: true,
+        governingLaw: "California",
+      },
+      content: overrides.content ?? "# Test NDA Content",
+      contentHtml: overrides.contentHtml ?? null,
+      status: overrides.status ?? "draft",
+    })
+    .returning()
+  return nda
+}
+
 // Reset counter between test runs
 export function resetFactoryCounter() {
   counter = 0
