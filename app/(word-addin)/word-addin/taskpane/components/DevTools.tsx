@@ -26,10 +26,8 @@ export function DevTools() {
   const clearAuth = useAuthStore((state) => state.clearAuth)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
-  // Check if we're in dev mode
+  // Render on client only
   if (typeof window === "undefined") return null
-  const params = new URLSearchParams(window.location.search)
-  if (params.get("dev") !== "true") return null
 
   const handleLoadMockData = (
     variant: "standard" | "low" | "high"

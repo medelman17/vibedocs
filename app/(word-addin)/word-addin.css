@@ -5,15 +5,15 @@
    Confident, warm, intellectually sophisticated.
    ============================================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
 
 /* -----------------------------------------------------------------------------
    Custom Properties - Word Add-in specific
    ----------------------------------------------------------------------------- */
 :root {
-  /* Typography */
-  --font-display: "Instrument Serif", Georgia, serif;
-  --font-body: "DM Sans", system-ui, sans-serif;
+  /* Typography - VibeDocs brand fonts */
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-body: var(--font-geist-sans, "Geist Sans", system-ui, sans-serif);
 
   /* Motion - silky spring-like easings */
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
