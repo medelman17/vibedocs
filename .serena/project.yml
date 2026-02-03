@@ -112,8 +112,15 @@ default_modes:
 # initial prompt for the project. It will always be given to the LLM upon activating the project
 # (contrary to the memories, which are loaded on demand).
 initial_prompt: |
-  VibeDocs is a Next.js 16 LLM-powered NDA analysis tool. Key conventions:
+  VibeDocs is a Next.js 16 LLM-powered NDA analysis tool.
 
+  **MCP Tools** (use these!):
+  - **next-devtools**: Call `init` tool at session start for Next.js context
+  - **Serena**: Prefer semantic tools (`find_symbol`, `get_symbols_overview`, `replace_symbol_body`) over basic file reads for code exploration/editing
+  - **context7**: Use for live documentation lookup (Drizzle, Next.js, Auth.js, etc.)
+  - **shadcn**: Use for component management
+
+  **Key Conventions**:
   - **Path alias**: `@/*` → `./*` (e.g., `@/lib/utils`, `@/db/client`)
   - **Structure**: `app/` (routes), `db/` (Drizzle), `lib/` (utils), `inngest/` (workflows), `agents/` (AI SDK 6)
   - **Auth**: Auth.js v5 with DrizzleAdapter, database sessions, multi-tenancy via `organization_members`
@@ -123,3 +130,4 @@ initial_prompt: |
   - **Zod 4**: Use `.issues` not `.errors` for error arrays
 
   See `CLAUDE.md` for full conventions. See `docs/PRD.md` for product spec.
+  Use Serena's `list_memories` and `read_memory` tools to access project-specific context.

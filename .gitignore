@@ -47,9 +47,8 @@ next-env.d.ts
 # Turbopack
 .turbo/
 
-# Serena MCP (keep project.yml for shared config)
+# Serena MCP (cache is local, project.yml and memories are shared)
 .serena/cache/
-.serena/memories/
 
 # Playwright
 /test-results/
