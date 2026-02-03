@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { writeFile, mkdir, rm } from "fs/promises"
 import { join } from "path"
+import { ParquetWriter, ParquetSchema } from "@dsnp/parquetjs"
 import {
   generateContentHash,
   normalizeText,
@@ -10,6 +11,7 @@ import {
   parseMarkdownTemplate,
   parseBontermsDataset,
   parseContractNliDataset,
+  NLI_HYPOTHESES,
   type NormalizedRecord,
 } from "./index"
 
@@ -188,46 +190,65 @@ This agreement shall remain in effect for 2 years.`
 })
 
 describe("ContractNLI parser", () => {
-  const testFile = join(process.cwd(), ".cache/test-cnli.json")
+  const testFile = join(process.cwd(), ".cache/test-cnli.parquet")
 
   beforeAll(async () => {
     await mkdir(join(process.cwd(), ".cache"), { recursive: true })
-    const testData = [
-      {
-        id: "test-001",
-        text: "This is a confidentiality agreement between parties.",
-        spans: [
-          { start: 0, end: 10, text: "This is a" },
-          { start: 11, end: 25, text: "confidentiality" },
-        ],
-        annotations: {
-          "1": { choice: "Entailment", spans: [0] },
-          "5": { choice: "NotMentioned", spans: [] },
-        },
-      },
-    ]
-    await writeFile(testFile, JSON.stringify(testData))
+
+    // Create a Parquet file matching the HuggingFace ContractNLI format
+    // Schema: premise (string), hypothesis (string), label (int: 0=entailment, 1=not_mentioned, 2=contradiction)
+    const schema = new ParquetSchema({
+      premise: { type: "UTF8" },
+      hypothesis: { type: "UTF8" },
+      label: { type: "INT64" },
+    })
+
+    const writer = await ParquetWriter.openFile(schema, testFile)
+
+    // Add a row with entailment (label=0) for hypothesis 1
+    await writer.appendRow({
+      premise: "This is a confidentiality agreement between parties.",
+      hypothesis: NLI_HYPOTHESES[1], // Use actual hypothesis text
+      label: 0, // entailment
+    })
+
+    // Add a row with not_mentioned (label=1) for hypothesis 10
+    // Use hypothesis 10 because it has a unique prefix (unlike 4-7 which share "Confidential Information may")
+    await writer.appendRow({
+      premise: "This is a confidentiality agreement between parties.",
+      hypothesis: NLI_HYPOTHESES[10],
+      label: 1, // not_mentioned
+    })
+
+    await writer.close()
   })
 
   afterAll(async () => {
     await rm(testFile, { force: true })
   })
 
-  it("parses ContractNLI JSON", async () => {
+  it("parses ContractNLI Parquet", async () => {
     const records: NormalizedRecord[] = []
     for await (const record of parseContractNliDataset(testFile)) {
       records.push(record)
     }
 
-    // 1 document + 1 span (hypothesis 1 has 1 span, hypothesis 5 has 0)
-    expect(records).toHaveLength(2)
+    // 1 document (deduplicated from 2 rows with same premise) + 2 spans
+    expect(records).toHaveLength(3)
 
     const docRecord = records.find((r) => r.granularity === "document")
     expect(docRecord?.source).toBe("contract_nli")
 
-    const spanRecord = records.find((r) => r.granularity === "span")
-    expect(spanRecord?.hypothesisId).toBe(1)
-    expect(spanRecord?.nliLabel).toBe("entailment")
+    const spanRecords = records.filter((r) => r.granularity === "span")
+    expect(spanRecords).toHaveLength(2)
+
+    const entailmentSpan = spanRecords.find((r) => r.nliLabel === "entailment")
+    expect(entailmentSpan?.hypothesisId).toBe(1)
+
+    const notMentionedSpan = spanRecords.find(
+      (r) => r.nliLabel === "not_mentioned"
+    )
+    expect(notMentionedSpan?.hypothesisId).toBe(10)
   })
 
   it("preserves hypothesis text in sectionPath", async () => {
@@ -237,6 +258,7 @@ describe("ContractNLI parser", () => {
     }
 
     const spanRecord = records.find((r) => r.granularity === "span")
+    // sectionPath should contain the hypothesis text
     expect(spanRecord?.sectionPath[0]).toContain("Confidential Information")
   })
 })

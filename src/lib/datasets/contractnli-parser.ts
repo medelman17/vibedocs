@@ -35,7 +35,7 @@ export async function* parseContractNliDataset(
 
   // Read rows one by one
   let row: Record<string, unknown> | null
-  while ((row = await cursor.next())) {
+  while ((row = (await cursor.next()) as Record<string, unknown> | null)) {
     const premise = normalizeText(String(row.premise ?? ""))
     const hypothesis = String(row.hypothesis ?? "")
     const labelNum = Number(row.label ?? 1)

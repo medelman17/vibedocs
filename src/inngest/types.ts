@@ -139,6 +139,7 @@ export const bootstrapIngestProgressPayload = z.object({
     "embedding",
     "inserting",
     "indexing",
+    "complete",
   ]),
   /** Records processed so far */
   recordsProcessed: z.number().int().nonnegative(),
