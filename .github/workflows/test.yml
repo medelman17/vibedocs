@@ -17,9 +17,14 @@ on:
       - '**/*.mdx'
       - '**/*.markdown'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     env:
       # Dummy values for CI - tests use PGlite, not real database
@@ -46,8 +51,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Cache Vitest
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.vite
+          key: vitest-${{ runner.os }}-${{ hashFiles('src/**/*.ts', 'src/**/*.tsx') }}
+          restore-keys: vitest-${{ runner.os }}-
+
       - name: Run tests
         run: pnpm test
 
+      - name: Cache ESLint
+        uses: actions/cache@v4
+        with:
+          path: .eslintcache
+          key: eslint-${{ runner.os }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
+          restore-keys: eslint-${{ runner.os }}-
+
       - name: Run linter
-        run: pnpm lint
+        run: pnpm lint --cache --cache-location .eslintcache
