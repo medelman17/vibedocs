@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { z } from 'zod'
 
 // Hoist the mock data so it's available during vi.mock hoisting
 const { mockDbResult, mockDocsResult, mockEmbedding, callCount } = vi.hoisted(() => ({
@@ -93,11 +94,15 @@ describe('vectorSearchTool', () => {
     expect(vectorSearchTool.description).toContain('reference corpus')
   })
 
-  it('defines query, category, and limit parameters', () => {
-    const params = vectorSearchTool.parameters
-    expect(params.shape.query).toBeDefined()
-    expect(params.shape.category).toBeDefined()
-    expect(params.shape.limit).toBeDefined()
+  it('defines query, category, and limit in input schema', () => {
+    const schema = vectorSearchTool.inputSchema as z.ZodObject<{
+      query: z.ZodString
+      category: z.ZodOptional<z.ZodString>
+      limit: z.ZodDefault<z.ZodNumber>
+    }>
+    expect(schema.shape.query).toBeDefined()
+    expect(schema.shape.category).toBeDefined()
+    expect(schema.shape.limit).toBeDefined()
   })
 })
 

@@ -31,6 +31,81 @@ const searchCache = new LRUCache<string, VectorSearchResult[]>({
   ttl: 1000 * 60 * 5,
 })
 
+/** Input schema for vector search */
+export const vectorSearchInputSchema = z.object({
+  query: z.string().describe('Clause text to find similar examples for'),
+  category: z.string().optional().describe('Filter by CUAD category'),
+  limit: z.number().min(1).max(10).default(5).describe('Max results (1-10)'),
+})
+
+type VectorSearchInput = z.infer<typeof vectorSearchInputSchema>
+
+/**
+ * Core vector search implementation.
+ * Used by both the AI SDK tool and direct function calls.
+ */
+async function executeVectorSearch({
+  query,
+  category,
+  limit,
+}: VectorSearchInput): Promise<VectorSearchResult[]> {
+  // Check cache
+  const cacheKey = `${query.slice(0, 100)}:${category ?? 'all'}:${limit}`
+  const cached = searchCache.get(cacheKey)
+  if (cached) return cached
+
+  // Generate query embedding
+  const voyageClient = getVoyageAIClient()
+  const { embedding } = await voyageClient.embed(query, 'query')
+
+  // Search with cosine distance
+  const distanceThreshold = 0.3 // similarity > 0.7
+
+  const whereConditions = [
+    lt(cosineDistance(referenceEmbeddings.embedding, embedding), distanceThreshold),
+  ]
+  if (category) {
+    whereConditions.push(eq(referenceEmbeddings.category, category))
+  }
+
+  const results = await db
+    .select({
+      id: referenceEmbeddings.id,
+      content: referenceEmbeddings.content,
+      category: referenceEmbeddings.category,
+      distance: cosineDistance(referenceEmbeddings.embedding, embedding),
+      documentId: referenceEmbeddings.documentId,
+    })
+    .from(referenceEmbeddings)
+    .where(and(...whereConditions))
+    .orderBy(cosineDistance(referenceEmbeddings.embedding, embedding))
+    .limit(limit)
+
+  // Fetch source document titles
+  const docIds = [...new Set(results.map(r => r.documentId))]
+  const docs = docIds.length > 0
+    ? await db
+        .select({ id: referenceDocuments.id, title: referenceDocuments.title })
+        .from(referenceDocuments)
+        .where(sql`${referenceDocuments.id} IN (${sql.join(docIds.map(id => sql`${id}`), sql`, `)})`)
+    : []
+
+  const docMap = new Map(docs.map(d => [d.id, d.title]))
+
+  const searchResults: VectorSearchResult[] = results.map(r => ({
+    id: r.id,
+    content: r.content.slice(0, 500),
+    category: r.category ?? 'Unknown',
+    similarity: Math.round((1 - (r.distance as number)) * 100) / 100,
+    source: docMap.get(r.documentId) ?? 'Unknown',
+  }))
+
+  // Cache results
+  searchCache.set(cacheKey, searchResults)
+
+  return searchResults
+}
+
 /**
  * AI SDK tool for agents to search reference corpus.
  * Finds similar clauses from CUAD/ContractNLI embeddings.
@@ -39,68 +114,8 @@ export const vectorSearchTool = tool({
   description:
     'Search the CUAD legal reference corpus for similar clauses. ' +
     'Use to find examples of standard clause language for comparison.',
-  parameters: z.object({
-    query: z.string().describe('Clause text to find similar examples for'),
-    category: z.string().optional().describe('Filter by CUAD category'),
-    limit: z.number().min(1).max(10).default(5).describe('Max results (1-10)'),
-  }),
-  execute: async ({ query, category, limit }) => {
-    // Check cache
-    const cacheKey = `${query.slice(0, 100)}:${category ?? 'all'}:${limit}`
-    const cached = searchCache.get(cacheKey)
-    if (cached) return cached
-
-    // Generate query embedding
-    const voyageClient = getVoyageAIClient()
-    const { embedding } = await voyageClient.embed(query, 'query')
-
-    // Search with cosine distance
-    const distanceThreshold = 0.3 // similarity > 0.7
-
-    const whereConditions = [
-      lt(cosineDistance(referenceEmbeddings.embedding, embedding), distanceThreshold),
-    ]
-    if (category) {
-      whereConditions.push(eq(referenceEmbeddings.category, category))
-    }
-
-    const results = await db
-      .select({
-        id: referenceEmbeddings.id,
-        content: referenceEmbeddings.content,
-        category: referenceEmbeddings.category,
-        distance: cosineDistance(referenceEmbeddings.embedding, embedding),
-        documentId: referenceEmbeddings.documentId,
-      })
-      .from(referenceEmbeddings)
-      .where(and(...whereConditions))
-      .orderBy(cosineDistance(referenceEmbeddings.embedding, embedding))
-      .limit(limit)
-
-    // Fetch source document titles
-    const docIds = [...new Set(results.map(r => r.documentId))]
-    const docs = docIds.length > 0
-      ? await db
-          .select({ id: referenceDocuments.id, title: referenceDocuments.title })
-          .from(referenceDocuments)
-          .where(sql`${referenceDocuments.id} IN (${sql.join(docIds.map(id => sql`${id}`), sql`, `)})`)
-      : []
-
-    const docMap = new Map(docs.map(d => [d.id, d.title]))
-
-    const searchResults: VectorSearchResult[] = results.map(r => ({
-      id: r.id,
-      content: r.content.slice(0, 500),
-      category: r.category ?? 'Unknown',
-      similarity: Math.round((1 - (r.distance as number)) * 100) / 100,
-      source: docMap.get(r.documentId) ?? 'Unknown',
-    }))
-
-    // Cache results
-    searchCache.set(cacheKey, searchResults)
-
-    return searchResults
-  },
+  inputSchema: vectorSearchInputSchema,
+  execute: executeVectorSearch,
 })
 
 /**
@@ -110,11 +125,12 @@ export async function findSimilarClauses(
   query: string,
   options: { category?: CuadCategory; limit?: number } = {}
 ): Promise<VectorSearchResult[]> {
-  return vectorSearchTool.execute({
+  const input = vectorSearchInputSchema.parse({
     query,
     category: options.category,
     limit: options.limit ?? 5,
   })
+  return executeVectorSearch(input)
 }
 
 /** Clear search cache (for testing) */
