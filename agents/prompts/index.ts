@@ -1,4 +1,5 @@
 export * from './classifier'
+export * from './risk-scorer'
 
 /** Legal disclaimer for all outputs */
 export const LEGAL_DISCLAIMER =
