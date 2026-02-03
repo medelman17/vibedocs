@@ -12,12 +12,12 @@
   <DisplayName DefaultValue="VibeDocs"/>
   <Description DefaultValue="Analyze NDAs for risks and missing clauses"/>
 
-  <IconUrl DefaultValue="https://vibedocs-n57rzk013-edel-projects.vercel.app/word-addin/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://vibedocs-n57rzk013-edel-projects.vercel.app/word-addin/assets/icon-80.png"/>
-  <SupportUrl DefaultValue="https://vibedocs-n57rzk013-edel-projects.vercel.app"/>
+  <IconUrl DefaultValue="https://vdocs.edel.sh/word-addin/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://vdocs.edel.sh/word-addin/assets/icon-80.png"/>
+  <SupportUrl DefaultValue="https://vdocs.edel.sh"/>
 
   <AppDomains>
-    <AppDomain>https://vibedocs-n57rzk013-edel-projects.vercel.app</AppDomain>
+    <AppDomain>https://vdocs.edel.sh</AppDomain>
   </AppDomains>
 
   <Hosts>
@@ -31,7 +31,7 @@
   </Requirements>
 
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://vibedocs-n57rzk013-edel-projects.vercel.app/word-addin/taskpane"/>
+    <SourceLocation DefaultValue="https://vdocs.edel.sh/word-addin/taskpane"/>
   </DefaultSettings>
 
   <Permissions>ReadWriteDocument</Permissions>
@@ -79,13 +79,13 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://vibedocs-n57rzk013-edel-projects.vercel.app/word-addin/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://vibedocs-n57rzk013-edel-projects.vercel.app/word-addin/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://vibedocs-n57rzk013-edel-projects.vercel.app/word-addin/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://vdocs.edel.sh/word-addin/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://vdocs.edel.sh/word-addin/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://vdocs.edel.sh/word-addin/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://vibedocs-n57rzk013-edel-projects.vercel.app/word-addin/taskpane"/>
-        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://vibedocs-n57rzk013-edel-projects.vercel.app"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://vdocs.edel.sh/word-addin/taskpane"/>
+        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://vdocs.edel.sh"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="Get started with VibeDocs"/>
