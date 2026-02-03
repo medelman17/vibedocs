@@ -6,6 +6,7 @@ import { AuthGate } from "./components/AuthGate"
 import { AnalyzeButton } from "./components/AnalyzeButton"
 import { ResultsView } from "./components/ResultsView"
 import { StoreHydration } from "./components/StoreHydration"
+import { DevTools } from "./components/DevTools"
 // Direct imports to enable tree-shaking (bundle-barrel-imports)
 import { useAnalysisStore } from "./store/analysis"
 import { initDevMode } from "./store/devMode"
@@ -109,13 +110,16 @@ export default function TaskPanePage() {
   }
 
   return (
-    <StoreHydration>
-      <TaskPaneShell>
-        <AuthGate>
-          <AnalyzeButton />
-          {showResults && <ResultsView />}
-        </AuthGate>
-      </TaskPaneShell>
-    </StoreHydration>
+    <>
+      <StoreHydration>
+        <TaskPaneShell>
+          <AuthGate>
+            <AnalyzeButton />
+            {showResults && <ResultsView />}
+          </AuthGate>
+        </TaskPaneShell>
+      </StoreHydration>
+      <DevTools />
+    </>
   )
 }
