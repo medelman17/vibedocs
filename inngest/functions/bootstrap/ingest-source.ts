@@ -46,7 +46,6 @@ const PARSERS: Record<DatasetSource, Parser> = {
 };
 
 const BATCH_SIZE = 128;
-const RATE_LIMIT_DELAY_MS = 200;
 
 /**
  * Process a single dataset source with resume support.
@@ -165,9 +164,6 @@ export const ingestSource = inngest.createFunction(
           await markFailed(progressId);
           throw new NonRetriableError(`Error rate exceeded 10% for ${source}`);
         }
-
-        // Rate limit between batches
-        await step.sleep(`rate-limit-${batchIndex}`, RATE_LIMIT_DELAY_MS);
 
         batch = [];
         batchIndex++;
