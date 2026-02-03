@@ -1,0 +1,106 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
+  "manifestVersion": "devPreview",
+  "id": "7c39cc9c-6bb3-40b8-949b-a0f8e7d641fb",
+  "version": "1.0.0",
+  "name": {
+    "short": "VibeDocs",
+    "full": "VibeDocs for Word"
+  },
+  "description": {
+    "short": "Analyze NDAs for risks and missing clauses",
+    "full": "AI-powered NDA analysis with evidence-based risk scoring. Extract clauses using the CUAD 41-category taxonomy, assess risk levels, and identify missing protections directly within Microsoft Word."
+  },
+  "developer": {
+    "name": "VibeDocs",
+    "websiteUrl": "https://vdocs.edel.sh",
+    "privacyUrl": "https://vdocs.edel.sh/privacy",
+    "termsOfUseUrl": "https://vdocs.edel.sh/terms"
+  },
+  "icons": {
+    "outline": "assets/icon-outline.png",
+    "color": "assets/icon-color.png"
+  },
+  "accentColor": "#8b5cf6",
+  "authorization": {
+    "permissions": {
+      "resourceSpecific": [
+        {
+          "name": "Document.ReadWrite.User",
+          "type": "Delegated"
+        }
+      ]
+    }
+  },
+  "validDomains": [
+    "vdocs.edel.sh",
+    "localhost:3000",
+    "*.vercel.app"
+  ],
+  "extensions": [
+    {
+      "requirements": {
+        "scopes": ["document"],
+        "capabilities": [
+          {
+            "name": "Mailbox",
+            "minVersion": "1.1"
+          }
+        ],
+        "formFactors": ["desktop", "web"]
+      },
+      "runtimes": [
+        {
+          "id": "TaskPaneRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://localhost:3000/word-addin/taskpane"
+          },
+          "lifetime": "short"
+        }
+      ],
+      "ribbons": [
+        {
+          "contexts": ["default"],
+          "tabs": [
+            {
+              "builtInTabId": "TabHome",
+              "groups": [
+                {
+                  "id": "NDAAnalystGroup",
+                  "label": "VibeDocs",
+                  "controls": [
+                    {
+                      "id": "AnalyzeButton",
+                      "type": "button",
+                      "label": "Analyze NDA",
+                      "icons": [
+                        {
+                          "size": 16,
+                          "url": "https://localhost:3000/word-addin/assets/icon-16.png"
+                        },
+                        {
+                          "size": 32,
+                          "url": "https://localhost:3000/word-addin/assets/icon-32.png"
+                        },
+                        {
+                          "size": 80,
+                          "url": "https://localhost:3000/word-addin/assets/icon-80.png"
+                        }
+                      ],
+                      "supertip": {
+                        "title": "Analyze NDA",
+                        "description": "Extract clauses and assess risks in the current document"
+                      },
+                      "actionId": "showTaskPane"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

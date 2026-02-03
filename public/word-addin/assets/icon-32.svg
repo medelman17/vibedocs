@@ -1,0 +1,8 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Document base -->
+  <path d="M6 4C6 2.89543 6.89543 2 8 2H18L26 10V28C26 29.1046 25.1046 30 24 30H8C6.89543 30 6 29.1046 6 28V4Z" fill="#22c55e"/>
+  <!-- Folded corner -->
+  <path d="M18 2V8C18 9.10457 18.8954 10 20 10H26L18 2Z" fill="#16a34a"/>
+  <!-- Check mark -->
+  <path d="M12 18L15 21L21 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

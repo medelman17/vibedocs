@@ -51,14 +51,17 @@ describe("api-utils", () => {
   })
 
   describe("withErrorHandling", () => {
+    // Helper to create mock context
+    const mockContext = { params: Promise.resolve({}) }
+
     it("returns handler result on success", async () => {
       const handler = vi.fn().mockResolvedValue(success({ data: "test" }))
       const wrapped = withErrorHandling(handler)
 
       const mockRequest = new Request("http://test.com/api")
-      const response = await wrapped(mockRequest)
+      const response = await wrapped(mockRequest, mockContext)
 
-      expect(handler).toHaveBeenCalledWith(mockRequest)
+      expect(handler).toHaveBeenCalledWith(mockRequest, mockContext)
       const body = await response.json()
       expect(body.success).toBe(true)
     })
@@ -68,7 +71,7 @@ describe("api-utils", () => {
       const wrapped = withErrorHandling(handler)
 
       const mockRequest = new Request("http://test.com/api")
-      const response = await wrapped(mockRequest)
+      const response = await wrapped(mockRequest, mockContext)
 
       expect(response.status).toBe(404)
       const body = await response.json()
@@ -83,7 +86,7 @@ describe("api-utils", () => {
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
       const mockRequest = new Request("http://test.com/api", { method: "POST" })
-      const response = await wrapped(mockRequest)
+      const response = await wrapped(mockRequest, mockContext)
 
       expect(response.status).toBe(500)
       const body = await response.json()
@@ -100,7 +103,7 @@ describe("api-utils", () => {
       const wrapped = withErrorHandling(handler)
 
       const mockRequest = new Request("http://test.com/api")
-      await wrapped(mockRequest)
+      await wrapped(mockRequest, mockContext)
 
       expect(consoleSpy).toHaveBeenCalledWith(
         "[API Error]",
@@ -109,6 +112,22 @@ describe("api-utils", () => {
         })
       )
       consoleSpy.mockRestore()
+    })
+
+    it("passes route params to handler via context", async () => {
+      const idContext = { params: Promise.resolve({ id: "123" }) }
+      const handler = vi.fn(async (_req, ctx) => {
+        const { id } = await ctx.params
+        return success({ receivedId: id })
+      })
+      const wrapped = withErrorHandling(handler)
+
+      const mockRequest = new Request("http://test.com/api/123")
+      const response = await wrapped(mockRequest, idContext)
+
+      const body = await response.json()
+      expect(body.success).toBe(true)
+      expect(body.data.receivedId).toBe("123")
     })
   })
 

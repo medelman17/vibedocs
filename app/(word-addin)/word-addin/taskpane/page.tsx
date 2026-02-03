@@ -1,0 +1,108 @@
+"use client"
+
+import { useSyncExternalStore, useCallback } from "react"
+import { TaskPaneShell } from "./components/TaskPaneShell"
+import { AuthGate } from "./components/AuthGate"
+import { AnalyzeButton } from "./components/AnalyzeButton"
+import { ResultsView } from "./components/ResultsView"
+import { StoreHydration } from "./components/StoreHydration"
+import { useAnalysisStore, initDevMode } from "./store"
+
+// Office.js types
+declare global {
+  interface Window {
+    Office?: typeof Office
+  }
+}
+
+// Office state managed outside React to avoid effect issues
+interface OfficeState {
+  isReady: boolean
+  error: string | null
+  host: string | null
+}
+
+let officeState: OfficeState = {
+  isReady: false,
+  error: null,
+  host: null,
+}
+
+const listeners = new Set<() => void>()
+
+function setOfficeState(newState: OfficeState) {
+  officeState = newState
+  listeners.forEach((listener) => listener())
+}
+
+function subscribeToOffice(callback: () => void) {
+  listeners.add(callback)
+  return () => listeners.delete(callback)
+}
+
+function getOfficeSnapshot() {
+  return officeState
+}
+
+// Initialize Office.js once (module-level side effect)
+if (typeof window !== "undefined") {
+  const devMode = initDevMode()
+
+  if (devMode) {
+    console.log("[Word Add-in] Dev mode active, bypassing Office.js")
+    setOfficeState({ isReady: true, error: null, host: "DevMode" })
+  } else if (window.Office) {
+    window.Office.onReady((info) => {
+      if (info.host === window.Office?.HostType.Word) {
+        setOfficeState({ isReady: true, error: null, host: info.host.toString() })
+      } else {
+        setOfficeState({
+          isReady: false,
+          error: "This add-in only works in Microsoft Word",
+          host: info.host?.toString() ?? null,
+        })
+      }
+    })
+  }
+}
+
+export default function TaskPanePage() {
+  const status = useAnalysisStore((state) => state.status)
+  const results = useAnalysisStore((state) => state.results)
+
+  // Use useSyncExternalStore to subscribe to Office state without effects
+  const getServerSnapshot = useCallback(() => officeState, [])
+  const currentOfficeState = useSyncExternalStore(
+    subscribeToOffice,
+    getOfficeSnapshot,
+    getServerSnapshot
+  )
+
+  if (!currentOfficeState.isReady) {
+    return (
+      <div className="flex h-screen items-center justify-center p-4">
+        <div className="text-center">
+          {currentOfficeState.error ? (
+            <p className="text-destructive">{currentOfficeState.error}</p>
+          ) : (
+            <p className="text-muted-foreground">Connecting to Word...</p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Determine if we should show results
+  const showResults = status === "completed" && results !== null
+
+  return (
+    <StoreHydration>
+      <TaskPaneShell>
+        <AuthGate>
+          <AnalyzeButton />
+          {showResults && <ResultsView />}
+        </AuthGate>
+      </TaskPaneShell>
+    </StoreHydration>
+  )
+}

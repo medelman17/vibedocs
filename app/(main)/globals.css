@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "../.ui-design/tokens/brand-palette.css";
+@import "../../.ui-design/tokens/brand-palette.css";
 
 @custom-variant dark (&:is(.dark *));
 
