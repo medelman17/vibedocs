@@ -1,9 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
+// Define mock type for chainable db methods
+type MockDb = {
+  update: ReturnType<typeof vi.fn> & { mockReturnValue: (val: MockDb) => void }
+  set: ReturnType<typeof vi.fn> & { mockReturnValue: (val: MockDb) => void }
+  where: ReturnType<typeof vi.fn>
+  query: {
+    users: {
+      findFirst: ReturnType<typeof vi.fn>
+    }
+  }
+}
+
 // Mock the db with a factory that returns fresh mocks
 vi.mock("@/db/client", () => {
-  const createChainableMock = () => {
-    const mock = {
+  const createChainableMock = (): MockDb => {
+    const mock: MockDb = {
       update: vi.fn(),
       set: vi.fn(),
       where: vi.fn(),
@@ -45,9 +57,9 @@ describe("rate limiting", () => {
 
   describe("checkLoginRateLimit", () => {
     it("allows login when under limit", async () => {
-      const { db } = await import("@/db/client")
+      const { db } = (await import("@/db/client")) as unknown as { db: MockDb }
       const { checkLoginRateLimit } = await import("./rate-limit")
-      vi.mocked(db.query.users.findFirst).mockResolvedValue({
+      db.query.users.findFirst.mockResolvedValue({
         id: "user-1",
         failedLoginAttempts: 2,
         lockedUntil: null,
@@ -59,9 +71,9 @@ describe("rate limiting", () => {
     })
 
     it("blocks login when limit exceeded", async () => {
-      const { db } = await import("@/db/client")
+      const { db } = (await import("@/db/client")) as unknown as { db: MockDb }
       const { checkLoginRateLimit } = await import("./rate-limit")
-      vi.mocked(db.query.users.findFirst).mockResolvedValue({
+      db.query.users.findFirst.mockResolvedValue({
         id: "user-1",
         failedLoginAttempts: 5,
         lockedUntil: new Date(Date.now() + 15 * 60 * 1000),
@@ -73,9 +85,9 @@ describe("rate limiting", () => {
     })
 
     it("allows login after lockout expires", async () => {
-      const { db } = await import("@/db/client")
+      const { db } = (await import("@/db/client")) as unknown as { db: MockDb }
       const { checkLoginRateLimit } = await import("./rate-limit")
-      vi.mocked(db.query.users.findFirst).mockResolvedValue({
+      db.query.users.findFirst.mockResolvedValue({
         id: "user-1",
         failedLoginAttempts: 5,
         lockedUntil: new Date(Date.now() - 1000), // Expired
@@ -86,9 +98,9 @@ describe("rate limiting", () => {
     })
 
     it("allows login for non-existent user", async () => {
-      const { db } = await import("@/db/client")
+      const { db } = (await import("@/db/client")) as unknown as { db: MockDb }
       const { checkLoginRateLimit } = await import("./rate-limit")
-      vi.mocked(db.query.users.findFirst).mockResolvedValue(null)
+      db.query.users.findFirst.mockResolvedValue(null)
 
       const result = await checkLoginRateLimit("nonexistent@example.com")
       expect(result.allowed).toBe(true)
@@ -98,7 +110,7 @@ describe("rate limiting", () => {
 
   describe("recordLoginAttempt", () => {
     it("resets attempts on successful login", async () => {
-      const { db } = await import("@/db/client")
+      const { db } = (await import("@/db/client")) as unknown as { db: MockDb }
       const { recordLoginAttempt } = await import("./rate-limit")
 
       await recordLoginAttempt("test@example.com", true, "192.168.1.1")
@@ -113,9 +125,9 @@ describe("rate limiting", () => {
     })
 
     it("increments failed attempts on failed login", async () => {
-      const { db } = await import("@/db/client")
+      const { db } = (await import("@/db/client")) as unknown as { db: MockDb }
       const { recordLoginAttempt } = await import("./rate-limit")
-      vi.mocked(db.query.users.findFirst).mockResolvedValue({
+      db.query.users.findFirst.mockResolvedValue({
         failedLoginAttempts: 2,
       })
 
@@ -131,9 +143,9 @@ describe("rate limiting", () => {
     })
 
     it("locks account when max attempts reached", async () => {
-      const { db } = await import("@/db/client")
+      const { db } = (await import("@/db/client")) as unknown as { db: MockDb }
       const { recordLoginAttempt } = await import("./rate-limit")
-      vi.mocked(db.query.users.findFirst).mockResolvedValue({
+      db.query.users.findFirst.mockResolvedValue({
         failedLoginAttempts: 4, // Next attempt will be 5th (max)
       })
 
@@ -148,12 +160,12 @@ describe("rate limiting", () => {
     })
 
     it("does nothing for non-existent user on failed login", async () => {
-      const { db } = await import("@/db/client")
+      const { db } = (await import("@/db/client")) as unknown as { db: MockDb }
       const { recordLoginAttempt } = await import("./rate-limit")
-      vi.mocked(db.query.users.findFirst).mockResolvedValue(null)
+      db.query.users.findFirst.mockResolvedValue(null)
 
       // Reset mock call counts before this test
-      vi.mocked(db.update).mockClear()
+      db.update.mockClear()
 
       await recordLoginAttempt("nonexistent@example.com", false)
 
@@ -166,7 +178,7 @@ describe("rate limiting", () => {
     })
 
     it("handles missing IP address on successful login", async () => {
-      const { db } = await import("@/db/client")
+      const { db } = (await import("@/db/client")) as unknown as { db: MockDb }
       const { recordLoginAttempt } = await import("./rate-limit")
 
       await recordLoginAttempt("test@example.com", true)
@@ -181,7 +193,7 @@ describe("rate limiting", () => {
 
   describe("resetLoginAttempts", () => {
     it("resets failed attempts and lockout", async () => {
-      const { db } = await import("@/db/client")
+      const { db } = (await import("@/db/client")) as unknown as { db: MockDb }
       const { resetLoginAttempts } = await import("./rate-limit")
 
       await resetLoginAttempts("test@example.com")

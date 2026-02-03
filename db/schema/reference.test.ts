@@ -9,6 +9,9 @@ import {
   contractNliHypotheses,
 } from "./index"
 
+// Mock 1024-dimensional embedding vector for tests
+const mockEmbedding = () => Array.from({ length: 1024 }, () => Math.random())
+
 describe("reference schema", () => {
   describe("referenceDocuments", () => {
     it("creates reference document", async () => {
@@ -70,7 +73,7 @@ describe("reference schema", () => {
           documentId: doc.id,
           granularity: "clause",
           content: "Test clause content",
-          embedding: "mock-embedding",
+          embedding: mockEmbedding(),
         })
         .returning()
 
@@ -90,7 +93,7 @@ describe("reference schema", () => {
           documentId: doc.id,
           granularity: "section",
           content: "Parent section",
-          embedding: "parent-embed",
+          embedding: mockEmbedding(),
         })
         .returning()
 
@@ -101,7 +104,7 @@ describe("reference schema", () => {
           parentId: parent.id,
           granularity: "clause",
           content: "Child clause",
-          embedding: "child-embed",
+          embedding: mockEmbedding(),
         })
         .returning()
 
@@ -118,7 +121,7 @@ describe("reference schema", () => {
         documentId: doc.id,
         granularity: "clause",
         content: "Test",
-        embedding: "embed",
+        embedding: mockEmbedding(),
       })
 
       await testDb.delete(referenceDocuments).where(eq(referenceDocuments.id, doc.id))
@@ -143,7 +146,7 @@ describe("reference schema", () => {
           documentId: doc.id,
           granularity: "clause",
           content: "Test",
-          embedding: "embed",
+          embedding: mockEmbedding(),
           sectionPath: ["Article 1", "Section 1.1"],
         })
         .returning()

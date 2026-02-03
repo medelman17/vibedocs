@@ -268,7 +268,7 @@ export async function changePassword(
  * ```
  */
 export async function deleteAccount(
-  input: z.infer<typeof deleteAccountSchema>
+  input: z.input<typeof deleteAccountSchema>
 ): Promise<ApiResponse<{ deleted: true }>> {
   const { userId } = await verifySession();
 

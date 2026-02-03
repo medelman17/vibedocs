@@ -23,6 +23,9 @@ import {
   createTestClauseExtraction,
 } from "@/test/factories"
 
+// Mock 1024-dimensional embedding vector for tests
+const mockEmbedding = () => Array.from({ length: 1024 }, () => Math.random())
+
 describe("relations", () => {
   describe("user relations", () => {
     it("fetches user with accounts", async () => {
@@ -262,7 +265,7 @@ describe("relations", () => {
         documentId: doc.id,
         granularity: "clause",
         content: "Test",
-        embedding: "embed",
+        embedding: mockEmbedding(),
       })
 
       const result = await testDb.query.referenceDocuments.findFirst({
@@ -285,7 +288,7 @@ describe("relations", () => {
           documentId: doc.id,
           granularity: "section",
           content: "Parent",
-          embedding: "p-embed",
+          embedding: mockEmbedding(),
         })
         .returning()
 
@@ -296,7 +299,7 @@ describe("relations", () => {
           parentId: parent.id,
           granularity: "clause",
           content: "Child",
-          embedding: "c-embed",
+          embedding: mockEmbedding(),
         })
         .returning()
 
@@ -320,7 +323,7 @@ describe("relations", () => {
           documentId: doc.id,
           granularity: "section",
           content: "Parent",
-          embedding: "p-embed",
+          embedding: mockEmbedding(),
         })
         .returning()
 
@@ -329,7 +332,7 @@ describe("relations", () => {
         parentId: parent.id,
         granularity: "clause",
         content: "Child 1",
-        embedding: "c1-embed",
+        embedding: mockEmbedding(),
       })
 
       await testDb.insert(referenceEmbeddings).values({
@@ -337,7 +340,7 @@ describe("relations", () => {
         parentId: parent.id,
         granularity: "clause",
         content: "Child 2",
-        embedding: "c2-embed",
+        embedding: mockEmbedding(),
       })
 
       const result = await testDb.query.referenceEmbeddings.findFirst({
