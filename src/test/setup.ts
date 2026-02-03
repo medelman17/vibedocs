@@ -284,6 +284,24 @@ const createSchema = async () => {
       category TEXT
     )
   `)
+
+  await testDb.execute(sql`
+    CREATE TABLE IF NOT EXISTS bootstrap_progress (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      source TEXT NOT NULL,
+      status TEXT NOT NULL,
+      total_records INTEGER,
+      processed_records INTEGER NOT NULL DEFAULT 0,
+      embedded_records INTEGER NOT NULL DEFAULT 0,
+      error_count INTEGER NOT NULL DEFAULT 0,
+      last_processed_hash TEXT,
+      last_batch_index INTEGER NOT NULL DEFAULT 0,
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
 }
 
 beforeEach(async () => {
