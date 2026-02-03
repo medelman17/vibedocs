@@ -18,8 +18,8 @@ const DATASET_URLS: Record<DatasetSource, string> = {
   cuad: "https://huggingface.co/datasets/cuad/resolve/main/CUAD_v1.parquet",
   contract_nli:
     "https://huggingface.co/datasets/kiddothe2b/contract-nli/resolve/main/train.json",
-  bonterms: "https://github.com/bonterms/nda/archive/refs/heads/main.zip",
-  commonaccord: "https://github.com/CommonAccord/NDA/archive/refs/heads/master.zip",
+  bonterms: "https://github.com/Bonterms/Mutual-NDA/archive/refs/heads/main.zip",
+  commonaccord: "https://github.com/CommonAccord/NW-NDA/archive/refs/heads/master.zip",
 }
 
 const DATASET_PATHS: Record<DatasetSource, string> = {
