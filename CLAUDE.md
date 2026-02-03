@@ -45,9 +45,19 @@ Will split into two physical databases later. Keep shared/tenant queries in sepa
 ### Auth & Multi-Tenancy
 
 - **Auth.js v5** with DrizzleAdapter, database sessions (not JWT)
-- **Providers**: Google OAuth, GitHub OAuth + Email/Password (bcryptjs)
+- **Providers**: Google OAuth, GitHub OAuth, Microsoft Entra ID + Email/Password (bcryptjs)
 - **Multi-org**: Users can belong to multiple organizations via `organization_members` junction table
 - **Session**: Includes `activeOrganizationId` for tenant context switching
+
+**CRITICAL: Auth.js DrizzleAdapter Column Naming**
+Auth.js v5 DrizzleAdapter expects **camelCase** column names for specific fields:
+- `users.emailVerified` (NOT `email_verified`)
+- `accounts.userId` (NOT `user_id`)
+- `accounts.providerAccountId` (NOT `provider_account_id`)
+- `sessions.sessionToken` (NOT `session_token`)
+- `sessions.userId` (NOT `user_id`)
+
+Using snake_case for these columns causes `AdapterError` (PostgreSQL 42703: undefined column) on OAuth callback. See `src/db/schema/auth.ts` for the correct schema definition.
 
 ### Data Access Layer (DAL)
 
