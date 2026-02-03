@@ -41,8 +41,6 @@ export default async function WordAddInAuthCompletePage() {
     sessionToken,
   })
 
-  console.log(`[AuthComplete] Generated code for user: ${session.user.email}`)
-
   // Redirect to callback with the code
   redirect(`/word-addin/auth/callback?code=${code}`)
 }

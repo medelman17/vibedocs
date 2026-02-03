@@ -61,7 +61,6 @@ export async function storeAuthCode(
     ex: CODE_EXPIRY_SECONDS,
   })
 
-  console.log(`[AuthCodeCache] Stored code for user: ${data.email}`)
   return code
 }
 
@@ -77,13 +76,11 @@ export async function exchangeAuthCode(
   const cached = await redis.getdel<string>(key)
 
   if (!cached) {
-    console.log(`[AuthCodeCache] Code not found or expired`)
     return null
   }
 
   const data: CachedAuth =
     typeof cached === "string" ? JSON.parse(cached) : cached
-  console.log(`[AuthCodeCache] Code exchanged for user: ${data.email}`)
 
   return data
 }
