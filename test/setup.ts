@@ -5,6 +5,10 @@ import { sql } from "drizzle-orm"
 import { beforeEach, afterEach, afterAll, vi } from "vitest"
 import * as schema from "@/db/schema"
 
+// Mock server-only package (used by lib/dal.ts)
+// This allows tests to import modules that use "server-only"
+vi.mock("server-only", () => ({}))
+
 // Create in-memory PGlite instance
 const client = new PGlite()
 export const testDb = drizzle(client, { schema })
