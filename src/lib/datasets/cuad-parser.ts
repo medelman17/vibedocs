@@ -12,17 +12,12 @@ import { tableFromIPC } from "apache-arrow"
 import type { NormalizedRecord, CuadCategory } from "./types"
 import { generateContentHash, normalizeText } from "./utils"
 
-// Lazy-loaded parquet-wasm module
+// Lazy-loaded parquet-wasm module (Node version doesn't need explicit WASM init)
 let parquetModule: typeof import("parquet-wasm/node") | null = null
-let wasmInitialized = false
 
 async function getParquetModule() {
   if (!parquetModule) {
     parquetModule = await import("parquet-wasm/node")
-  }
-  if (!wasmInitialized) {
-    await parquetModule.default()
-    wasmInitialized = true
   }
   return parquetModule
 }
