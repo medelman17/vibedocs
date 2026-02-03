@@ -3,9 +3,12 @@
 import { useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { FileSearch, Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
-import { useDocumentContent, useAnalysisProgress } from "../hooks"
-import { useAuthStore, useAnalysisStore } from "../store"
-import type { AnalysisResults } from "../store"
+// Direct imports to enable tree-shaking (bundle-barrel-imports)
+import { useDocumentContent } from "../hooks/useDocumentContent"
+import { useAnalysisProgress } from "../hooks/useAnalysisProgress"
+import { useAuthStore } from "../store/auth"
+import { useAnalysisStore } from "../store/analysis"
+import type { AnalysisResults } from "../store/analysis"
 
 /**
  * Button to trigger NDA analysis on the current document.
@@ -33,6 +36,11 @@ export function AnalyzeButton() {
     error: sseError,
   } = useAnalysisProgress(analysisId, status === "analyzing")
 
+  // Extract primitives for effect dependencies (rerender-dependencies)
+  const sseProgressStage = sseProgress?.stage
+  const sseProgressPercent = sseProgress?.percent
+  const sseProgressMessage = sseProgress?.message
+
   /**
    * Fetch completed results
    */
@@ -56,17 +64,21 @@ export function AnalyzeButton() {
     }
   }, [setResults, setError])
 
-  // Update store when SSE progress changes
+  // Update store when SSE progress changes (using primitive dependencies)
   useEffect(() => {
-    if (sseProgress) {
-      updateProgress(sseProgress)
+    if (sseProgressStage !== undefined && sseProgressPercent !== undefined) {
+      updateProgress({
+        stage: sseProgressStage,
+        percent: sseProgressPercent,
+        message: sseProgressMessage ?? "",
+      })
 
       // Fetch results when complete
-      if (sseProgress.stage === "completed" && analysisId && token) {
+      if (sseProgressStage === "completed" && analysisId && token) {
         fetchResults(analysisId, token)
       }
     }
-  }, [sseProgress, analysisId, token, updateProgress, fetchResults])
+  }, [sseProgressStage, sseProgressPercent, sseProgressMessage, analysisId, token, updateProgress, fetchResults])
 
   // Handle SSE errors
   useEffect(() => {

@@ -1,7 +1,8 @@
 "use client"
 
 import { type RiskLevel, RISK_BADGE_CONFIG } from "@/types/word-addin"
-import { useAnalysisStore } from "../store"
+// Direct import for tree-shaking (bundle-barrel-imports)
+import { useAnalysisStore } from "../store/analysis"
 
 /**
  * Extended risk level configuration with label and color class for gauge display

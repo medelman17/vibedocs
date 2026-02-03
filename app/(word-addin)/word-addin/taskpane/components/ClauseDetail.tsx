@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { RISK_BADGE_CONFIG } from "@/types/word-addin"
 import { ArrowLeft, MapPin, FileText, Loader2 } from "lucide-react"
-import { useAnalysisStore } from "../store"
-import { useDocumentNavigation } from "../hooks"
+// Direct imports for tree-shaking (bundle-barrel-imports)
+import { useAnalysisStore } from "../store/analysis"
+import { useDocumentNavigation } from "../hooks/useDocumentNavigation"
 import { formatCategory, normalizeRiskLevel } from "../lib/format"
 
 /**

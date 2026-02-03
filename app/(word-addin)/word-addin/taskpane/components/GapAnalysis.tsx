@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { PRIORITY_BADGE_CONFIG } from "@/types/word-addin"
 import { AlertCircle, AlertTriangle, CheckCircle2, Lightbulb, XCircle } from "lucide-react"
-import { useAnalysisStore } from "../store"
+// Direct import for tree-shaking (bundle-barrel-imports)
+import { useAnalysisStore } from "../store/analysis"
 import { formatCategory } from "../lib/format"
 
 /**

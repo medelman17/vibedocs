@@ -8,9 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useAnalysisStore } from "../store"
+// Direct imports for tree-shaking (bundle-barrel-imports)
+import { useAnalysisStore } from "../store/analysis"
+import type { ClauseResult } from "../store/analysis"
 import { ClauseCard } from "./ClauseCard"
-import type { ClauseResult } from "../store"
 
 /**
  * Risk filter options

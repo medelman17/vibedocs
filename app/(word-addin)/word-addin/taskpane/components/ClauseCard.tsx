@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { RISK_BADGE_CONFIG } from "@/types/word-addin"
 import { ChevronRight } from "lucide-react"
-import type { ClauseResult } from "../store"
+// Direct import for tree-shaking (bundle-barrel-imports)
+import type { ClauseResult } from "../store/analysis"
 import { formatCategory, normalizeRiskLevel } from "../lib/format"
 
 /**

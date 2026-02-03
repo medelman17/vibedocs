@@ -6,7 +6,9 @@ import { AuthGate } from "./components/AuthGate"
 import { AnalyzeButton } from "./components/AnalyzeButton"
 import { ResultsView } from "./components/ResultsView"
 import { StoreHydration } from "./components/StoreHydration"
-import { useAnalysisStore, initDevMode } from "./store"
+// Direct imports to enable tree-shaking (bundle-barrel-imports)
+import { useAnalysisStore } from "./store/analysis"
+import { initDevMode } from "./store/devMode"
 
 // Office.js types
 declare global {
@@ -79,8 +81,10 @@ if (typeof window !== "undefined") {
 }
 
 export default function TaskPanePage() {
-  const status = useAnalysisStore((state) => state.status)
-  const results = useAnalysisStore((state) => state.results)
+  // Derive boolean in selector to minimize re-renders (rerender-derived-state)
+  const showResults = useAnalysisStore(
+    (state) => state.status === "completed" && state.results !== null
+  )
 
   // Use useSyncExternalStore to subscribe to Office state without effects
   const getServerSnapshot = useCallback(() => officeState, [])
@@ -103,9 +107,6 @@ export default function TaskPanePage() {
       </div>
     )
   }
-
-  // Determine if we should show results
-  const showResults = status === "completed" && results !== null
 
   return (
     <StoreHydration>
