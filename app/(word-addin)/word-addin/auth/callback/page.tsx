@@ -5,11 +5,17 @@ import { useEffect, useState, useRef } from "react"
 /**
  * OAuth Callback Page for Word Add-in
  *
- * IMPORTANT: This page runs in an Office dialog which has ISOLATED cookies.
- * We CANNOT fetch session data here - cookies are blocked by third-party restrictions.
+ * This page receives a one-time auth code from the server (via URL param)
+ * and sends it to the taskpane via Office.js messageParent().
  *
- * Instead, we just signal "auth-complete" and let the TASKPANE fetch the session
- * (the taskpane CAN access cookies since it's the main frame).
+ * Flow:
+ * 1. OAuth completes → redirects to /word-addin/auth/complete (server component)
+ * 2. Server reads session cookies, generates one-time code
+ * 3. Redirects here with ?code=XXX
+ * 4. This page sends { type: "auth-code", code } to taskpane
+ * 5. Taskpane exchanges code for session via /api/word-addin/exchange
+ *
+ * This bypasses cookie restrictions in both dialogs AND cross-site iframes.
  *
  * See: https://learn.microsoft.com/en-us/office/dev/add-ins/develop/auth-with-office-dialog-api
  */
@@ -41,7 +47,8 @@ export default function WordAddInAuthCallbackPage() {
       })
     } else {
       addLog("Office.js not available, proceeding anyway")
-      setReady(true)
+      // Use setTimeout to avoid synchronous setState in effect (lint rule)
+      setTimeout(() => setReady(true), 0)
     }
   }, [])
 
@@ -57,7 +64,8 @@ export default function WordAddInAuthCallbackPage() {
     const errorParam = urlParams.get("error")
     if (errorParam) {
       addLog(`OAuth error in URL: ${errorParam}`)
-      setError(`OAuth error: ${errorParam}`)
+      // Use setTimeout to avoid synchronous setState in effect (lint rule)
+      setTimeout(() => setError(`OAuth error: ${errorParam}`), 0)
 
       // Send error to taskpane
       const errorMessage = JSON.stringify({
@@ -68,13 +76,25 @@ export default function WordAddInAuthCallbackPage() {
       return
     }
 
-    // OAuth completed - signal taskpane to fetch session
-    // NOTE: We don't fetch the session here because cookies are blocked in Office dialogs
-    // The taskpane will fetch the session after receiving this message
-    addLog("OAuth flow completed, signaling taskpane...")
+    // Check for auth code in URL (from /word-addin/auth/complete server component)
+    const authCode = urlParams.get("code")
+    if (!authCode) {
+      addLog("No auth code in URL - missing ?code= parameter")
+      // Use setTimeout to avoid synchronous setState in effect (lint rule)
+      setTimeout(() => setError("Authentication incomplete - no code received"), 0)
+      sendMessage(JSON.stringify({
+        type: "auth-error",
+        error: "No auth code received",
+      }))
+      return
+    }
+
+    // Send auth code to taskpane for exchange
+    addLog(`Got auth code: ${authCode.slice(0, 8)}...`)
 
     const message = JSON.stringify({
-      type: "auth-complete", // Changed from auth-success - taskpane will fetch token
+      type: "auth-code",
+      code: authCode,
     })
 
     sendMessage(message)
@@ -106,13 +126,17 @@ export default function WordAddInAuthCallbackPage() {
         }
       }
 
-      // Store flag in localStorage (for non-Office environments)
+      // Store code in localStorage (for non-Office environments)
       try {
-        localStorage.setItem("word-addin-auth-complete", JSON.stringify({
-          complete: true,
-          timestamp: Date.now(),
-        }))
-        addLog("Stored completion flag in localStorage")
+        const urlParams = new URLSearchParams(window.location.search)
+        const authCode = urlParams.get("code")
+        if (authCode) {
+          localStorage.setItem("word-addin-auth-code", JSON.stringify({
+            code: authCode,
+            timestamp: Date.now(),
+          }))
+          addLog("Stored auth code in localStorage")
+        }
       } catch (e) {
         addLog(`localStorage failed: ${e}`)
       }

@@ -94,7 +94,7 @@ export default function WordAddInAuthPage() {
 
     try {
       await signIn(providerId, {
-        callbackUrl: "/word-addin/auth/callback",
+        callbackUrl: "/word-addin/auth/complete",
       })
     } catch (e) {
       console.error("[AuthPage] Failed to start sign in:", e)

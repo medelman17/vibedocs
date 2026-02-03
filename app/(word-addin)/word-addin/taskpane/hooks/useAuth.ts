@@ -4,8 +4,9 @@ import { useCallback, useEffect } from "react"
 import { useAuthStore } from "../store/auth"
 
 interface AuthDialogResult {
-  type: "auth-success" | "auth-complete" | "auth-error"
+  type: "auth-success" | "auth-code" | "auth-error"
   token?: string
+  code?: string
   user?: {
     id: string
     email: string
@@ -15,27 +16,29 @@ interface AuthDialogResult {
 }
 
 /**
- * Fetch session from our API - this works from the taskpane because
- * the taskpane (unlike the dialog) can access cookies.
+ * Exchange a one-time auth code for session data.
+ * This bypasses cookie restrictions since no cookies are needed.
  */
-async function fetchSessionFromTaskpane(): Promise<{ token: string; user: { id: string; email: string; name?: string | null } } | null> {
-  console.log("[useAuth] Fetching session from taskpane...")
+async function exchangeAuthCode(code: string): Promise<{ token: string; user: { id: string; email: string; name?: string | null } } | null> {
+  console.log("[useAuth] Exchanging auth code...")
   try {
-    const response = await fetch("/api/word-addin/session", {
-      credentials: "include",
+    const response = await fetch("/api/word-addin/exchange", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
     })
-    console.log("[useAuth] Session API response:", response.status)
+    console.log("[useAuth] Exchange API response:", response.status)
 
     if (!response.ok) {
-      console.log("[useAuth] Session API failed:", response.status)
+      console.log("[useAuth] Exchange API failed:", response.status)
       return null
     }
 
     const data = await response.json()
-    console.log("[useAuth] Session fetched for:", data.user?.email)
-    return { token: data.token, user: data.user }
+    console.log("[useAuth] Exchange successful for:", data.data?.user?.email)
+    return { token: data.data.token, user: data.data.user }
   } catch (e) {
-    console.error("[useAuth] Session fetch error:", e)
+    console.error("[useAuth] Exchange error:", e)
     return null
   }
 }
@@ -55,10 +58,10 @@ export function useAuth() {
     }
   }, [isAuthenticated, isTokenValid, clearAuth])
 
-  // Poll localStorage for auth completion flag (fallback when Office.js messaging fails)
+  // Poll localStorage for auth code (fallback when Office.js messaging fails)
   const pollLocalStorage = useCallback(() => {
     return new Promise<AuthDialogResult | null>((resolve) => {
-      const AUTH_COMPLETE_KEY = "word-addin-auth-complete"
+      const AUTH_CODE_KEY = "word-addin-auth-code"
       const AUTH_KEY = "word-addin-auth" // Legacy key for backward compatibility
       const MAX_POLL_TIME = 5 * 60 * 1000 // 5 minutes max
       const POLL_INTERVAL = 500 // Check every 500ms
@@ -81,20 +84,20 @@ export function useAuth() {
           console.log(`[useAuth] Poll #${pollCount}, found: NO`)
         }
 
-        // Check for auth-complete flag (new approach)
-        const completeFlag = localStorage.getItem(AUTH_COMPLETE_KEY)
-        if (completeFlag) {
+        // Check for auth code (new approach)
+        const codeData = localStorage.getItem(AUTH_CODE_KEY)
+        if (codeData) {
           try {
-            const data = JSON.parse(completeFlag)
+            const data = JSON.parse(codeData)
             const age = Date.now() - (data.timestamp || 0)
-            if (data.complete && data.timestamp && age < 60000) {
-              console.log("[useAuth] Found auth-complete flag, fetching session...")
-              localStorage.removeItem(AUTH_COMPLETE_KEY)
+            if (data.code && data.timestamp && age < 60000) {
+              console.log("[useAuth] Found auth code in localStorage, exchanging...")
+              localStorage.removeItem(AUTH_CODE_KEY)
 
-              // Fetch session from taskpane (we can access cookies here)
-              const session = await fetchSessionFromTaskpane()
+              // Exchange code for session (no cookies needed)
+              const session = await exchangeAuthCode(data.code)
               if (session) {
-                console.log("[useAuth] Session fetched successfully!")
+                console.log("[useAuth] Code exchange successful!")
                 resolve({
                   type: "auth-success",
                   token: session.token,
@@ -104,7 +107,7 @@ export function useAuth() {
               }
             }
           } catch (e) {
-            console.error("[useAuth] Failed to parse auth-complete flag:", e)
+            console.error("[useAuth] Failed to parse auth code:", e)
           }
         }
 
@@ -153,17 +156,18 @@ export function useAuth() {
         try {
           const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data
 
-          // Handle auth-complete: dialog finished OAuth, we need to fetch session
-          if (data.type === "auth-complete" && !resolved) {
-            console.log("[useAuth] Got auth-complete, fetching session...")
-            const session = await fetchSessionFromTaskpane()
+          // Handle auth-code: dialog sent one-time code, exchange it for session
+          if (data.type === "auth-code" && data.code && !resolved) {
+            console.log("[useAuth] Got auth-code, exchanging...")
+            const session = await exchangeAuthCode(data.code)
             if (session) {
               resolved = true
               window.removeEventListener("message", messageHandler)
               setAuth(session.token, session.user)
               resolve({ type: "auth-success", token: session.token, user: session.user })
             } else {
-              console.log("[useAuth] Session fetch failed after auth-complete")
+              console.log("[useAuth] Code exchange failed")
+              resolve({ type: "auth-error", error: "Code exchange failed" })
             }
             return
           }
@@ -240,18 +244,18 @@ export function useAuth() {
                 const data = JSON.parse(arg.message) as AuthDialogResult
                 console.log("[useAuth] Parsed message:", data.type)
 
-                // Handle auth-complete: dialog finished OAuth, we fetch session from taskpane
-                if (data.type === "auth-complete") {
-                  console.log("[useAuth] Auth complete, fetching session from taskpane...")
-                  const session = await fetchSessionFromTaskpane()
+                // Handle auth-code: dialog sent one-time code, exchange for session
+                if (data.type === "auth-code" && data.code) {
+                  console.log("[useAuth] Got auth-code, exchanging...")
+                  const session = await exchangeAuthCode(data.code)
                   if (session) {
                     resolved = true
                     window.removeEventListener("message", messageHandler)
                     setAuth(session.token, session.user)
                     resolve({ type: "auth-success", token: session.token, user: session.user })
                   } else {
-                    console.log("[useAuth] Session fetch failed - user may not be authenticated")
-                    resolve({ type: "auth-error", error: "Session not found after OAuth" })
+                    console.log("[useAuth] Code exchange failed")
+                    resolve({ type: "auth-error", error: "Code exchange failed" })
                   }
                   dialog.close()
                   return
