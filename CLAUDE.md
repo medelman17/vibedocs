@@ -97,6 +97,7 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 - Claude Sonnet 4.5 (structured output, 0.0 temperature for classification)
 - Inngest for durable workflows (rate limiting: Voyage 300 RPM, Claude 60 RPM)
 - Auth.js v5 with Drizzle adapter
+- @dsnp/parquetjs for Parquet parsing (`cursor.next()` returns `unknown`, needs type assertion)
 
 ### Path Aliases
 ```
@@ -138,6 +139,7 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 ### Database (Drizzle)
 - All tenant tables use `...tenantId` spread from `src/db/_columns.ts`
 - Use column helpers: `primaryId`, `timestamps`, `softDelete`, `tenantId`
+- **CUAD Categories**: Use title case for abbreviations (e.g., `"Ip Ownership Assignment"` not `"IP Ownership Assignment"`)
 - Use `cosineDistance()` for vector similarity queries
 - HNSW indexes created AFTER bulk data load
 - Idempotent ingestion via `content_hash` + `ON CONFLICT DO NOTHING`
@@ -162,6 +164,7 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 ### Testing (Vitest + PGlite)
 - Tests use in-memory PGlite (WASM Postgres) - no Docker needed
 - Test files: `*.test.ts` in `src/` directory
+- ContractNLI parser tests require Parquet fixtures (use `ParquetWriter` from `@dsnp/parquetjs`)
 - Setup file: `src/test/setup.ts` creates schema before each test
 - Run: `pnpm test` or `pnpm test:coverage`
 - Use `vi.resetModules()` in `beforeEach` when mocks need fresh state between tests
