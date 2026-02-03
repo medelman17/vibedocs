@@ -164,6 +164,37 @@ export const bootstrapIngestCompletedPayload = z.object({
 })
 
 /**
+ * Bootstrap source process event - triggers per-source worker.
+ * Dispatched by coordinator to process one dataset.
+ */
+export const bootstrapSourceProcessPayload = z.object({
+  /** Dataset to process */
+  source: datasetSourceSchema,
+  /** Progress record ID for tracking */
+  progressId: z.string().uuid(),
+  /** Re-download even if cached */
+  forceRefresh: z.boolean().optional().default(false),
+})
+
+/**
+ * Bootstrap source completed event - emitted when a source finishes.
+ */
+export const bootstrapSourceCompletedPayload = z.object({
+  /** Dataset that completed */
+  source: datasetSourceSchema,
+  /** Progress record ID */
+  progressId: z.string().uuid(),
+  /** Final status */
+  status: z.enum(["completed", "failed"]),
+  /** Records processed */
+  processedRecords: z.number().int().nonnegative(),
+  /** Embeddings created */
+  embeddedRecords: z.number().int().nonnegative(),
+  /** Errors encountered */
+  errorCount: z.number().int().nonnegative(),
+})
+
+/**
  * All Inngest event types for the VibeDocs application.
  */
 export type InngestEvents = {
@@ -196,6 +227,12 @@ export type InngestEvents = {
   "bootstrap/ingest.completed": {
     data: z.infer<typeof bootstrapIngestCompletedPayload>
   }
+  "bootstrap/source.process": {
+    data: z.infer<typeof bootstrapSourceProcessPayload>
+  }
+  "bootstrap/source.completed": {
+    data: z.infer<typeof bootstrapSourceCompletedPayload>
+  }
 }
 
 /**
@@ -216,6 +253,12 @@ export type BootstrapIngestProgressPayload = z.infer<
 export type BootstrapIngestCompletedPayload = z.infer<
   typeof bootstrapIngestCompletedPayload
 >
+export type BootstrapSourceProcessPayload = z.infer<
+  typeof bootstrapSourceProcessPayload
+>
+export type BootstrapSourceCompletedPayload = z.infer<
+  typeof bootstrapSourceCompletedPayload
+>
 
 /**
  * Map of event names to their Zod schemas for runtime validation.
@@ -228,4 +271,6 @@ export const eventSchemas = {
   "bootstrap/ingest.requested": bootstrapIngestRequestedPayload,
   "bootstrap/ingest.progress": bootstrapIngestProgressPayload,
   "bootstrap/ingest.completed": bootstrapIngestCompletedPayload,
+  "bootstrap/source.process": bootstrapSourceProcessPayload,
+  "bootstrap/source.completed": bootstrapSourceCompletedPayload,
 } as const
