@@ -14,7 +14,7 @@ import {
 } from "@/db/schema/reference"
 import { getVoyageAIClient, VOYAGE_CONFIG } from "@/lib/embeddings"
 import type { NormalizedRecord, DatasetSource } from "@/lib/datasets"
-import { withRetry } from "./retry.js"
+import { withRetry } from "./retry"
 
 /**
  * Result of processing a batch.
