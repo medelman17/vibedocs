@@ -105,7 +105,10 @@ export async function GET(
         const pollInterval = setInterval(async () => {
           try {
             const updated = await db.query.analyses.findFirst({
-              where: eq(analyses.id, analysisId),
+              where: and(
+                eq(analyses.id, analysisId),
+                eq(analyses.tenantId, tenantId)
+              ),
               columns: { status: true },
             })
 
