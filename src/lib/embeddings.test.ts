@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import {
-  VoyageAIClient,
   VOYAGE_CONFIG,
   getVoyageAIClient,
   resetVoyageAIClient,
@@ -97,7 +96,7 @@ describe("VoyageAIClient", () => {
     })
 
     it("returns embeddings in original order", async () => {
-      const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
+      vi.spyOn(global, "fetch").mockResolvedValue({
         ok: true,
         json: async () => ({
           object: "list",

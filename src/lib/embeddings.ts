@@ -8,11 +8,7 @@
  */
 
 import { z } from "zod"
-import {
-  getCachedEmbeddings,
-  setCachedEmbedding,
-  type CachedEmbedding,
-} from "./cache"
+import { getCachedEmbeddings, setCachedEmbedding } from "./cache"
 
 /**
  * Voyage AI configuration.
