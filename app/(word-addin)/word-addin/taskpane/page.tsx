@@ -51,18 +51,30 @@ if (typeof window !== "undefined") {
   if (devMode) {
     console.log("[Word Add-in] Dev mode active, bypassing Office.js")
     setOfficeState({ isReady: true, error: null, host: "DevMode" })
-  } else if (window.Office) {
-    window.Office.onReady((info) => {
-      if (info.host === window.Office?.HostType.Word) {
-        setOfficeState({ isReady: true, error: null, host: info.host.toString() })
-      } else {
-        setOfficeState({
-          isReady: false,
-          error: "This add-in only works in Microsoft Word",
-          host: info.host?.toString() ?? null,
+  } else {
+    // Office.js loads async via next/script, so we need to wait for it
+    const initOffice = () => {
+      if (window.Office) {
+        console.log("[Word Add-in] Office.js found, calling onReady")
+        window.Office.onReady((info) => {
+          console.log("[Word Add-in] Office.onReady fired", info)
+          if (info.host === window.Office?.HostType.Word) {
+            setOfficeState({ isReady: true, error: null, host: info.host.toString() })
+          } else {
+            setOfficeState({
+              isReady: false,
+              error: `This add-in only works in Microsoft Word (got: ${info.host})`,
+              host: info.host?.toString() ?? null,
+            })
+          }
         })
+      } else {
+        // Office.js not loaded yet, try again shortly
+        console.log("[Word Add-in] Waiting for Office.js to load...")
+        setTimeout(initOffice, 100)
       }
-    })
+    }
+    initOffice()
   }
 }
 
