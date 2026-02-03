@@ -14,15 +14,11 @@
  * @module inngest/functions/bootstrap/ingest-source
  */
 
-import { inngest } from "../../client"
-import { NonRetriableError } from "@/inngest/utils/errors"
-import { db } from "@/db/client"
-import {
-  referenceDocuments,
-  referenceEmbeddings,
-} from "@/db/schema/reference"
-import { eq } from "drizzle-orm"
-import { getDatasetPath } from "@/lib/datasets/downloader"
+import { inngest, NonRetriableError } from "@/inngest";
+import { db } from "@/db/client";
+import { referenceDocuments, referenceEmbeddings } from "@/db/schema/reference";
+import { eq } from "drizzle-orm";
+import { getDatasetPath } from "@/lib/datasets/downloader";
 import {
   parseCuadDataset,
   parseContractNliDataset,
@@ -30,27 +26,27 @@ import {
   parseCommonAccordDataset,
   type NormalizedRecord,
   type DatasetSource,
-} from "@/lib/datasets"
+} from "@/lib/datasets";
 import {
   getProgress,
   markStarted,
   markCompleted,
   markFailed,
   updateProgress,
-} from "./utils/progress-tracker"
-import { processBatch, shouldCircuitBreak } from "./utils/batch-processor"
+} from "./utils/progress-tracker";
+import { processBatch, shouldCircuitBreak } from "./utils/batch-processor";
 
-type Parser = (path: string) => AsyncGenerator<NormalizedRecord>
+type Parser = (path: string) => AsyncGenerator<NormalizedRecord>;
 
 const PARSERS: Record<DatasetSource, Parser> = {
   cuad: parseCuadDataset,
   contract_nli: parseContractNliDataset,
   bonterms: parseBontermsDataset,
   commonaccord: parseCommonAccordDataset,
-}
+};
 
-const BATCH_SIZE = 128
-const RATE_LIMIT_DELAY_MS = 200
+const BATCH_SIZE = 128;
+const RATE_LIMIT_DELAY_MS = 200;
 
 /**
  * Process a single dataset source with resume support.
@@ -72,16 +68,16 @@ export const ingestSource = inngest.createFunction(
   },
   { event: "bootstrap/source.process" },
   async ({ event, step }) => {
-    const { source, progressId } = event.data
+    const { source, progressId } = event.data;
 
     // Get progress record for resume support
     const progress = await step.run("get-progress", async () => {
-      const p = await getProgress(progressId)
+      const p = await getProgress(progressId);
       if (!p) {
-        throw new NonRetriableError(`Progress record not found: ${progressId}`)
+        throw new NonRetriableError(`Progress record not found: ${progressId}`);
       }
-      return p
-    })
+      return p;
+    });
 
     // Get existing hashes for deduplication
     // Join with documents to filter by source
@@ -93,66 +89,66 @@ export const ingestSource = inngest.createFunction(
           .from(referenceEmbeddings)
           .innerJoin(
             referenceDocuments,
-            eq(referenceEmbeddings.documentId, referenceDocuments.id)
+            eq(referenceEmbeddings.documentId, referenceDocuments.id),
           )
-          .where(eq(referenceDocuments.source, source))
+          .where(eq(referenceDocuments.source, source));
 
-        return rows.map((r) => r.hash).filter((h): h is string => h !== null)
-      }
-    )
+        return rows.map((r) => r.hash).filter((h): h is string => h !== null);
+      },
+    );
 
     // Convert to Set for O(1) lookups (done outside step for proper type)
-    const existingHashes = new Set(existingHashesArray)
+    const existingHashes = new Set(existingHashesArray);
 
     // Mark as started
     await step.run("mark-started", async () => {
-      await markStarted(progressId)
-    })
+      await markStarted(progressId);
+    });
 
     // Get parser and path
-    const path = getDatasetPath(source)
-    const parser = PARSERS[source]
+    const path = getDatasetPath(source);
+    const parser = PARSERS[source];
 
     if (!parser) {
-      throw new NonRetriableError(`Unknown source: ${source}`)
+      throw new NonRetriableError(`Unknown source: ${source}`);
     }
 
-    let batchIndex = 0
-    let batch: NormalizedRecord[] = []
-    let totalProcessed = 0
-    let totalEmbedded = 0
-    let totalErrors = 0
+    let batchIndex = 0;
+    let batch: NormalizedRecord[] = [];
+    let totalProcessed = 0;
+    let totalEmbedded = 0;
+    let totalErrors = 0;
 
     // Stream through records from parser
     for await (const record of parser(path)) {
       // Skip empty content
       if (!record.content?.trim()) {
-        continue
+        continue;
       }
 
       // Skip already-embedded records (deduplication)
       if (existingHashes.has(record.contentHash)) {
-        continue
+        continue;
       }
 
-      batch.push(record)
+      batch.push(record);
 
       if (batch.length >= BATCH_SIZE) {
         // Skip already-completed batches (resume support)
         if (batchIndex < progress.lastBatchIndex) {
-          batchIndex++
-          batch = []
-          continue
+          batchIndex++;
+          batch = [];
+          continue;
         }
 
         // Process batch as a durable step
         const result = await step.run(`batch-${batchIndex}`, async () => {
-          return await processBatch(batch, source, batchIndex)
-        })
+          return await processBatch(batch, source, batchIndex);
+        });
 
-        totalProcessed += result.processed
-        totalEmbedded += result.embedded
-        totalErrors += result.errors
+        totalProcessed += result.processed;
+        totalEmbedded += result.embedded;
+        totalErrors += result.errors;
 
         // Update progress
         await step.run(`progress-${batchIndex}`, async () => {
@@ -161,34 +157,32 @@ export const ingestSource = inngest.createFunction(
             embeddedRecords: totalEmbedded,
             errorCount: totalErrors,
             lastBatchIndex: batchIndex,
-          })
-        })
+          });
+        });
 
         // Circuit breaker check
         if (shouldCircuitBreak(totalProcessed, totalErrors)) {
-          await markFailed(progressId)
-          throw new NonRetriableError(
-            `Error rate exceeded 10% for ${source}`
-          )
+          await markFailed(progressId);
+          throw new NonRetriableError(`Error rate exceeded 10% for ${source}`);
         }
 
         // Rate limit between batches
-        await step.sleep(`rate-limit-${batchIndex}`, RATE_LIMIT_DELAY_MS)
+        await step.sleep(`rate-limit-${batchIndex}`, RATE_LIMIT_DELAY_MS);
 
-        batch = []
-        batchIndex++
+        batch = [];
+        batchIndex++;
       }
     }
 
     // Process remaining records in final batch
     if (batch.length > 0) {
       const result = await step.run(`batch-${batchIndex}-final`, async () => {
-        return await processBatch(batch, source, batchIndex)
-      })
+        return await processBatch(batch, source, batchIndex);
+      });
 
-      totalProcessed += result.processed
-      totalEmbedded += result.embedded
-      totalErrors += result.errors
+      totalProcessed += result.processed;
+      totalEmbedded += result.embedded;
+      totalErrors += result.errors;
 
       await step.run("progress-final", async () => {
         await updateProgress(progressId, {
@@ -196,14 +190,14 @@ export const ingestSource = inngest.createFunction(
           embeddedRecords: totalEmbedded,
           errorCount: totalErrors,
           lastBatchIndex: batchIndex,
-        })
-      })
+        });
+      });
     }
 
     // Mark as completed
     await step.run("mark-completed", async () => {
-      await markCompleted(progressId)
-    })
+      await markCompleted(progressId);
+    });
 
     // Emit completion event
     await step.sendEvent("emit-completed", {
@@ -216,13 +210,13 @@ export const ingestSource = inngest.createFunction(
         embeddedRecords: totalEmbedded,
         errorCount: totalErrors,
       },
-    })
+    });
 
     return {
       source,
       processedRecords: totalProcessed,
       embeddedRecords: totalEmbedded,
       errorCount: totalErrors,
-    }
-  }
-)
+    };
+  },
+);

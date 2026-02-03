@@ -7,8 +7,12 @@
  * @module inngest/functions/demo
  */
 
-import { inngest } from "../client"
-import { RETRY_CONFIG } from "../utils/concurrency"
+import {
+  inngest,
+  RETRY_CONFIG,
+  CONCURRENCY,
+  type InngestEvents,
+} from "@/inngest"
 
 /**
  * Demo function that simulates a document processing workflow.
@@ -33,15 +37,12 @@ export const demoProcess = inngest.createFunction(
   {
     id: "demo-process",
     name: "Demo: Process Document",
-    concurrency: { limit: 5 },
+    concurrency: CONCURRENCY.documentProcessing,
     retries: RETRY_CONFIG.default.retries,
   },
   { event: "demo/process" },
   async ({ event, step }) => {
-    const { documentId, message } = event.data as {
-      documentId: string
-      message?: string
-    }
+    const { documentId, message } = event.data as InngestEvents["demo/process"]["data"]
 
     // Step 1: Validate
     const validation = await step.run("validate-input", async () => {
@@ -101,10 +102,7 @@ export const demoMultiStep = inngest.createFunction(
   },
   { event: "demo/multi-step" },
   async ({ event, step }) => {
-    const { steps = 3, delayMs = 1000 } = event.data as {
-      steps?: number
-      delayMs?: number
-    }
+    const { steps = 3, delayMs = 1000 } = event.data as InngestEvents["demo/multi-step"]["data"]
 
     const results: Array<{ step: number; completedAt: string }> = []
 

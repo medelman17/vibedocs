@@ -11,15 +11,20 @@
  * @module inngest/functions/bootstrap/ingest-coordinator
  */
 
-import { inngest } from "../../client"
-import { db } from "@/db/client"
-import { downloadDataset } from "@/lib/datasets/downloader"
-import type { DatasetSource } from "@/lib/datasets"
-import { createProgress } from "./utils/progress-tracker"
-import { sql } from "drizzle-orm"
+import { inngest } from "@/inngest";
+import { db } from "@/db/client";
+import { downloadDataset } from "@/lib/datasets/downloader";
+import type { DatasetSource } from "@/lib/datasets";
+import { createProgress } from "./utils/progress-tracker";
+import { sql } from "drizzle-orm";
 
 /**
  * Coordinate the full bootstrap pipeline.
+ *
+ * Uses idiomatic Inngest patterns:
+ * - Parallel operations within steps (Promise.all)
+ * - Batch fan-out with single step.sendEvent call
+ * - step.waitForEvent to await worker completion
  */
 export const ingestCoordinator = inngest.createFunction(
   {
@@ -30,59 +35,69 @@ export const ingestCoordinator = inngest.createFunction(
   },
   { event: "bootstrap/ingest.requested" },
   async ({ event, step }) => {
-    const { sources, forceRefresh = false } = event.data
-    const startedAt = Date.now()
+    const { sources, forceRefresh = false } = event.data;
+    const startedAt = Date.now();
 
-    // Step 1: Download all datasets
-    const downloadResults: Record<string, boolean> = {}
-    for (const source of sources) {
-      const result = await step.run(`download-${source}`, async () => {
-        const downloadResult = await downloadDataset(source, forceRefresh)
-        return { cached: downloadResult.cached }
-      })
-      downloadResults[source] = result.cached
-    }
+    // Step 1: Download all datasets (parallel within single step)
+    const downloadResults = await step.run("download-datasets", async () => {
+      const results = await Promise.all(
+        sources.map(async (source: DatasetSource) => {
+          const result = await downloadDataset(source, forceRefresh);
+          return { source, cached: result.cached };
+        }),
+      );
+      return Object.fromEntries(results.map(({ source, cached }) => [source, cached]));
+    });
 
-    // Step 2: Create progress records for each source
-    const progressIds: Record<DatasetSource, string> = {} as Record<
-      DatasetSource,
-      string
-    >
-    for (const source of sources) {
-      const progress = await step.run(`create-progress-${source}`, async () => {
-        return await createProgress(source)
-      })
-      progressIds[source] = progress.id
-    }
+    // Step 2: Create progress records (parallel within single step)
+    const progressIds = await step.run("create-progress-records", async () => {
+      const results = await Promise.all(
+        sources.map(async (source: DatasetSource) => {
+          const progress = await createProgress(source);
+          return { source, progressId: progress.id };
+        }),
+      );
+      return Object.fromEntries(
+        results.map(({ source, progressId }) => [source, progressId]),
+      ) as Record<DatasetSource, string>;
+    });
 
-    // Step 3: Dispatch source workers (they run in parallel)
-    for (const source of sources) {
-      await step.sendEvent(`dispatch-${source}`, {
-        name: "bootstrap/source.process",
+    // Step 3: Fan-out to source workers (idiomatic batch pattern)
+    await step.sendEvent(
+      "fan-out-sources",
+      sources.map((source: DatasetSource) => ({
+        name: "bootstrap/source.process" as const,
         data: {
           source,
           progressId: progressIds[source],
           forceRefresh,
         },
-      })
-    }
+      })),
+    );
 
-    // Step 4: Wait for all sources to complete
-    // Note: In a real implementation, you'd use step.waitForEvent
-    // For now, we proceed after dispatch and let workers complete asynchronously
+    // Step 4: Wait for all sources to complete before creating indexes
+    await Promise.all(
+      sources.map((source: DatasetSource) =>
+        step.waitForEvent(`wait-for-${source}`, {
+          event: "bootstrap/source.completed",
+          if: `async.data.source == "${source}"`,
+          timeout: "2h",
+        }),
+      ),
+    );
 
     // Step 5: Create HNSW indexes after all data loaded
     await step.run("create-hnsw-indexes", async () => {
-      await db.execute(sql`DROP INDEX IF EXISTS ref_embeddings_hnsw_idx`)
+      await db.execute(sql`DROP INDEX IF EXISTS ref_embeddings_hnsw_idx`);
       await db.execute(sql`
         CREATE INDEX ref_embeddings_hnsw_idx
         ON reference_embeddings
         USING hnsw (embedding vector_cosine_ops)
         WITH (m = 16, ef_construction = 64)
-      `)
-    })
+      `);
+    });
 
-    const durationMs = Date.now() - startedAt
+    const durationMs = Date.now() - startedAt;
 
     // Emit completion event
     await step.sendEvent("emit-completed", {
@@ -93,7 +108,7 @@ export const ingestCoordinator = inngest.createFunction(
         totalEmbeddings: 0,
         durationMs,
       },
-    })
+    });
 
     return {
       success: true,
@@ -103,6 +118,6 @@ export const ingestCoordinator = inngest.createFunction(
         .map(([source]) => source),
       progressIds,
       durationMs,
-    }
-  }
-)
+    };
+  },
+);

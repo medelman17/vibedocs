@@ -253,6 +253,57 @@ await step.sendEvent("emit-progress", {
 })
 ```
 
+**Fan-out Pattern**: Use batch `step.sendEvent` (not loops):
+```typescript
+// ✅ CORRECT - Single atomic fan-out
+await step.sendEvent(
+  "fan-out-sources",
+  sources.map((source) => ({
+    name: "bootstrap/source.process",
+    data: { source, progressId: progressIds[source] },
+  }))
+)
+
+// ❌ AVOID - Loop creates multiple steps
+for (const source of sources) {
+  await step.sendEvent(`dispatch-${source}`, { ... })
+}
+```
+
+**Waiting for Workers**: Use `step.waitForEvent` before dependent steps:
+```typescript
+await Promise.all(
+  sources.map((source) =>
+    step.waitForEvent(`wait-for-${source}`, {
+      event: "bootstrap/source.completed",
+      if: `async.data.source == "${source}"`,
+      timeout: "2h",
+    })
+  )
+)
+```
+
+**Event Batching**: Process multiple events per invocation for high-volume scenarios:
+```typescript
+export const bulkIngest = inngest.createFunction(
+  {
+    id: "bulk-ingest",
+    batchEvents: {
+      maxSize: 100,                // Up to 100 events per invocation
+      timeout: "10s",              // Or after 10 seconds
+      key: "event.data.tenantId",  // Group by tenant
+    }
+  },
+  { event: "webhook/received" },
+  async ({ events, step }) => {   // Note: events (plural)
+    await step.run("bulk-insert", async () => {
+      return await db.insert(table).values(events.map(e => e.data))
+    })
+  }
+)
+```
+**Note:** Batching is incompatible with `cancelOn`, rate limiting, idempotency, and priority.
+
 **Testing**: Import test helpers directly (not from barrel):
 ```typescript
 import { createMockEvent, createMockStep, testEventData } from "@/inngest/utils/test-helpers"

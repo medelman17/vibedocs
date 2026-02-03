@@ -9,8 +9,8 @@
  * @module inngest/types
  */
 
-import { z } from "zod"
-import type { DatasetSource } from "@/lib/datasets"
+import { z } from "zod";
+import type { DatasetSource } from "@/lib/datasets";
 
 /**
  * Base payload fields included in all tenant-scoped events.
@@ -20,7 +20,7 @@ export const baseTenantPayload = z.object({
   tenantId: z.string().uuid(),
   /** User who triggered the event (optional for system events) */
   userId: z.string().uuid().optional(),
-})
+});
 
 /**
  * Document upload event - triggers processing pipeline.
@@ -38,7 +38,7 @@ export const documentUploadedPayload = baseTenantPayload.extend({
   ]),
   /** Blob storage URL */
   fileUrl: z.string().url(),
-})
+});
 
 /**
  * Analysis request event - triggers the full agent pipeline.
@@ -51,7 +51,7 @@ export const analysisRequestedPayload = baseTenantPayload.extend({
   analysisId: z.string().uuid(),
   /** Optional: specific analysis version (for re-analysis) */
   version: z.number().int().positive().optional(),
-})
+});
 
 /**
  * Analysis progress event - emitted during pipeline execution.
@@ -66,7 +66,7 @@ export const analysisProgressPayload = z.object({
   percent: z.number().min(0).max(100),
   /** Optional status message */
   message: z.string().optional(),
-})
+});
 
 /**
  * Comparison request event - triggers side-by-side comparison.
@@ -78,7 +78,7 @@ export const comparisonRequestedPayload = baseTenantPayload.extend({
   documentAId: z.string().uuid(),
   /** Second document in comparison */
   documentBId: z.string().uuid(),
-})
+});
 
 // =============================================================================
 // Demo Events (for testing Inngest setup)
@@ -90,7 +90,7 @@ export const comparisonRequestedPayload = baseTenantPayload.extend({
 export const demoProcessPayload = z.object({
   documentId: z.string(),
   message: z.string().optional(),
-})
+});
 
 /**
  * Demo multi-step event - runs configurable steps with delays.
@@ -98,7 +98,7 @@ export const demoProcessPayload = z.object({
 export const demoMultiStepPayload = z.object({
   steps: z.number().int().positive().optional().default(3),
   delayMs: z.number().int().nonnegative().optional().default(1000),
-})
+});
 
 // =============================================================================
 // Bootstrap Events (for reference data ingestion)
@@ -112,7 +112,7 @@ const datasetSourceSchema = z.enum([
   "contract_nli",
   "bonterms",
   "commonaccord",
-]) satisfies z.ZodType<DatasetSource>
+]) satisfies z.ZodType<DatasetSource>;
 
 /**
  * Bootstrap ingest request event - triggers reference data pipeline.
@@ -123,7 +123,7 @@ export const bootstrapIngestRequestedPayload = z.object({
   sources: z.array(datasetSourceSchema).min(1),
   /** Re-download even if cached */
   forceRefresh: z.boolean().optional().default(false),
-})
+});
 
 /**
  * Bootstrap ingest progress event - emitted during pipeline execution.
@@ -147,7 +147,7 @@ export const bootstrapIngestProgressPayload = z.object({
   totalRecords: z.number().int().nonnegative().optional(),
   /** Progress percentage (0-100) */
   percent: z.number().min(0).max(100).optional(),
-})
+});
 
 /**
  * Bootstrap ingest completed event - emitted when pipeline finishes.
@@ -161,7 +161,7 @@ export const bootstrapIngestCompletedPayload = z.object({
   totalEmbeddings: z.number().int().nonnegative(),
   /** Total duration in milliseconds */
   durationMs: z.number().int().nonnegative(),
-})
+});
 
 /**
  * Bootstrap source process event - triggers per-source worker.
@@ -174,7 +174,7 @@ export const bootstrapSourceProcessPayload = z.object({
   progressId: z.string().uuid(),
   /** Re-download even if cached */
   forceRefresh: z.boolean().optional().default(false),
-})
+});
 
 /**
  * Bootstrap source completed event - emitted when a source finishes.
@@ -192,73 +192,100 @@ export const bootstrapSourceCompletedPayload = z.object({
   embeddedRecords: z.number().int().nonnegative(),
   /** Errors encountered */
   errorCount: z.number().int().nonnegative(),
-})
+});
+
+/**
+ * Analysis cancelled event - triggers cancellation of running analysis.
+ * Sent when user deletes document or explicitly cancels analysis.
+ */
+export const analysisCancelledPayload = baseTenantPayload.extend({
+  /** Analysis to cancel */
+  analysisId: z.string().uuid(),
+  /** Reason for cancellation */
+  reason: z.enum(["document_deleted", "user_cancelled", "superseded"]),
+});
+
+/**
+ * Document deleted event - triggers cleanup and cancellation.
+ */
+export const documentDeletedPayload = baseTenantPayload.extend({
+  /** Deleted document ID */
+  documentId: z.string().uuid(),
+});
 
 /**
  * All Inngest event types for the VibeDocs application.
  */
 export type InngestEvents = {
   "nda/uploaded": {
-    data: z.infer<typeof documentUploadedPayload>
-  }
+    data: z.infer<typeof documentUploadedPayload>;
+  };
   "nda/analysis.requested": {
-    data: z.infer<typeof analysisRequestedPayload>
-  }
+    data: z.infer<typeof analysisRequestedPayload>;
+  };
   "nda/analysis.progress": {
-    data: z.infer<typeof analysisProgressPayload>
-  }
+    data: z.infer<typeof analysisProgressPayload>;
+  };
+  "nda/analysis.cancelled": {
+    data: z.infer<typeof analysisCancelledPayload>;
+  };
+  "nda/document.deleted": {
+    data: z.infer<typeof documentDeletedPayload>;
+  };
   "nda/comparison.requested": {
-    data: z.infer<typeof comparisonRequestedPayload>
-  }
+    data: z.infer<typeof comparisonRequestedPayload>;
+  };
   // Demo events
   "demo/process": {
-    data: z.infer<typeof demoProcessPayload>
-  }
+    data: z.infer<typeof demoProcessPayload>;
+  };
   "demo/multi-step": {
-    data: z.infer<typeof demoMultiStepPayload>
-  }
+    data: z.infer<typeof demoMultiStepPayload>;
+  };
   // Bootstrap events
   "bootstrap/ingest.requested": {
-    data: z.infer<typeof bootstrapIngestRequestedPayload>
-  }
+    data: z.infer<typeof bootstrapIngestRequestedPayload>;
+  };
   "bootstrap/ingest.progress": {
-    data: z.infer<typeof bootstrapIngestProgressPayload>
-  }
+    data: z.infer<typeof bootstrapIngestProgressPayload>;
+  };
   "bootstrap/ingest.completed": {
-    data: z.infer<typeof bootstrapIngestCompletedPayload>
-  }
+    data: z.infer<typeof bootstrapIngestCompletedPayload>;
+  };
   "bootstrap/source.process": {
-    data: z.infer<typeof bootstrapSourceProcessPayload>
-  }
+    data: z.infer<typeof bootstrapSourceProcessPayload>;
+  };
   "bootstrap/source.completed": {
-    data: z.infer<typeof bootstrapSourceCompletedPayload>
-  }
-}
+    data: z.infer<typeof bootstrapSourceCompletedPayload>;
+  };
+};
 
 /**
  * Payload types exported for function implementations.
  */
-export type DocumentUploadedPayload = z.infer<typeof documentUploadedPayload>
-export type AnalysisRequestedPayload = z.infer<typeof analysisRequestedPayload>
-export type AnalysisProgressPayload = z.infer<typeof analysisProgressPayload>
+export type DocumentUploadedPayload = z.infer<typeof documentUploadedPayload>;
+export type AnalysisRequestedPayload = z.infer<typeof analysisRequestedPayload>;
+export type AnalysisProgressPayload = z.infer<typeof analysisProgressPayload>;
 export type ComparisonRequestedPayload = z.infer<
   typeof comparisonRequestedPayload
->
+>;
+export type AnalysisCancelledPayload = z.infer<typeof analysisCancelledPayload>;
+export type DocumentDeletedPayload = z.infer<typeof documentDeletedPayload>;
 export type BootstrapIngestRequestedPayload = z.infer<
   typeof bootstrapIngestRequestedPayload
->
+>;
 export type BootstrapIngestProgressPayload = z.infer<
   typeof bootstrapIngestProgressPayload
->
+>;
 export type BootstrapIngestCompletedPayload = z.infer<
   typeof bootstrapIngestCompletedPayload
->
+>;
 export type BootstrapSourceProcessPayload = z.infer<
   typeof bootstrapSourceProcessPayload
->
+>;
 export type BootstrapSourceCompletedPayload = z.infer<
   typeof bootstrapSourceCompletedPayload
->
+>;
 
 /**
  * Map of event names to their Zod schemas for runtime validation.
@@ -267,10 +294,16 @@ export const eventSchemas = {
   "nda/uploaded": documentUploadedPayload,
   "nda/analysis.requested": analysisRequestedPayload,
   "nda/analysis.progress": analysisProgressPayload,
+  "nda/analysis.cancelled": analysisCancelledPayload,
+  "nda/document.deleted": documentDeletedPayload,
   "nda/comparison.requested": comparisonRequestedPayload,
+  // Demo events
+  "demo/process": demoProcessPayload,
+  "demo/multi-step": demoMultiStepPayload,
+  // Bootstrap events
   "bootstrap/ingest.requested": bootstrapIngestRequestedPayload,
   "bootstrap/ingest.progress": bootstrapIngestProgressPayload,
   "bootstrap/ingest.completed": bootstrapIngestCompletedPayload,
   "bootstrap/source.process": bootstrapSourceProcessPayload,
   "bootstrap/source.completed": bootstrapSourceCompletedPayload,
-} as const
+} as const;

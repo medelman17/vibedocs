@@ -188,7 +188,7 @@ await step.sendEvent("emit-progress", {
 })
 ```
 
-### Parallel Execution
+### Parallel Execution (Within Single Function)
 ```typescript
 // Option 1: Promise.all (works fine)
 const [result1, result2] = await Promise.all([
@@ -202,6 +202,43 @@ const results = await step.parallel(
   () => step.run("task-2", async () => task2()),
 )
 ```
+
+### Fan-out Pattern (Trigger Multiple Functions)
+
+**IMPORTANT**: Use batch `step.sendEvent` with array, NOT loops:
+
+```typescript
+// ✅ CORRECT - Single atomic fan-out (idiomatic)
+await step.sendEvent(
+  "fan-out-sources",
+  sources.map((source) => ({
+    name: "bootstrap/source.process",
+    data: { source, progressId: progressIds[source], forceRefresh },
+  }))
+)
+
+// ❌ AVOID - Loop creates multiple steps, harder to trace
+for (const source of sources) {
+  await step.sendEvent(`dispatch-${source}`, {
+    name: "bootstrap/source.process",
+    data: { source, progressId: progressIds[source], forceRefresh },
+  })
+}
+```
+
+**Why batch is better:**
+1. Single atomic operation with unified tracing
+2. One API call vs N calls
+3. Cleaner Inngest dashboard visibility
+
+**When to use each pattern:**
+
+| Use Case | Pattern |
+|----------|---------|
+| Need aggregated results in same function | Step parallelism (`Promise.all`) |
+| Independent retries per item | Fan-out (`step.sendEvent` with array) |
+| >1000 items | Fan-out (parallelism caps at 1000 steps) |
+| Need to replay individual items | Fan-out |
 
 ### Waiting for Events
 ```typescript
@@ -218,6 +255,39 @@ if (!payment) {
 }
 ```
 
+### Fan-out + Wait Pattern (Coordinator)
+
+Complete pattern for orchestrating parallel workers:
+
+```typescript
+// Step 1: Fan-out to workers (batch)
+await step.sendEvent(
+  "fan-out-sources",
+  sources.map((source) => ({
+    name: "bootstrap/source.process",
+    data: { source, progressId: progressIds[source] },
+  }))
+)
+
+// Step 2: Wait for ALL workers to complete before next step
+await Promise.all(
+  sources.map((source) =>
+    step.waitForEvent(`wait-for-${source}`, {
+      event: "bootstrap/source.completed",
+      if: `async.data.source == "${source}"`,
+      timeout: "2h",
+    })
+  )
+)
+
+// Step 3: Now safe to run dependent work (e.g., create indexes)
+await step.run("post-processing", async () => {
+  // All workers have completed
+})
+```
+
+**CRITICAL**: Without `step.waitForEvent`, dependent steps run immediately after fan-out dispatch (before workers complete). This causes race conditions.
+
 ### Invoking Other Functions
 ```typescript
 // Call another Inngest function directly
@@ -230,40 +300,92 @@ const emailResult = await step.invoke("send-notification", {
 ## Advanced Patterns
 
 ### Function Cancellation
+
+Use `cancelOn` for long-running functions that should stop when related events occur:
+
 ```typescript
-export const longTask = inngest.createFunction(
+export const analyzeDocument = inngest.createFunction(
   {
-    id: "long-task",
+    id: "nda-analyze",
     cancelOn: [
+      // Cancel if analysis is explicitly cancelled
       {
-        event: "task/cancelled",
-        if: "async.data.taskId == event.data.taskId"
+        event: "nda/analysis.cancelled",
+        if: "async.data.analysisId == event.data.analysisId"
+      },
+      // Cancel if document is deleted mid-analysis
+      {
+        event: "nda/document.deleted",
+        if: "async.data.documentId == event.data.documentId"
       }
     ]
   },
-  { event: "task/started" },
+  { event: "nda/analysis.requested" },
   async ({ event, step }) => { ... }
 )
 ```
 
+**When to use cancellation:**
+- Long-running pipelines (analysis, comparison, generation)
+- Multi-step functions that become invalid if source data changes
+- Preventing wasted compute when user cancels or deletes
+
+**Important limitation:** Cancelling a function that has a currently executing step will NOT stop that step. The step completes, then cancellation takes effect.
+
 ### Event Batching
+
+Process multiple events in a single function invocation for efficiency:
+
 ```typescript
 export const bulkProcess = inngest.createFunction(
   {
     id: "bulk-process",
     batchEvents: {
-      maxSize: 100,        // Up to 100 events per invocation
-      timeout: "10s",      // Or after 10 seconds
-      key: "event.data.tenantId"  // Group by tenant
+      maxSize: 100,                    // Up to 100 events per invocation
+      timeout: "10s",                  // Or after 10 seconds (whichever first)
+      key: "event.data.tenantId",      // Group by tenant (optional)
     }
   },
   { event: "record/created" },
-  async ({ events, step }) => {  // Note: events (plural)
+  async ({ events, step }) => {  // Note: events (plural), NOT event
     return await step.run("bulk-insert", async () => {
-      return await db.bulkInsert(events.map(e => e.data))
+      // Process all events in batch
+      const records = events.map(e => e.data)
+      return await db.insert(myTable).values(records)
     })
   }
 )
+```
+
+**When to use batching:**
+- High-volume event ingestion (webhooks, logs, metrics)
+- Batch database writes (insert many rows at once)
+- Reducing external API calls (batch notifications)
+- Cost optimization (fewer function invocations)
+
+**Configuration options:**
+
+| Option | Description |
+|--------|-------------|
+| `maxSize` | Max events per batch (required) |
+| `timeout` | Wait time before invoking with available events (required) |
+| `key` | Group events by expression (e.g., `event.data.tenantId`) |
+| `if` | Conditional batching (when false, event executes immediately) |
+
+**Important limitations:**
+- Function receives `events` array, NOT single `event`
+- **INCOMPATIBLE** with: idempotency, rate limiting, `cancelOn`, priority
+- Hard limit: 10 MiB total batch size
+- Each event in batch shares the same retry/failure fate
+
+**Conditional batching example:**
+```typescript
+batchEvents: {
+  maxSize: 50,
+  timeout: "5s",
+  key: "event.data.tenantId",
+  if: "event.data.priority != 'urgent'"  // Urgent events skip batching
+}
 ```
 
 ### Priority Execution
@@ -414,3 +536,7 @@ describe("myFunction", () => {
 - [ ] **Created test file?** ← REQUIRED
 - [ ] Used kebab-case for function `id`?
 - [ ] Used `domain/entity.action` format for event names?
+- [ ] **Fan-out? → Used batch `step.sendEvent([...])` not loops**
+- [ ] **Fan-out with dependent steps? → Added `step.waitForEvent` before dependent work**
+- [ ] **High-volume events? → Consider `batchEvents` for efficiency**
+- [ ] **Using `batchEvents`? → Verified NOT using `cancelOn`, rate limiting, or priority**
