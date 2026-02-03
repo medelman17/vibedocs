@@ -1,54 +1,123 @@
 /**
  * Vector Search Tool
  *
- * Agent tool for semantic similarity search across reference documents.
+ * AI SDK tool for semantic similarity search across reference documents.
  * Uses Voyage AI voyage-law-2 embeddings with pgvector.
  *
- * Configuration:
- * - Search cache TTL: 5 minutes
- * - Max cache entries: 500
- *
- * @status placeholder - implement when agent pipeline is built
- * @see docs/plans/2026-02-01-inngest-agents-foundation.md
+ * @module agents/tools/vector-search
  */
 
-import { LRUCache } from "lru-cache"
+import { tool } from 'ai'
+import { z } from 'zod'
+import { db } from '@/db/client'
+import { referenceEmbeddings, referenceDocuments } from '@/db/schema/reference'
+import { cosineDistance, lt, eq, and, sql } from 'drizzle-orm'
+import { getVoyageAIClient } from '@/lib/embeddings'
+import { LRUCache } from 'lru-cache'
+import type { CuadCategory } from '../types'
 
-export interface SearchResult {
-  documentId: string
-  chunkId: string
+/** Search result from vector query */
+export interface VectorSearchResult {
+  id: string
   content: string
+  category: string
   similarity: number
-  metadata: Record<string, unknown>
+  source: string
 }
 
-// Vector search result cache
-export const searchCache = new LRUCache<string, SearchResult[]>({
+/** Cache for search results (5 min TTL, 500 entries) */
+const searchCache = new LRUCache<string, VectorSearchResult[]>({
   max: 500,
-  ttl: 1000 * 60 * 5, // 5 minutes
+  ttl: 1000 * 60 * 5,
 })
 
 /**
- * Search for similar content in reference documents
- *
- * @param query - The search query
- * @param options - Search options (limit, threshold, filters)
- * @returns Array of search results sorted by similarity
+ * AI SDK tool for agents to search reference corpus.
+ * Finds similar clauses from CUAD/ContractNLI embeddings.
  */
-export async function vectorSearch(
+export const vectorSearchTool = tool({
+  description:
+    'Search the CUAD legal reference corpus for similar clauses. ' +
+    'Use to find examples of standard clause language for comparison.',
+  parameters: z.object({
+    query: z.string().describe('Clause text to find similar examples for'),
+    category: z.string().optional().describe('Filter by CUAD category'),
+    limit: z.number().min(1).max(10).default(5).describe('Max results (1-10)'),
+  }),
+  execute: async ({ query, category, limit }) => {
+    // Check cache
+    const cacheKey = `${query.slice(0, 100)}:${category ?? 'all'}:${limit}`
+    const cached = searchCache.get(cacheKey)
+    if (cached) return cached
+
+    // Generate query embedding
+    const voyageClient = getVoyageAIClient()
+    const { embedding } = await voyageClient.embed(query, 'query')
+
+    // Search with cosine distance
+    const distanceThreshold = 0.3 // similarity > 0.7
+
+    const whereConditions = [
+      lt(cosineDistance(referenceEmbeddings.embedding, embedding), distanceThreshold),
+    ]
+    if (category) {
+      whereConditions.push(eq(referenceEmbeddings.category, category))
+    }
+
+    const results = await db
+      .select({
+        id: referenceEmbeddings.id,
+        content: referenceEmbeddings.content,
+        category: referenceEmbeddings.category,
+        distance: cosineDistance(referenceEmbeddings.embedding, embedding),
+        documentId: referenceEmbeddings.documentId,
+      })
+      .from(referenceEmbeddings)
+      .where(and(...whereConditions))
+      .orderBy(cosineDistance(referenceEmbeddings.embedding, embedding))
+      .limit(limit)
+
+    // Fetch source document titles
+    const docIds = [...new Set(results.map(r => r.documentId))]
+    const docs = docIds.length > 0
+      ? await db
+          .select({ id: referenceDocuments.id, title: referenceDocuments.title })
+          .from(referenceDocuments)
+          .where(sql`${referenceDocuments.id} IN (${sql.join(docIds.map(id => sql`${id}`), sql`, `)})`)
+      : []
+
+    const docMap = new Map(docs.map(d => [d.id, d.title]))
+
+    const searchResults: VectorSearchResult[] = results.map(r => ({
+      id: r.id,
+      content: r.content.slice(0, 500),
+      category: r.category ?? 'Unknown',
+      similarity: Math.round((1 - (r.distance as number)) * 100) / 100,
+      source: docMap.get(r.documentId) ?? 'Unknown',
+    }))
+
+    // Cache results
+    searchCache.set(cacheKey, searchResults)
+
+    return searchResults
+  },
+})
+
+/**
+ * Direct function for non-agent use (e.g., batch processing).
+ */
+export async function findSimilarClauses(
   query: string,
-  options?: {
-    limit?: number
-    threshold?: number
-    documentTypes?: string[]
-  }
-): Promise<SearchResult[]> {
-  void query
-  void options
-  // TODO: Implement vector search when agent pipeline is built
-  // 1. Generate embedding for query using Voyage AI
-  // 2. Check cache for recent identical queries
-  // 3. Query pgvector with cosineDistance
-  // 4. Cache and return results
-  throw new Error("Not implemented - see docs/plans/2026-02-01-inngest-agents-foundation.md")
+  options: { category?: CuadCategory; limit?: number } = {}
+): Promise<VectorSearchResult[]> {
+  return vectorSearchTool.execute({
+    query,
+    category: options.category,
+    limit: options.limit ?? 5,
+  })
+}
+
+/** Clear search cache (for testing) */
+export function clearSearchCache(): void {
+  searchCache.clear()
 }
