@@ -37,3 +37,12 @@ export {
   parseCommonAccordDataset,
   getTemplateStats,
 } from "./template-parser"
+
+// Downloader
+export {
+  downloadDataset,
+  downloadAllDatasets,
+  getDatasetPath,
+  isDatasetCached,
+  type DownloadResult,
+} from "./downloader"
