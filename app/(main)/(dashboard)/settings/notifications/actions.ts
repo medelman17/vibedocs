@@ -225,7 +225,7 @@ export async function updateNotificationPreferences(
  * ```
  */
 export async function getNotifications(
-  input?: z.infer<typeof getNotificationsSchema>
+  input?: z.input<typeof getNotificationsSchema>
 ): Promise<ApiResponse<Notification[]>> {
   // Validate input
   const parsed = getNotificationsSchema.safeParse(input ?? {});

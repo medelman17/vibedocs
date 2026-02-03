@@ -271,10 +271,10 @@ describe("members/actions", () => {
       setupTenantContext({ user: owner, org, membership: { role: "owner" } })
 
       const { inviteMember } = await import("./actions")
-      // @ts-expect-error - testing invalid role
+      // Use type assertion to test runtime validation of invalid role
       const result = await inviteMember({
         email: "test@example.com",
-        role: "owner",
+        role: "owner" as "admin",
       })
 
       expect(result.success).toBe(false)

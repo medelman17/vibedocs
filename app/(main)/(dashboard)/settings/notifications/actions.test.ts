@@ -101,9 +101,9 @@ describe("notifications/actions", () => {
       setupSessionContext({ user })
 
       const { updateNotificationPreferences } = await import("./actions")
-      // @ts-expect-error - testing invalid input
+      // Use type assertion to test runtime validation of invalid input
       const result = await updateNotificationPreferences({
-        emailWeeklyDigest: "not-a-boolean",
+        emailWeeklyDigest: "not-a-boolean" as unknown as boolean,
       })
 
       expect(result.success).toBe(false)

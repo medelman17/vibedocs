@@ -327,7 +327,7 @@ export async function getGeneratedNda(
  * @returns List of generated NDA summaries
  */
 export async function getGeneratedNdas(
-  options?: z.infer<typeof listNdasSchema>
+  options?: z.input<typeof listNdasSchema>
 ): Promise<ApiResponse<GeneratedNdaSummary[]>> {
   try {
     const { db, tenantId } = await withTenant()

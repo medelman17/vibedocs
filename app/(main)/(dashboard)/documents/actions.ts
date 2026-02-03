@@ -295,7 +295,7 @@ export async function getDocuments(
  * ```
  */
 export async function searchDocuments(
-  input: z.infer<typeof searchDocumentsInputSchema>
+  input: z.input<typeof searchDocumentsInputSchema>
 ): Promise<ApiResponse<Document[]>> {
   const { db, tenantId } = await withTenant()
 

@@ -187,8 +187,8 @@ describe("test-helpers", () => {
 
       expect(getSentEvents()).toHaveLength(2)
       expect(getSentEvents()[0].name).toBe("nda/analysis.progress")
-      expect(getSentEvents()[0].data.percent).toBe(25)
-      expect(getSentEvents()[1].data.percent).toBe(50)
+      expect((getSentEvents()[0].data as { percent: number }).percent).toBe(25)
+      expect((getSentEvents()[1].data as { percent: number }).percent).toBe(50)
     })
 
     it("should handle array of events", async () => {
@@ -214,8 +214,8 @@ describe("test-helpers", () => {
       ])
 
       expect(getSentEvents()).toHaveLength(2)
-      expect(getSentEvents()[0].data.percent).toBe(10)
-      expect(getSentEvents()[1].data.percent).toBe(20)
+      expect((getSentEvents()[0].data as { percent: number }).percent).toBe(10)
+      expect((getSentEvents()[1].data as { percent: number }).percent).toBe(20)
     })
 
     it("should reset all tracked calls", async () => {
