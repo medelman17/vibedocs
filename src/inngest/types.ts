@@ -10,6 +10,7 @@
  */
 
 import { z } from "zod"
+import type { DatasetSource } from "@/lib/datasets"
 
 /**
  * Base payload fields included in all tenant-scoped events.
@@ -99,6 +100,68 @@ export const demoMultiStepPayload = z.object({
   delayMs: z.number().int().nonnegative().optional().default(1000),
 })
 
+// =============================================================================
+// Bootstrap Events (for reference data ingestion)
+// =============================================================================
+
+/**
+ * Dataset source enum for validation.
+ */
+const datasetSourceSchema = z.enum([
+  "cuad",
+  "contract_nli",
+  "bonterms",
+  "commonaccord",
+]) satisfies z.ZodType<DatasetSource>
+
+/**
+ * Bootstrap ingest request event - triggers reference data pipeline.
+ * Sent by admin API to initiate dataset ingestion.
+ */
+export const bootstrapIngestRequestedPayload = z.object({
+  /** Which datasets to ingest */
+  sources: z.array(datasetSourceSchema).min(1),
+  /** Re-download even if cached */
+  forceRefresh: z.boolean().optional().default(false),
+})
+
+/**
+ * Bootstrap ingest progress event - emitted during pipeline execution.
+ * Used for monitoring/logging bootstrap progress.
+ */
+export const bootstrapIngestProgressPayload = z.object({
+  /** Dataset being processed */
+  source: datasetSourceSchema,
+  /** Current processing step */
+  step: z.enum([
+    "downloading",
+    "parsing",
+    "embedding",
+    "inserting",
+    "indexing",
+  ]),
+  /** Records processed so far */
+  recordsProcessed: z.number().int().nonnegative(),
+  /** Total records if known */
+  totalRecords: z.number().int().nonnegative().optional(),
+  /** Progress percentage (0-100) */
+  percent: z.number().min(0).max(100).optional(),
+})
+
+/**
+ * Bootstrap ingest completed event - emitted when pipeline finishes.
+ */
+export const bootstrapIngestCompletedPayload = z.object({
+  /** Datasets that were ingested */
+  sources: z.array(datasetSourceSchema),
+  /** Total records processed across all sources */
+  totalRecords: z.number().int().nonnegative(),
+  /** Total embeddings created */
+  totalEmbeddings: z.number().int().nonnegative(),
+  /** Total duration in milliseconds */
+  durationMs: z.number().int().nonnegative(),
+})
+
 /**
  * All Inngest event types for the VibeDocs application.
  */
@@ -122,6 +185,16 @@ export type InngestEvents = {
   "demo/multi-step": {
     data: z.infer<typeof demoMultiStepPayload>
   }
+  // Bootstrap events
+  "bootstrap/ingest.requested": {
+    data: z.infer<typeof bootstrapIngestRequestedPayload>
+  }
+  "bootstrap/ingest.progress": {
+    data: z.infer<typeof bootstrapIngestProgressPayload>
+  }
+  "bootstrap/ingest.completed": {
+    data: z.infer<typeof bootstrapIngestCompletedPayload>
+  }
 }
 
 /**
@@ -133,6 +206,15 @@ export type AnalysisProgressPayload = z.infer<typeof analysisProgressPayload>
 export type ComparisonRequestedPayload = z.infer<
   typeof comparisonRequestedPayload
 >
+export type BootstrapIngestRequestedPayload = z.infer<
+  typeof bootstrapIngestRequestedPayload
+>
+export type BootstrapIngestProgressPayload = z.infer<
+  typeof bootstrapIngestProgressPayload
+>
+export type BootstrapIngestCompletedPayload = z.infer<
+  typeof bootstrapIngestCompletedPayload
+>
 
 /**
  * Map of event names to their Zod schemas for runtime validation.
@@ -142,4 +224,7 @@ export const eventSchemas = {
   "nda/analysis.requested": analysisRequestedPayload,
   "nda/analysis.progress": analysisProgressPayload,
   "nda/comparison.requested": comparisonRequestedPayload,
+  "bootstrap/ingest.requested": bootstrapIngestRequestedPayload,
+  "bootstrap/ingest.progress": bootstrapIngestProgressPayload,
+  "bootstrap/ingest.completed": bootstrapIngestCompletedPayload,
 } as const
