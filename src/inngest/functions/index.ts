@@ -10,8 +10,7 @@
 // Demo functions (for testing Inngest setup)
 import { demoProcess, demoMultiStep } from "./demo"
 
-// Bootstrap pipeline
-import { ingestReferenceData } from "./bootstrap/ingest-reference-data"
+// Bootstrap pipeline (coordinator + source workers)
 import { ingestCoordinator } from "./bootstrap/ingest-coordinator"
 import { ingestSource } from "./bootstrap/ingest-source"
 
@@ -31,8 +30,7 @@ export const functions = [
   demoProcess,
   demoMultiStep,
 
-  // Bootstrap functions
-  ingestReferenceData,
+  // Bootstrap functions (coordinator + source workers)
   ingestCoordinator,
   ingestSource,
 
