@@ -77,6 +77,14 @@ const ctx = await requireRole(["owner", "admin"])        // Role-based access
 - **DAL**: Uses React `cache()` for request memoization
 - **Server-only**: Import `"server-only"` in DAL to prevent client bundling
 
+### Word Add-in Integration
+
+Microsoft Word Add-in uses OAuth code flow with Upstash Redis for secure token exchange:
+- **Auth**: Microsoft Entra ID via Auth.js, auth code cached in Redis (5-min TTL, one-time use)
+- **Files**: `src/lib/word-addin-auth.ts`, `src/lib/auth-code-cache.ts`
+- **PRD**: See `docs/PRD-word-addin.md` for full specification
+- **App routes**: `app/(word-addin)/` for add-in specific pages
+
 ### Agent Pipeline (Inngest + AI SDK 6)
 
 ```
@@ -126,12 +134,16 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 - `src/proxy.ts` - Next.js 16 auth redirects (formerly middleware.ts)
 - `src/test/` - Test setup (PGlite)
 - `src/inngest/` - Inngest client and pipeline functions
-- `src/agents/` - AI SDK 6 agent definitions
+  - `functions/` - Inngest function definitions (bootstrap, demo)
+  - `utils/` - Shared utilities (rate limiting, tenant context, test helpers)
+- `src/agents/` - AI SDK 6 agent definitions (🚧 placeholder structure)
   - `prompts/` - System prompts for each agent
   - `tools/` - Vector search and other agent tools
   - `testing/` - Mock AI and fixtures for agent tests
   - `comparison/` - Comparison pipeline schemas and prompts
-- `src/lib/cache/` - LRU caching (embeddings, responses, search)
+- `src/lib/cache/` - LRU caching (embeddings, responses)
+- `src/lib/datasets/` - Dataset parsing utilities (CUAD, ContractNLI)
+- `src/lib/embeddings.ts` - Voyage AI embedding utilities
 - `components/` - shadcn/ui + AI SDK Elements
 
 ## Conventions
@@ -246,8 +258,8 @@ import { createMockEvent, createMockStep, testEventData } from "@/inngest/utils/
 
 ### Caching (LRU)
 - **Embedding cache**: 1-hour TTL, 10K entries - `src/lib/cache/embedding-cache.ts`
-- **Response cache**: 30-min TTL, 1K entries - `src/lib/cache/response-cache.ts`
-- **Vector search cache**: 5-min TTL, 500 entries - `src/agents/tools/vector-search.ts`
+- **Response cache**: 30-min TTL, 1K entries - `src/lib/cache/response-cache.ts` (🚧 placeholder)
+- **Vector search cache**: 5-min TTL, 500 entries - `src/agents/tools/vector-search.ts` (🚧 placeholder)
 - Package: `lru-cache` (not Redis for MVP)
 
 ### Component Patterns
@@ -265,6 +277,11 @@ pnpm dlx shadcn@latest add <component-name> -r @ai-elements
 ### ESLint
 - `components/ui/**` and `components/ai-elements/**` are excluded (shadcn-generated)
 - Underscore prefix (`_var`) marks intentionally unused variables
+
+### Git Worktrees
+- **CRITICAL**: Before removing a worktree, always `cd` to the main repo first
+- Shell breaks irrecoverably if CWD is inside the worktree being removed
+- Use `/clean-worktree <name>` skill for safe cleanup
 
 ### pnpm Workspace
 - Single-package projects need `packages: []` in `pnpm-workspace.yaml` for `actions/setup-node` cache to work
@@ -287,6 +304,7 @@ Project-level automations in `.claude/` (shared via git):
 ### Skills
 - `/drizzle-migration <description>` - Create Drizzle migrations following project conventions
 - `/inngest-function <description>` - Create durable Inngest workflows with rate limiting
+- `/clean-worktree <name>` - Safely remove git worktree and associated branches
 - `error-response` (Claude-only) - Automatically apply error handling conventions
 
 ### Agents
@@ -308,19 +326,19 @@ Note: `.claude/settings.local.json` is gitignored (user-specific permissions)
 
 Detailed specs in `docs/`:
 - `PRD.md` - Full product requirements (authoritative source)
+- `PRD-word-addin.md` - Word Add-in product requirements
 - `schema.md` - Database schema details
 - `agents.md` - Agent architecture specs
 - `api-patterns.md` - API design patterns
 - `embedding-strategy.md` - Vector embedding approach
 
-Implementation plans in `docs/plans/`:
-- `2026-02-01-database-foundation-design.md` - Database architecture decisions
-- `2026-02-01-database-foundation-implementation.md` - Step-by-step implementation
-- `2026-02-01-inngest-infrastructure.md` - Inngest setup (Plan 1)
-- `2026-02-01-inngest-bootstrap.md` - Bootstrap pipeline for reference data (Plan 2)
-- `2026-02-01-inngest-agents-foundation.md` - AI SDK 6 base patterns (Plan 3)
-- `2026-02-01-inngest-analysis-pipeline.md` - Full analysis pipeline (Plan 4)
-- `2026-02-01-inngest-comparison-generation.md` - Comparison & generation pipelines (Plan 5)
+Implementation plans in `docs/plans/` (18+ detailed plans covering):
+- Database foundation (design, implementation, testing)
+- Inngest infrastructure and bootstrap pipeline
+- Agent foundation, analysis pipeline, comparison/generation
+- Auth hardening, server actions, TypeScript advanced types
+- SOC2 Type 1 readiness, GitHub Actions efficiency
+- Word Add-in integration
 
 ## Environment Variables
 
@@ -328,7 +346,12 @@ See `.env.example` for required variables:
 - `DATABASE_URL` - Neon PostgreSQL connection string
 - `AUTH_SECRET` - Auth.js session secret
 - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` - Google OAuth credentials
+- `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` - GitHub OAuth credentials
+- `AUTH_MICROSOFT_ENTRA_ID_ID` / `AUTH_MICROSOFT_ENTRA_ID_SECRET` - Microsoft Entra ID (for Word Add-in)
 - `RESEND_API_KEY` - Email provider for password reset
 - `BLOB_READ_WRITE_TOKEN` - Vercel Blob for file uploads
+- `INNGEST_DEV` - Set to `1` for local development
 - `INNGEST_EVENT_KEY` - Inngest event key for sending events
 - `INNGEST_SIGNING_KEY` - Inngest webhook signature verification
+- `VOYAGE_API_KEY` - Voyage AI embeddings (voyage-law-2 model)
+- `KV_REST_API_URL` / `KV_REST_API_TOKEN` - Upstash Redis for auth code flow
