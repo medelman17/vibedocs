@@ -60,10 +60,17 @@ describe("document queries", () => {
 
     it("orders by createdAt descending", async () => {
       const org = await createTestOrg()
-      const doc1 = await createTestDocument(org.id, { title: "First" })
-      // Small delay to ensure different timestamps
-      await new Promise((r) => setTimeout(r, 10))
-      const doc2 = await createTestDocument(org.id, { title: "Second" })
+      // Use explicit timestamps since now() returns same value within transaction
+      const olderDate = new Date("2024-01-01T10:00:00Z")
+      const newerDate = new Date("2024-01-02T10:00:00Z")
+      const doc1 = await createTestDocument(org.id, {
+        title: "First",
+        createdAt: olderDate,
+      })
+      const doc2 = await createTestDocument(org.id, {
+        title: "Second",
+        createdAt: newerDate,
+      })
 
       const docs = await getDocumentsByTenant(org.id)
 
