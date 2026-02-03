@@ -9,8 +9,11 @@
  * 3. Callback sends code to taskpane via messageParent
  * 4. Taskpane exchanges code for session via /api/word-addin/exchange
  *
+ * Uses Upstash Redis for serverless-compatible storage.
  * Codes expire after 60 seconds and can only be used once.
  */
+
+import { Redis } from "@upstash/redis"
 
 interface CachedAuth {
   userId: string
@@ -20,11 +23,17 @@ interface CachedAuth {
   createdAt: number
 }
 
-// In-memory cache - for production, consider using Redis
-const authCodeCache = new Map<string, CachedAuth>()
+// Initialize Redis client (Vercel KV uses these env var names)
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
+})
+
+// Key prefix for auth codes
+const KEY_PREFIX = "word-addin-auth:"
 
 // Code expiration time (60 seconds)
-const CODE_EXPIRY_MS = 60 * 1000
+const CODE_EXPIRY_SECONDS = 60
 
 /**
  * Generate a cryptographically secure random code
@@ -38,14 +47,18 @@ function generateCode(): string {
 /**
  * Store auth data and return a one-time code
  */
-export function storeAuthCode(data: Omit<CachedAuth, "createdAt">): string {
-  // Clean up expired codes
-  cleanupExpiredCodes()
-
+export async function storeAuthCode(
+  data: Omit<CachedAuth, "createdAt">
+): Promise<string> {
   const code = generateCode()
-  authCodeCache.set(code, {
+  const cacheData: CachedAuth = {
     ...data,
     createdAt: Date.now(),
+  }
+
+  // Store in Redis with TTL
+  await redis.set(`${KEY_PREFIX}${code}`, JSON.stringify(cacheData), {
+    ex: CODE_EXPIRY_SECONDS,
   })
 
   console.log(`[AuthCodeCache] Stored code for user: ${data.email}`)
@@ -55,36 +68,22 @@ export function storeAuthCode(data: Omit<CachedAuth, "createdAt">): string {
 /**
  * Exchange a code for auth data (one-time use)
  */
-export function exchangeAuthCode(code: string): CachedAuth | null {
-  const cached = authCodeCache.get(code)
+export async function exchangeAuthCode(
+  code: string
+): Promise<CachedAuth | null> {
+  const key = `${KEY_PREFIX}${code}`
+
+  // Get and delete atomically using GETDEL
+  const cached = await redis.getdel<string>(key)
 
   if (!cached) {
-    console.log(`[AuthCodeCache] Code not found`)
+    console.log(`[AuthCodeCache] Code not found or expired`)
     return null
   }
 
-  // Check expiration
-  if (Date.now() - cached.createdAt > CODE_EXPIRY_MS) {
-    console.log(`[AuthCodeCache] Code expired`)
-    authCodeCache.delete(code)
-    return null
-  }
+  const data: CachedAuth =
+    typeof cached === "string" ? JSON.parse(cached) : cached
+  console.log(`[AuthCodeCache] Code exchanged for user: ${data.email}`)
 
-  // Delete code (one-time use)
-  authCodeCache.delete(code)
-  console.log(`[AuthCodeCache] Code exchanged for user: ${cached.email}`)
-
-  return cached
-}
-
-/**
- * Clean up expired codes
- */
-function cleanupExpiredCodes(): void {
-  const now = Date.now()
-  for (const [code, data] of authCodeCache.entries()) {
-    if (now - data.createdAt > CODE_EXPIRY_MS) {
-      authCodeCache.delete(code)
-    }
-  }
+  return data
 }

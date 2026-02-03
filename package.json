@@ -54,6 +54,7 @@
     "@streamdown/code": "^1.0.1",
     "@streamdown/math": "^1.0.1",
     "@streamdown/mermaid": "^1.0.1",
+    "@upstash/redis": "^1.36.1",
     "@vercel/blob": "^2.0.1",
     "@xyflow/react": "^12.10.0",
     "adm-zip": "^0.5.16",

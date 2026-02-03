@@ -19,7 +19,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     throw new ValidationError("Missing or invalid 'code' parameter")
   }
 
-  const authData = exchangeAuthCode(code)
+  const authData = await exchangeAuthCode(code)
 
   if (!authData) {
     throw new UnauthorizedError("Invalid or expired code")

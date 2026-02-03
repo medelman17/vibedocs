@@ -34,7 +34,7 @@ export default async function WordAddInAuthCompletePage() {
   }
 
   // Generate one-time code and store session data
-  const code = storeAuthCode({
+  const code = await storeAuthCode({
     userId: session.user.id,
     email: session.user.email,
     name: session.user.name ?? null,
