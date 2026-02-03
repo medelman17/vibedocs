@@ -15,16 +15,16 @@ import type { DatasetSource } from "./types"
 const CACHE_DIR = ".cache/datasets"
 
 const DATASET_URLS: Record<DatasetSource, string> = {
-  cuad: "https://huggingface.co/datasets/cuad/resolve/main/CUAD_v1.parquet",
+  cuad: "https://huggingface.co/api/datasets/theatticusproject/cuad/parquet/default/train/0.parquet",
   contract_nli:
-    "https://huggingface.co/datasets/kiddothe2b/contract-nli/resolve/main/train.json",
+    "https://huggingface.co/api/datasets/kiddothe2b/contract-nli/parquet/contractnli_a/train/0.parquet",
   bonterms: "https://github.com/Bonterms/Mutual-NDA/archive/refs/heads/main.zip",
   commonaccord: "https://github.com/CommonAccord/NW-NDA/archive/refs/heads/master.zip",
 }
 
 const DATASET_PATHS: Record<DatasetSource, string> = {
-  cuad: "CUAD_v1.parquet",
-  contract_nli: "contract_nli.json",
+  cuad: "cuad_train.parquet",
+  contract_nli: "contract_nli_train.parquet",
   bonterms: "bonterms-nda",
   commonaccord: "commonaccord-nda",
 }
