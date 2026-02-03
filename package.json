@@ -67,6 +67,7 @@
     "geist": "^1.5.1",
     "inngest": "^3.50.0",
     "input-otp": "^1.4.2",
+    "lru-cache": "^11.2.5",
     "lucide-react": "^0.563.0",
     "media-chrome": "^4.17.2",
     "motion": "^12.29.2",
