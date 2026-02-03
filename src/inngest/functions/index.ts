@@ -10,12 +10,14 @@
 // Demo functions (for testing Inngest setup)
 import { demoProcess, demoMultiStep } from "./demo"
 
+// Bootstrap pipeline
+import { ingestReferenceData } from "./bootstrap/ingest-reference-data"
+
 // Production functions - will be populated as functions are created
 // import { processDocument } from "./process-document"
 // import { analyzeNda } from "./analyze-nda"
 // import { compareNdas } from "./compare-ndas"
 // import { generateNda } from "./generate-nda"
-// import { bootstrapPipeline } from "./bootstrap"
 // import { generateEmbeddings } from "./embeddings"
 
 /**
@@ -27,11 +29,13 @@ export const functions = [
   demoProcess,
   demoMultiStep,
 
+  // Bootstrap functions
+  ingestReferenceData,
+
   // Production functions
   // processDocument,
   // analyzeNda,
   // compareNdas,
   // generateNda,
-  // bootstrapPipeline,
   // generateEmbeddings,
 ]
