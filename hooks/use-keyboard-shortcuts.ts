@@ -10,16 +10,27 @@ interface KeyboardShortcutHandlers {
 }
 
 /**
+ * Navigator with experimental userAgentData API.
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/NavigatorUAData
+ */
+interface NavigatorWithUserAgentData extends Navigator {
+  userAgentData?: {
+    platform?: string
+  }
+}
+
+/**
  * Detect if the user is on a Mac platform.
  * Uses modern navigator.userAgentData API with fallback to deprecated navigator.platform.
  * SSR-safe: returns false during server-side rendering.
  */
 function detectMacPlatform(): boolean {
   if (typeof navigator === "undefined") return false
+  const nav = navigator as NavigatorWithUserAgentData
   // Modern API with fallback to deprecated navigator.platform
   return (
-    navigator.userAgentData?.platform?.toLowerCase().includes("mac") ??
-    navigator.platform?.toUpperCase().includes("MAC") ??
+    nav.userAgentData?.platform?.toLowerCase().includes("mac") ??
+    nav.platform?.toUpperCase().includes("MAC") ??
     false
   )
 }
