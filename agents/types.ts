@@ -1,0 +1,185 @@
+import { z } from 'zod'
+
+// ============================================================================
+// Risk Levels (PRD-aligned)
+// ============================================================================
+
+/** Risk levels per PRD (not low/medium/high) */
+export const RISK_LEVELS = [
+  'standard',
+  'cautious',
+  'aggressive',
+  'unknown',
+] as const
+
+export type RiskLevel = (typeof RISK_LEVELS)[number]
+
+export const riskLevelSchema = z.enum(RISK_LEVELS)
+
+/** Gap status for clause coverage */
+export const GAP_STATUS = [
+  'present',
+  'weak',
+  'missing',
+] as const
+
+export type GapStatus = (typeof GAP_STATUS)[number]
+
+// ============================================================================
+// CUAD Categories
+// ============================================================================
+
+/** CUAD 41-category taxonomy (title case for abbreviations per CLAUDE.md) */
+export const CUAD_CATEGORIES = [
+  'Document Name',
+  'Parties',
+  'Agreement Date',
+  'Effective Date',
+  'Expiration Date',
+  'Renewal Term',
+  'Notice Period To Terminate Renewal',
+  'Governing Law',
+  'Most Favored Nation',
+  'Non-Compete',
+  'Exclusivity',
+  'No-Solicit Of Customers',
+  'Competitive Restriction Exception',
+  'No-Solicit Of Employees',
+  'Non-Disparagement',
+  'Termination For Convenience',
+  'Rofr/Rofo/Rofn',
+  'Change Of Control',
+  'Anti-Assignment',
+  'Revenue/Profit Sharing',
+  'Price Restrictions',
+  'Minimum Commitment',
+  'Volume Restriction',
+  'Ip Ownership Assignment',
+  'Joint Ip Ownership',
+  'License Grant',
+  'Non-Transferable License',
+  'Affiliate License',
+  'Unlimited/All-You-Can-Eat-License',
+  'Irrevocable Or Perpetual License',
+  'Source Code Escrow',
+  'Post-Termination Services',
+  'Audit Rights',
+  'Uncapped Liability',
+  'Cap On Liability',
+  'Liquidated Damages',
+  'Warranty Duration',
+  'Insurance',
+  'Covenant Not To Sue',
+  'Third Party Beneficiary',
+  'Unknown',
+] as const
+
+export type CuadCategory = (typeof CUAD_CATEGORIES)[number]
+
+export const cuadCategorySchema = z.enum(CUAD_CATEGORIES)
+
+// ============================================================================
+// ContractNLI Categories
+// ============================================================================
+
+/** ContractNLI 17 hypothesis categories */
+export const CONTRACT_NLI_CATEGORIES = [
+  'Purpose Limitation',
+  'Permitted Disclosure',
+  'Third Party Disclosure',
+  'Standard of Care',
+  'Survival Period',
+  'Termination',
+  'Return/Destruction',
+  'Ip License',
+  'Warranties',
+  'Liability Limitation',
+  'Governing Law',
+  'Legal Compulsion',
+  'Public Information Exception',
+  'Prior Knowledge Exception',
+  'Independent Development Exception',
+  'Assignment',
+  'Amendment',
+] as const
+
+export type ContractNLICategory = (typeof CONTRACT_NLI_CATEGORIES)[number]
+
+// ============================================================================
+// Agent Output Types
+// ============================================================================
+
+/** Classification result from Classifier agent */
+export interface ClassificationResult {
+  clauseId: string
+  category: CuadCategory
+  secondaryCategories: CuadCategory[]
+  confidence: number
+  reasoning: string
+}
+
+export const classificationSchema = z.object({
+  category: cuadCategorySchema,
+  secondaryCategories: z.array(cuadCategorySchema).max(2).default([]),
+  confidence: z.number().min(0).max(1),
+  reasoning: z.string(),
+})
+
+/** Risk assessment from Risk Scorer agent */
+export interface RiskAssessment {
+  clauseId: string
+  riskLevel: RiskLevel
+  confidence: number
+  explanation: string
+  evidence: {
+    citations: string[]
+    comparisons: string[]
+    statistic?: string
+  }
+}
+
+export const riskAssessmentSchema = z.object({
+  riskLevel: riskLevelSchema,
+  confidence: z.number().min(0).max(1),
+  explanation: z.string(),
+  evidence: z.object({
+    citations: z.array(z.string()).min(1),
+    comparisons: z.array(z.string()).min(1),
+    statistic: z.string().optional(),
+  }),
+})
+
+/** Hypothesis coverage from Gap Analyst */
+export interface HypothesisCoverage {
+  hypothesisId: string
+  category: ContractNLICategory
+  status: 'entailment' | 'contradiction' | 'not_mentioned'
+  supportingClause?: string
+  explanation: string
+}
+
+export const hypothesisCoverageSchema = z.object({
+  hypothesisId: z.string(),
+  category: z.enum(CONTRACT_NLI_CATEGORIES),
+  status: z.enum(['entailment', 'contradiction', 'not_mentioned']),
+  supportingClause: z.string().optional(),
+  explanation: z.string(),
+})
+
+/** Gap analysis result */
+export interface GapAnalysis {
+  presentCategories: CuadCategory[]
+  missingCategories: Array<{
+    category: CuadCategory
+    importance: 'critical' | 'important' | 'optional'
+    explanation: string
+  }>
+  weakClauses: Array<{
+    clauseId: string
+    category: CuadCategory
+    issue: string
+    recommendation: string
+  }>
+  hypothesisCoverage: HypothesisCoverage[]
+  gapScore: number
+}
