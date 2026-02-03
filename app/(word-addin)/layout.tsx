@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import "@/app/(main)/globals.css"
+import "./word-addin.css"
 import { Providers } from "./word-addin/providers"
 
 export const metadata: Metadata = {
@@ -81,7 +82,7 @@ export default function WordAddInLayout({
           the browser's native history API that Next.js needs.
         */}
       </head>
-      <body className="bg-background text-foreground antialiased">
+      <body className="word-addin-root bg-background text-foreground antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

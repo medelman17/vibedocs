@@ -1,27 +1,38 @@
 "use client"
 
 import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { ArrowLeft, MapPin, FileText, Loader2, AlertTriangle, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { RISK_BADGE_CONFIG } from "@/types/word-addin"
-import { ArrowLeft, MapPin, FileText, Loader2 } from "lucide-react"
-// Direct imports for tree-shaking (bundle-barrel-imports)
 import { useAnalysisStore } from "../store/analysis"
 import { useDocumentNavigation } from "../hooks/useDocumentNavigation"
 import { formatCategory, normalizeRiskLevel } from "../lib/format"
 
 /**
- * ClauseDetail displays expanded information for a selected clause.
+ * Risk badge configuration
+ */
+const RISK_BADGE_CLASSES = {
+  standard: "addin-badge-standard",
+  cautious: "addin-badge-cautious",
+  aggressive: "addin-badge-aggressive",
+  unknown: "addin-badge-unknown",
+} as const
+
+const RISK_BADGE_LABELS = {
+  standard: "Standard Risk",
+  cautious: "Cautious Risk",
+  aggressive: "Aggressive Risk",
+  unknown: "Unknown Risk",
+} as const
+
+/**
+ * ClauseDetail - Expanded view for a selected clause with full context.
  *
- * Shows:
- * - Category header
- * - Risk level badge with explanation
- * - Confidence percentage with visual bar
- * - Full clause text
- * - Start/end character positions
- * - Navigate to clause button (placeholder for Office.js integration)
- * - Back to list button
+ * Features:
+ * - Back navigation with smooth transitions
+ * - Risk explanation panel
+ * - Full clause text display
+ * - Navigate to clause in document functionality
+ * - Position metadata
  */
 export function ClauseDetail() {
   const results = useAnalysisStore((state) => state.results)
@@ -31,19 +42,18 @@ export function ClauseDetail() {
   const { navigateToClause, isNavigating } = useDocumentNavigation()
   const [navigationError, setNavigationError] = useState<string | null>(null)
 
-  // Don't render if no clause selected
   if (!selectedClauseId || !results) {
     return null
   }
 
-  // Find the selected clause
   const clause = results.clauses.find((c) => c.id === selectedClauseId)
   if (!clause) {
     return null
   }
 
   const riskLevel = normalizeRiskLevel(clause.riskLevel)
-  const badgeConfig = RISK_BADGE_CONFIG[riskLevel]
+  const badgeClass = RISK_BADGE_CLASSES[riskLevel]
+  const badgeLabel = RISK_BADGE_LABELS[riskLevel]
   const confidencePercent = Math.round(clause.confidence * 100)
 
   const handleBackToList = () => {
@@ -64,77 +74,73 @@ export function ClauseDetail() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 animate-slide-up">
       {/* Back button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="w-fit -ml-2"
+      <button
         onClick={handleBackToList}
+        className="addin-btn addin-btn-ghost w-fit -ml-2 text-sm"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to list
-      </Button>
+        <span>Back to list</span>
+      </button>
 
       {/* Header: Category + Risk Badge */}
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="text-lg font-semibold leading-tight">
-          {formatCategory(clause.category)}
-        </h3>
-        <Badge
-          variant="secondary"
-          className={cn("shrink-0 text-xs px-2 py-0.5", badgeConfig.className)}
-        >
-          {badgeConfig.label} Risk
-        </Badge>
+      <div className="addin-detail-header">
+        <h3 className="addin-detail-title">{formatCategory(clause.category)}</h3>
+        <span className={cn("addin-badge", badgeClass)}>{badgeLabel}</span>
       </div>
 
       {/* Risk explanation */}
       {clause.riskExplanation && (
-        <div className="rounded-lg border bg-muted/30 p-3">
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Risk Analysis: </span>
-            {clause.riskExplanation}
-          </p>
+        <div className="addin-card p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-warning-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-medium text-foreground mb-1">
+                Risk Analysis
+              </p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                {clause.riskExplanation}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Confidence score */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Confidence</span>
+      <div className="addin-detail-section">
+        <div className="flex items-center justify-between text-sm mb-2">
+          <span className="text-neutral-500">Confidence</span>
           <span className="font-medium tabular-nums">{confidencePercent}%</span>
         </div>
-        <div className="h-2 w-full rounded-full bg-muted">
+        <div className="h-2 w-full rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
           <div
-            className="h-2 rounded-full bg-primary transition-all"
+            className="h-full rounded-full bg-violet-500 transition-all duration-300"
             style={{ width: `${confidencePercent}%` }}
           />
         </div>
       </div>
 
       {/* Full clause text */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <FileText className="h-4 w-4" />
+      <div className="addin-detail-section">
+        <div className="addin-detail-label">
+          <FileText />
           <span>Clause Text</span>
         </div>
-        <div className="rounded-lg border bg-card p-3">
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-            {clause.clauseText}
-          </p>
+        <div className="addin-detail-content whitespace-pre-wrap">
+          {clause.clauseText}
         </div>
       </div>
 
       {/* Position info */}
       {(clause.startPosition !== null || clause.endPosition !== null) && (
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <MapPin className="h-3 w-3" />
+        <div className="addin-detail-meta">
+          <Info className="h-3 w-3" />
           <span>
-            Position: {clause.startPosition ?? "?"} - {clause.endPosition ?? "?"}
+            Characters {clause.startPosition ?? "?"} – {clause.endPosition ?? "?"}
             {clause.startPosition !== null && clause.endPosition !== null && (
-              <span className="ml-1">
-                ({clause.endPosition - clause.startPosition} characters)
+              <span className="opacity-60 ml-1">
+                ({clause.endPosition - clause.startPosition} chars)
               </span>
             )}
           </span>
@@ -142,24 +148,26 @@ export function ClauseDetail() {
       )}
 
       {/* Navigate to clause button */}
-      <div className="space-y-2">
-        <Button
-          variant="outline"
-          className="w-full"
+      <div className="space-y-2 pt-2">
+        <button
           onClick={handleNavigateToClause}
           disabled={isNavigating || !clause.clauseText}
+          className="addin-btn addin-btn-secondary w-full"
         >
           {isNavigating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Navigating...</span>
+            </>
           ) : (
-            <MapPin className="h-4 w-4" />
+            <>
+              <MapPin className="h-4 w-4" />
+              <span>Navigate to Clause</span>
+            </>
           )}
-          {isNavigating ? "Navigating..." : "Navigate to Clause in Document"}
-        </Button>
+        </button>
         {navigationError && (
-          <p className="text-xs text-destructive text-center">
-            {navigationError}
-          </p>
+          <p className="text-xs text-center text-error-500">{navigationError}</p>
         )}
       </div>
     </div>

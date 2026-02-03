@@ -7,6 +7,9 @@
 // Risk levels aligned with PRD terminology
 export type RiskLevel = "standard" | "cautious" | "aggressive" | "unknown";
 
+// Priority levels for gap analysis recommendations
+export type Priority = "low" | "medium" | "high";
+
 // Analysis pipeline stages (for SSE progress)
 export type AnalysisStage =
   | "pending"

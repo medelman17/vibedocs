@@ -1,8 +1,7 @@
 "use client"
 
 import { ReactNode, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { LogIn, User, Loader2 } from "lucide-react"
+import { LogIn, User, Loader2, Sparkles } from "lucide-react"
 import { useAuth } from "../hooks/useAuth"
 
 interface AuthGateProps {
@@ -10,12 +9,10 @@ interface AuthGateProps {
 }
 
 /**
- * Wraps content that requires authentication.
- * Shows a sign-in prompt if the user is not authenticated.
- * Uses the Zustand auth store via useAuth hook.
+ * AuthGate - Elegant authentication gate with warm welcome experience.
  *
- * Note: This component assumes StoreHydration has already run,
- * ensuring the auth store is hydrated from localStorage.
+ * Shows an inviting sign-in screen for unauthenticated users,
+ * and a personalized user card once authenticated.
  */
 export function AuthGate({ children }: AuthGateProps) {
   const { user, isAuthenticated, login } = useAuth()
@@ -32,45 +29,61 @@ export function AuthGate({ children }: AuthGateProps) {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-col items-center justify-center space-y-4 py-8">
-        <div className="rounded-full bg-muted p-4">
-          <User className="h-8 w-8 text-muted-foreground" />
+      <div className="addin-signin animate-fade-in">
+        {/* Decorative icon */}
+        <div className="addin-signin-icon">
+          <User />
         </div>
-        <div className="text-center">
-          <h2 className="font-semibold">Sign in to get started</h2>
-          <p className="text-sm text-muted-foreground">
-            Connect your account to analyze documents
-          </p>
-        </div>
-        <Button onClick={handleSignIn} disabled={isLoading} className="gap-2">
+
+        {/* Welcome text */}
+        <h2 className="addin-signin-title">Welcome to VibeDocs</h2>
+        <p className="addin-signin-subtitle">
+          Sign in to analyze NDAs with AI-powered clause extraction and risk assessment.
+        </p>
+
+        {/* Sign in button with loading state */}
+        <button
+          onClick={handleSignIn}
+          disabled={isLoading}
+          className="addin-btn addin-btn-primary w-full max-w-[200px]"
+        >
           {isLoading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Signing in...
+              <span>Signing in...</span>
             </>
           ) : (
             <>
               <LogIn className="h-4 w-4" />
-              Sign In
+              <span>Sign In</span>
             </>
           )}
-        </Button>
+        </button>
+
+        {/* Feature hint */}
+        <div className="mt-6 flex items-center gap-1.5 text-xs text-neutral-400">
+          <Sparkles className="h-3 w-3" />
+          <span>Powered by Claude AI</span>
+        </div>
       </div>
     )
   }
 
-  // Show authenticated user info
+  // Authenticated state - show user card and children
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+    <div className="flex flex-col gap-4 animate-fade-in">
+      {/* User profile card */}
+      <div className="addin-card addin-user-card">
+        <div className="addin-avatar">
           {user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{user?.name || "User"}</p>
-          <p className="truncate text-sm text-muted-foreground">{user?.email}</p>
+        <div className="addin-user-info">
+          <p className="addin-user-name">{user?.name || "User"}</p>
+          <p className="addin-user-email">{user?.email}</p>
         </div>
       </div>
+
+      {/* Children (main content) */}
       {children}
     </div>
   )

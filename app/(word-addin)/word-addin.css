@@ -1,0 +1,1146 @@
+/* =============================================================================
+   Word Add-in Design System: "Liquid Precision"
+
+   A buttery, best-in-class experience for NDA analysis.
+   Confident, warm, intellectually sophisticated.
+   ============================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Instrument+Serif:ital@0;1&display=swap');
+
+/* -----------------------------------------------------------------------------
+   Custom Properties - Word Add-in specific
+   ----------------------------------------------------------------------------- */
+:root {
+  /* Typography */
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+
+  /* Motion - silky spring-like easings */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Durations - intentionally smooth */
+  --duration-micro: 120ms;
+  --duration-base: 200ms;
+  --duration-medium: 350ms;
+  --duration-slow: 500ms;
+
+  /* Gradients */
+  --gradient-violet: linear-gradient(135deg, var(--violet-500), var(--violet-600));
+  --gradient-teal: linear-gradient(135deg, var(--teal-500), var(--teal-600));
+  --gradient-surface: linear-gradient(180deg, oklch(1 0 0), oklch(0.985 0 0));
+  --gradient-risk-standard: linear-gradient(135deg, oklch(0.7 0.18 145), oklch(0.6 0.16 145));
+  --gradient-risk-cautious: linear-gradient(135deg, oklch(0.85 0.16 85), oklch(0.75 0.15 85));
+  --gradient-risk-aggressive: linear-gradient(135deg, oklch(0.68 0.22 25), oklch(0.58 0.2 25));
+
+  /* Shadows - layered for depth */
+  --shadow-card:
+    0 1px 2px oklch(0 0 0 / 0.03),
+    0 4px 8px oklch(0 0 0 / 0.04),
+    0 8px 16px oklch(0 0 0 / 0.03);
+  --shadow-card-hover:
+    0 2px 4px oklch(0 0 0 / 0.04),
+    0 8px 16px oklch(0 0 0 / 0.06),
+    0 16px 32px oklch(0 0 0 / 0.04);
+  --shadow-glow-violet: 0 0 40px oklch(0.541 0.281 293 / 0.15);
+  --shadow-glow-teal: 0 0 40px oklch(0.679 0.141 175 / 0.15);
+  --shadow-inset: inset 0 2px 4px oklch(0 0 0 / 0.04);
+
+  /* Noise texture for subtle grain */
+  --noise-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+.dark {
+  --gradient-surface: linear-gradient(180deg, var(--neutral-900), var(--neutral-950));
+  --shadow-card:
+    0 1px 2px oklch(0 0 0 / 0.2),
+    0 4px 8px oklch(0 0 0 / 0.15),
+    0 8px 16px oklch(0 0 0 / 0.1);
+  --shadow-card-hover:
+    0 2px 4px oklch(0 0 0 / 0.25),
+    0 8px 16px oklch(0 0 0 / 0.2),
+    0 16px 32px oklch(0 0 0 / 0.15);
+  --shadow-glow-violet: 0 0 60px oklch(0.65 0.23 293 / 0.2);
+  --shadow-glow-teal: 0 0 60px oklch(0.72 0.13 175 / 0.2);
+}
+
+/* -----------------------------------------------------------------------------
+   Base Styles - Word Add-in specific
+   ----------------------------------------------------------------------------- */
+.word-addin-root {
+  font-family: var(--font-body);
+  font-feature-settings: "ss01" on, "ss02" on;
+  letter-spacing: -0.01em;
+  background: var(--gradient-surface);
+  min-height: 100vh;
+}
+
+.word-addin-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--noise-texture);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* -----------------------------------------------------------------------------
+   Typography - Editorial elegance meets technical clarity
+   ----------------------------------------------------------------------------- */
+.addin-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.addin-display-sm {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.addin-label {
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--neutral-500);
+}
+
+.addin-caption {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--neutral-500);
+  line-height: 1.5;
+}
+
+/* -----------------------------------------------------------------------------
+   Layout Components
+   ----------------------------------------------------------------------------- */
+
+/* Shell - the main container */
+.addin-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Header - refined and compact */
+.addin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: oklch(1 0 0 / 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
+  z-index: 10;
+}
+
+.dark .addin-header {
+  background: oklch(0.18 0 0 / 0.8);
+}
+
+.addin-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.addin-logo {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background: var(--gradient-violet);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-glow-violet);
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+
+.addin-logo:hover {
+  transform: scale(1.05);
+}
+
+.addin-logo svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: white;
+}
+
+.addin-title {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 400;
+  color: var(--foreground);
+  letter-spacing: -0.01em;
+}
+
+/* Main content area */
+.addin-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem;
+  position: relative;
+  z-index: 1;
+
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--neutral-300) transparent;
+}
+
+.addin-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.addin-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.addin-content::-webkit-scrollbar-thumb {
+  background: var(--neutral-300);
+  border-radius: 3px;
+}
+
+.addin-content::-webkit-scrollbar-thumb:hover {
+  background: var(--neutral-400);
+}
+
+/* Footer */
+.addin-footer {
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.6875rem;
+  color: var(--neutral-400);
+  background: oklch(1 0 0 / 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dark .addin-footer {
+  background: oklch(0.1 0 0 / 0.6);
+}
+
+/* -----------------------------------------------------------------------------
+   Cards - Elevated surfaces with life
+   ----------------------------------------------------------------------------- */
+.addin-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow var(--duration-base) var(--ease-smooth),
+    transform var(--duration-base) var(--ease-spring),
+    border-color var(--duration-micro) var(--ease-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.addin-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, oklch(1 0 0 / 0.5) 0%, transparent 50%);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.dark .addin-card::before {
+  background: linear-gradient(180deg, oklch(1 0 0 / 0.03) 0%, transparent 50%);
+}
+
+.addin-card-interactive {
+  cursor: pointer;
+}
+
+.addin-card-interactive:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--violet-300);
+  transform: translateY(-1px);
+}
+
+.addin-card-interactive:active {
+  transform: translateY(0);
+}
+
+.addin-card-selected {
+  border-color: var(--violet-400);
+  box-shadow: var(--shadow-card-hover), var(--shadow-glow-violet);
+}
+
+/* -----------------------------------------------------------------------------
+   User Profile Card - Warm welcome
+   ----------------------------------------------------------------------------- */
+.addin-user-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem;
+}
+
+.addin-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--gradient-violet);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  box-shadow: var(--shadow-glow-violet);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.addin-avatar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, oklch(1 0 0 / 0.2) 0%, transparent 50%);
+}
+
+.addin-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.addin-user-name {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.addin-user-email {
+  font-size: 0.75rem;
+  color: var(--neutral-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -----------------------------------------------------------------------------
+   Buttons - Satisfying interactions
+   ----------------------------------------------------------------------------- */
+.addin-btn {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition:
+    background var(--duration-micro) var(--ease-smooth),
+    transform var(--duration-base) var(--ease-spring),
+    box-shadow var(--duration-base) var(--ease-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.addin-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, oklch(1 0 0 / 0.15) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.addin-btn-primary {
+  background: var(--gradient-violet);
+  color: white;
+  box-shadow: 0 2px 8px oklch(0.541 0.281 293 / 0.3);
+}
+
+.addin-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px oklch(0.541 0.281 293 / 0.4);
+}
+
+.addin-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px oklch(0.541 0.281 293 / 0.3);
+}
+
+.addin-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.addin-btn-secondary {
+  background: var(--muted);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.addin-btn-secondary:hover {
+  background: var(--neutral-200);
+  transform: translateY(-1px);
+}
+
+.dark .addin-btn-secondary:hover {
+  background: var(--neutral-700);
+}
+
+.addin-btn-ghost {
+  background: transparent;
+  color: var(--muted-foreground);
+}
+
+.addin-btn-ghost:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.addin-btn-icon {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+}
+
+/* -----------------------------------------------------------------------------
+   Risk Gauge - The dramatic storytelling moment
+   ----------------------------------------------------------------------------- */
+.addin-risk-gauge {
+  text-align: center;
+  padding: 1.25rem 1rem 1rem;
+}
+
+.addin-risk-gauge-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--foreground);
+  margin-bottom: 0.75rem;
+}
+
+.addin-gauge-container {
+  position: relative;
+  width: 160px;
+  height: 90px;
+  margin: 0 auto;
+}
+
+.addin-gauge-svg {
+  overflow: visible;
+}
+
+.addin-gauge-bg {
+  fill: none;
+  stroke: var(--neutral-200);
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+
+.dark .addin-gauge-bg {
+  stroke: var(--neutral-800);
+}
+
+.addin-gauge-fill {
+  fill: none;
+  stroke-width: 14;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 8px currentColor);
+  transition: stroke-dashoffset var(--duration-slow) var(--ease-spring);
+}
+
+.addin-gauge-needle {
+  transform-origin: center;
+  transition: transform var(--duration-slow) var(--ease-spring);
+}
+
+.addin-gauge-needle-line {
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.addin-gauge-needle-dot {
+  filter: drop-shadow(0 2px 4px oklch(0 0 0 / 0.2));
+}
+
+.addin-gauge-score {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.addin-gauge-score-value {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: 400;
+  line-height: 1;
+  transition: color var(--duration-base) var(--ease-smooth);
+}
+
+.addin-gauge-score-max {
+  font-size: 0.875rem;
+  color: var(--neutral-400);
+}
+
+.addin-gauge-label {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: color var(--duration-base) var(--ease-smooth);
+}
+
+.addin-gauge-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  font-size: 0.6875rem;
+  color: var(--neutral-400);
+}
+
+/* Risk colors */
+.risk-standard { --risk-color: var(--success-500); }
+.risk-cautious { --risk-color: var(--warning-500); }
+.risk-aggressive { --risk-color: var(--error-500); }
+.risk-unknown { --risk-color: var(--neutral-400); }
+
+/* -----------------------------------------------------------------------------
+   Clause Cards - Compact, scannable, tactile
+   ----------------------------------------------------------------------------- */
+.addin-clause-card {
+  padding: 0.75rem;
+  border-radius: 0.625rem;
+}
+
+.addin-clause-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.375rem;
+}
+
+.addin-clause-category {
+  font-weight: 500;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  line-height: 1.3;
+}
+
+.addin-clause-confidence {
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.addin-clause-confidence-bar {
+  height: 3px;
+  background: var(--neutral-200);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.dark .addin-clause-confidence-bar {
+  background: var(--neutral-700);
+}
+
+.addin-clause-confidence-fill {
+  height: 100%;
+  background: var(--violet-400);
+  border-radius: 2px;
+  transition: width var(--duration-base) var(--ease-smooth);
+}
+
+.addin-clause-confidence-label {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--neutral-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.addin-clause-text {
+  font-size: 0.75rem;
+  color: var(--neutral-500);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.addin-clause-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.addin-clause-expand-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  color: var(--neutral-400);
+  transition:
+    transform var(--duration-base) var(--ease-spring),
+    color var(--duration-micro) var(--ease-smooth);
+}
+
+.addin-card-interactive:hover .addin-clause-expand-icon {
+  transform: translateX(2px);
+  color: var(--violet-500);
+}
+
+/* -----------------------------------------------------------------------------
+   Badges - Refined status indicators
+   ----------------------------------------------------------------------------- */
+.addin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1875rem 0.4375rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 0.3125rem;
+  text-transform: uppercase;
+}
+
+.addin-badge-standard {
+  background: oklch(0.65 0.2 145 / 0.15);
+  color: oklch(0.5 0.18 145);
+}
+
+.dark .addin-badge-standard {
+  background: oklch(0.65 0.2 145 / 0.2);
+  color: oklch(0.7 0.18 145);
+}
+
+.addin-badge-cautious {
+  background: oklch(0.8 0.18 85 / 0.2);
+  color: oklch(0.55 0.16 85);
+}
+
+.dark .addin-badge-cautious {
+  background: oklch(0.8 0.18 85 / 0.25);
+  color: oklch(0.85 0.16 85);
+}
+
+.addin-badge-aggressive {
+  background: oklch(0.63 0.24 25 / 0.15);
+  color: oklch(0.5 0.22 25);
+}
+
+.dark .addin-badge-aggressive {
+  background: oklch(0.63 0.24 25 / 0.2);
+  color: oklch(0.7 0.22 25);
+}
+
+.addin-badge-unknown {
+  background: var(--neutral-200);
+  color: var(--neutral-600);
+}
+
+.dark .addin-badge-unknown {
+  background: var(--neutral-700);
+  color: var(--neutral-400);
+}
+
+.addin-badge-count {
+  background: var(--violet-500);
+  color: white;
+  min-width: 1.25rem;
+  text-align: center;
+  border-radius: 0.625rem;
+}
+
+/* -----------------------------------------------------------------------------
+   Progress - Smooth and satisfying
+   ----------------------------------------------------------------------------- */
+.addin-progress {
+  height: 6px;
+  background: var(--neutral-200);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.dark .addin-progress {
+  background: var(--neutral-700);
+}
+
+.addin-progress-fill {
+  height: 100%;
+  background: var(--gradient-violet);
+  border-radius: 3px;
+  transition: width var(--duration-medium) var(--ease-smooth);
+  position: relative;
+}
+
+.addin-progress-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.3), transparent);
+  animation: progress-shimmer 1.5s infinite;
+}
+
+@keyframes progress-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+.addin-progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.addin-progress-message {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.addin-progress-percent {
+  color: var(--neutral-500);
+  font-variant-numeric: tabular-nums;
+}
+
+/* -----------------------------------------------------------------------------
+   Tabs - Refined navigation
+   ----------------------------------------------------------------------------- */
+.addin-tabs-list {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: var(--neutral-100);
+  border-radius: 0.5rem;
+}
+
+.dark .addin-tabs-list {
+  background: var(--neutral-800);
+}
+
+.addin-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--neutral-600);
+  background: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition:
+    background var(--duration-micro) var(--ease-smooth),
+    color var(--duration-micro) var(--ease-smooth),
+    box-shadow var(--duration-base) var(--ease-smooth);
+}
+
+.addin-tab:hover {
+  color: var(--foreground);
+}
+
+.addin-tab[data-state="active"] {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 3px oklch(0 0 0 / 0.08);
+}
+
+.addin-tab-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.addin-tab-count {
+  font-size: 0.6875rem;
+  padding: 0.0625rem 0.375rem;
+  border-radius: 0.625rem;
+  font-weight: 600;
+}
+
+.addin-tab[data-state="active"] .addin-tab-count {
+  background: var(--violet-100);
+  color: var(--violet-700);
+}
+
+.dark .addin-tab[data-state="active"] .addin-tab-count {
+  background: var(--violet-900);
+  color: var(--violet-200);
+}
+
+/* -----------------------------------------------------------------------------
+   Accordion - Smooth expand/collapse
+   ----------------------------------------------------------------------------- */
+.addin-accordion-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.addin-accordion-item:last-child {
+  border-bottom: none;
+}
+
+.addin-accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.addin-accordion-trigger-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.addin-accordion-icon {
+  width: 1rem;
+  height: 1rem;
+  transition: transform var(--duration-base) var(--ease-spring);
+}
+
+.addin-accordion-trigger[data-state="open"] .addin-accordion-icon {
+  transform: rotate(180deg);
+}
+
+.addin-accordion-content {
+  overflow: hidden;
+  animation: accordion-up var(--duration-base) var(--ease-smooth);
+}
+
+.addin-accordion-content[data-state="open"] {
+  animation: accordion-down var(--duration-base) var(--ease-smooth);
+}
+
+@keyframes accordion-down {
+  from { height: 0; opacity: 0; }
+  to { height: var(--radix-accordion-content-height); opacity: 1; }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+
+/* -----------------------------------------------------------------------------
+   Sign-in Screen - Inviting first impression
+   ----------------------------------------------------------------------------- */
+.addin-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.addin-signin-icon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: var(--gradient-surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+
+.addin-signin-icon svg {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--neutral-400);
+}
+
+.addin-signin-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--foreground);
+  margin-bottom: 0.5rem;
+}
+
+.addin-signin-subtitle {
+  font-size: 0.875rem;
+  color: var(--neutral-500);
+  margin-bottom: 1.5rem;
+  max-width: 220px;
+}
+
+/* -----------------------------------------------------------------------------
+   Status Messages - Clear feedback
+   ----------------------------------------------------------------------------- */
+.addin-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.addin-status-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.0625rem;
+}
+
+.addin-status-success {
+  background: oklch(0.65 0.2 145 / 0.1);
+  color: oklch(0.45 0.18 145);
+}
+
+.dark .addin-status-success {
+  background: oklch(0.65 0.2 145 / 0.15);
+  color: oklch(0.7 0.18 145);
+}
+
+.addin-status-error {
+  background: oklch(0.63 0.24 25 / 0.1);
+  color: oklch(0.45 0.22 25);
+}
+
+.dark .addin-status-error {
+  background: oklch(0.63 0.24 25 / 0.15);
+  color: oklch(0.7 0.22 25);
+}
+
+.addin-status-warning {
+  background: oklch(0.8 0.18 85 / 0.15);
+  color: oklch(0.5 0.16 85);
+}
+
+.dark .addin-status-warning {
+  background: oklch(0.8 0.18 85 / 0.2);
+  color: oklch(0.85 0.16 85);
+}
+
+/* -----------------------------------------------------------------------------
+   Skeleton Loading - Smooth pulse
+   ----------------------------------------------------------------------------- */
+.addin-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--neutral-200) 25%,
+    var(--neutral-100) 50%,
+    var(--neutral-200) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 0.375rem;
+}
+
+.dark .addin-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--neutral-800) 25%,
+    var(--neutral-700) 50%,
+    var(--neutral-800) 75%
+  );
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* -----------------------------------------------------------------------------
+   Detail View - Rich information display
+   ----------------------------------------------------------------------------- */
+.addin-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.addin-detail-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  color: var(--foreground);
+  line-height: 1.3;
+}
+
+.addin-detail-section {
+  margin-bottom: 1rem;
+}
+
+.addin-detail-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--neutral-500);
+}
+
+.addin-detail-label svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.addin-detail-content {
+  padding: 0.75rem;
+  background: var(--muted);
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--foreground);
+}
+
+.addin-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--neutral-400);
+}
+
+.addin-detail-meta svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+/* -----------------------------------------------------------------------------
+   Animations - Entrance and micro-interactions
+   ----------------------------------------------------------------------------- */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in var(--duration-base) var(--ease-smooth);
+}
+
+.animate-slide-up {
+  animation: slide-up var(--duration-medium) var(--ease-spring);
+}
+
+.animate-scale-in {
+  animation: scale-in var(--duration-base) var(--ease-spring);
+}
+
+/* Staggered animations for lists */
+.animate-stagger > * {
+  animation: slide-up var(--duration-medium) var(--ease-spring) backwards;
+}
+
+.animate-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.animate-stagger > *:nth-child(2) { animation-delay: 50ms; }
+.animate-stagger > *:nth-child(3) { animation-delay: 100ms; }
+.animate-stagger > *:nth-child(4) { animation-delay: 150ms; }
+.animate-stagger > *:nth-child(5) { animation-delay: 200ms; }
+.animate-stagger > *:nth-child(6) { animation-delay: 250ms; }
+.animate-stagger > *:nth-child(7) { animation-delay: 300ms; }
+.animate-stagger > *:nth-child(8) { animation-delay: 350ms; }
+
+/* Spinner animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Pulse animation for loading states */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* -----------------------------------------------------------------------------
+   Responsive - Handle narrow widths gracefully
+   ----------------------------------------------------------------------------- */
+@media (max-width: 280px) {
+  .addin-content {
+    padding: 0.75rem;
+  }
+
+  .addin-gauge-container {
+    width: 140px;
+    height: 80px;
+  }
+
+  .addin-gauge-score-value {
+    font-size: 1.75rem;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   Print - Clean output for any printed reports
+   ----------------------------------------------------------------------------- */
+@media print {
+  .addin-header,
+  .addin-footer,
+  .addin-btn {
+    display: none;
+  }
+
+  .addin-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}

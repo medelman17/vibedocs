@@ -1,40 +1,64 @@
 "use client"
 
 import { ReactNode } from "react"
-import { FileText, Settings } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { FileText, Settings, LogOut } from "lucide-react"
+import { useAuth } from "../hooks/useAuth"
 
 interface TaskPaneShellProps {
   children: ReactNode
 }
 
 /**
- * The main layout shell for the Word Add-in task pane.
- * Provides header, content area, and footer.
+ * TaskPaneShell - The refined container for the Word Add-in task pane.
+ *
+ * Design: "Liquid Precision" - confident, warm, intellectually sophisticated.
+ * - Glassmorphic header with subtle backdrop blur
+ * - Custom typography (Instrument Serif + DM Sans)
+ * - Smooth transitions and micro-interactions
  */
 export function TaskPaneShell({ children }: TaskPaneShellProps) {
+  const { isAuthenticated, logout } = useAuth()
+
   return (
-    <div className="flex h-screen flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <FileText className="h-4 w-4 text-primary-foreground" />
+    <div className="addin-shell">
+      {/* Header with glassmorphism effect */}
+      <header className="addin-header">
+        <div className="addin-header-brand">
+          <div className="addin-logo">
+            <FileText strokeWidth={2} />
           </div>
-          <span className="font-semibold">VibeDocs</span>
+          <span className="addin-title">VibeDocs</span>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Settings className="h-4 w-4" />
-          <span className="sr-only">Settings</span>
-        </Button>
+
+        <div className="flex items-center gap-1">
+          {isAuthenticated && (
+            <button
+              onClick={logout}
+              className="addin-btn addin-btn-ghost addin-btn-icon"
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="sr-only">Sign out</span>
+            </button>
+          )}
+          <button
+            className="addin-btn addin-btn-ghost addin-btn-icon"
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
+            <span className="sr-only">Settings</span>
+          </button>
+        </div>
       </header>
 
-      {/* Content */}
-      <main className="flex-1 overflow-y-auto p-4">{children}</main>
+      {/* Main content with smooth scrolling */}
+      <main className="addin-content">{children}</main>
 
-      {/* Footer */}
-      <footer className="border-t px-4 py-2 text-center text-xs text-muted-foreground">
-        Powered by AI &middot; v1.0.0
+      {/* Subtle footer */}
+      <footer className="addin-footer">
+        <span>AI-Powered NDA Analysis</span>
+        <span className="mx-1.5 opacity-40">·</span>
+        <span>v1.0</span>
       </footer>
     </div>
   )

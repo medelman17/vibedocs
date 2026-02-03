@@ -1,37 +1,89 @@
 "use client"
 
+import { useState } from "react"
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import { Badge } from "@/components/ui/badge"
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Lightbulb,
+  XCircle,
+  ChevronDown,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
-import { PRIORITY_BADGE_CONFIG } from "@/types/word-addin"
-import { AlertCircle, AlertTriangle, CheckCircle2, Lightbulb, XCircle } from "lucide-react"
-// Direct import for tree-shaking (bundle-barrel-imports)
+import type { Priority } from "@/types/word-addin"
 import { useAnalysisStore } from "../store/analysis"
 import { formatCategory } from "../lib/format"
 
 /**
- * GapAnalysis displays the gap analysis results from NDA analysis.
+ * Priority badge configuration
+ */
+const PRIORITY_BADGE_CLASSES = {
+  high: "addin-badge-aggressive",
+  medium: "addin-badge-cautious",
+  low: "addin-badge-standard",
+} as const
+
+const PRIORITY_BADGE_LABELS = {
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+} as const
+
+interface AccordionItemProps {
+  title: string
+  icon: React.ReactNode
+  count: number
+  defaultOpen?: boolean
+  children: React.ReactNode
+}
+
+/**
+ * Custom accordion item component
+ */
+function AccordionItem({
+  title,
+  icon,
+  count,
+  defaultOpen = false,
+  children,
+}: AccordionItemProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
+
+  return (
+    <div className="addin-accordion-item">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        data-state={isOpen ? "open" : "closed"}
+        className="addin-accordion-trigger"
+      >
+        <div className="addin-accordion-trigger-content">
+          {icon}
+          <span className="text-sm font-medium">{title}</span>
+          <span className="addin-badge addin-badge-unknown">{count}</span>
+        </div>
+        <ChevronDown className="addin-accordion-icon h-4 w-4 text-neutral-500" />
+      </button>
+      {isOpen && (
+        <div className="pb-3 animate-fade-in">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * GapAnalysis - Displays gap analysis results in collapsible sections.
  *
- * Shows three collapsible sections:
- * 1. Missing Clauses - List of clause categories that are absent from the NDA
- * 2. Weak Clauses - Clauses that exist but have issues, with explanation
+ * Shows three sections:
+ * 1. Missing Clauses - Clause categories absent from the NDA
+ * 2. Weak Clauses - Clauses that exist but have issues
  * 3. Recommendations - Suggested improvements with priority badges
- *
- * Priority badges are color-coded:
- * - High: Red
- * - Medium: Yellow
- * - Low: Green
  */
 export function GapAnalysis() {
   const results = useAnalysisStore((state) => state.results)
   const gapAnalysis = results?.gapAnalysis
 
-  // Don't render if no gap analysis data
   if (!gapAnalysis) {
     return null
   }
@@ -44,158 +96,125 @@ export function GapAnalysis() {
 
   if (!hasData) {
     return (
-      <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-        <CheckCircle2 className="mx-auto mb-2 h-5 w-5 text-green-500" />
-        No gaps or issues detected in this NDA.
+      <div className="flex flex-col items-center justify-center py-8 text-center animate-scale-in">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success-500/10 mb-3">
+          <CheckCircle2 className="h-6 w-6 text-success-500" />
+        </div>
+        <p className="text-sm font-medium text-foreground">No gaps detected</p>
+        <p className="text-xs text-neutral-500 mt-1">
+          This NDA appears to be comprehensive.
+        </p>
       </div>
     )
   }
 
-  // Determine which sections to open by default (those with items)
-  const defaultOpenSections: string[] = []
-  if (missingClauses.length > 0) defaultOpenSections.push("missing")
-  if (weakClauses.length > 0) defaultOpenSections.push("weak")
-  if (recommendations.length > 0) defaultOpenSections.push("recommendations")
-
   return (
-    <div className="flex flex-col gap-3">
-      <h3 className="font-medium">Gap Analysis</h3>
+    <div className="flex flex-col gap-3 animate-fade-in">
+      <h3 className="addin-display-sm text-foreground">Gap Analysis</h3>
 
-      <Accordion
-        type="multiple"
-        defaultValue={defaultOpenSections}
-        className="rounded-lg border"
-      >
+      <div className="addin-card p-0 overflow-hidden">
         {/* Missing Clauses Section */}
-        <AccordionItem value="missing" className="px-3">
-          <AccordionTrigger className="py-3">
-            <div className="flex items-center gap-2">
-              <XCircle className="h-4 w-4 text-red-500" />
-              <span>Missing Clauses</span>
-              <Badge
-                variant="secondary"
-                className="ml-1 text-xs px-1.5 py-0 bg-muted"
-              >
-                {missingClauses.length}
-              </Badge>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            {missingClauses.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No missing clauses detected.
-              </p>
-            ) : (
-              <ul className="space-y-1.5">
-                {missingClauses.map((clause, index) => (
-                  <li
-                    key={index}
-                    className="flex items-center gap-2 text-sm"
-                  >
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
-                    {formatCategory(clause)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </AccordionContent>
+        <AccordionItem
+          title="Missing Clauses"
+          icon={<XCircle className="h-4 w-4 text-error-500" />}
+          count={missingClauses.length}
+          defaultOpen={missingClauses.length > 0}
+        >
+          {missingClauses.length === 0 ? (
+            <p className="text-xs text-neutral-500 px-3">
+              No missing clauses detected.
+            </p>
+          ) : (
+            <ul className="space-y-1.5 px-3">
+              {missingClauses.map((clause, index) => (
+                <li key={index} className="flex items-center gap-2 text-sm">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-error-400" />
+                  <span>{formatCategory(clause)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </AccordionItem>
 
         {/* Weak Clauses Section */}
-        <AccordionItem value="weak" className="px-3">
-          <AccordionTrigger className="py-3">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-              <span>Weak Clauses</span>
-              <Badge
-                variant="secondary"
-                className="ml-1 text-xs px-1.5 py-0 bg-muted"
-              >
-                {weakClauses.length}
-              </Badge>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            {weakClauses.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No weak clauses detected.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {weakClauses.map((item, index) => (
-                  <div
-                    key={index}
-                    className="rounded-md border bg-muted/30 p-2.5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />
-                      <span className="text-sm font-medium">
-                        {formatCategory(item.category)}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-xs text-muted-foreground">
-                      {item.reason}
-                    </p>
+        <AccordionItem
+          title="Weak Clauses"
+          icon={<AlertTriangle className="h-4 w-4 text-warning-500" />}
+          count={weakClauses.length}
+          defaultOpen={weakClauses.length > 0 && missingClauses.length === 0}
+        >
+          {weakClauses.length === 0 ? (
+            <p className="text-xs text-neutral-500 px-3">
+              No weak clauses detected.
+            </p>
+          ) : (
+            <div className="space-y-2 px-3">
+              {weakClauses.map((item, index) => (
+                <div
+                  key={index}
+                  className="rounded-md border bg-muted/50 p-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-3.5 w-3.5 text-warning-500" />
+                    <span className="text-xs font-medium">
+                      {formatCategory(item.category)}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
-          </AccordionContent>
+                  <p className="mt-1.5 text-xs text-neutral-500 leading-relaxed">
+                    {item.reason}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </AccordionItem>
 
         {/* Recommendations Section */}
-        <AccordionItem value="recommendations" className="px-3 border-b-0">
-          <AccordionTrigger className="py-3">
-            <div className="flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-blue-500" />
-              <span>Recommendations</span>
-              <Badge
-                variant="secondary"
-                className="ml-1 text-xs px-1.5 py-0 bg-muted"
-              >
-                {recommendations.length}
-              </Badge>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            {recommendations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No recommendations at this time.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {recommendations.map((item, index) => {
-                  const badgeConfig = PRIORITY_BADGE_CONFIG[item.priority]
-                  return (
-                    <div
-                      key={index}
-                      className="rounded-md border bg-muted/30 p-2.5"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">
-                          {formatCategory(item.category)}
-                        </span>
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "shrink-0 text-xs px-1.5 py-0",
-                            badgeConfig.className
-                          )}
-                        >
-                          {badgeConfig.label}
-                        </Badge>
-                      </div>
-                      <p className="mt-1.5 text-xs text-muted-foreground">
-                        {item.recommendation}
-                      </p>
+        <AccordionItem
+          title="Recommendations"
+          icon={<Lightbulb className="h-4 w-4 text-info-500" />}
+          count={recommendations.length}
+          defaultOpen={
+            recommendations.length > 0 &&
+            missingClauses.length === 0 &&
+            weakClauses.length === 0
+          }
+        >
+          {recommendations.length === 0 ? (
+            <p className="text-xs text-neutral-500 px-3">
+              No recommendations at this time.
+            </p>
+          ) : (
+            <div className="space-y-2 px-3">
+              {recommendations.map((item, index) => {
+                const badgeClass =
+                  PRIORITY_BADGE_CLASSES[item.priority as Priority] ||
+                  "addin-badge-unknown"
+                const badgeLabel =
+                  PRIORITY_BADGE_LABELS[item.priority as Priority] || item.priority
+                return (
+                  <div
+                    key={index}
+                    className="rounded-md border bg-muted/50 p-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium">
+                        {formatCategory(item.category)}
+                      </span>
+                      <span className={cn("addin-badge", badgeClass)}>
+                        {badgeLabel}
+                      </span>
                     </div>
-                  )
-                })}
-              </div>
-            )}
-          </AccordionContent>
+                    <p className="mt-1.5 text-xs text-neutral-500 leading-relaxed">
+                      {item.recommendation}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </AccordionItem>
-      </Accordion>
+      </div>
     </div>
   )
 }

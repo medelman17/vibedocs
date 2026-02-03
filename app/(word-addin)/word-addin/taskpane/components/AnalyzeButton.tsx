@@ -1,9 +1,7 @@
 "use client"
 
 import { useEffect, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { FileSearch, Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
-// Direct imports to enable tree-shaking (bundle-barrel-imports)
+import { FileSearch, Loader2, AlertCircle, CheckCircle2, Sparkles } from "lucide-react"
 import { useDocumentContent } from "../hooks/useDocumentContent"
 import { useAnalysisProgress } from "../hooks/useAnalysisProgress"
 import { useAuthStore } from "../store/auth"
@@ -11,8 +9,13 @@ import { useAnalysisStore } from "../store/analysis"
 import type { AnalysisResults } from "../store/analysis"
 
 /**
- * Button to trigger NDA analysis on the current document.
- * Extracts document content, submits it for analysis, and tracks progress.
+ * AnalyzeButton - The primary action component for triggering NDA analysis.
+ *
+ * Features:
+ * - Animated button with gradient and glow effects
+ * - Smooth progress bar with shimmer animation
+ * - Clear success and error states
+ * - Real-time progress updates via SSE
  */
 export function AnalyzeButton() {
   const token = useAuthStore((state) => state.token)
@@ -31,12 +34,12 @@ export function AnalyzeButton() {
   } = useAnalysisStore()
 
   // Subscribe to SSE progress updates
-  const {
-    progress: sseProgress,
-    error: sseError,
-  } = useAnalysisProgress(analysisId, status === "analyzing")
+  const { progress: sseProgress, error: sseError } = useAnalysisProgress(
+    analysisId,
+    status === "analyzing"
+  )
 
-  // Extract primitives for effect dependencies (rerender-dependencies)
+  // Extract primitives for effect dependencies
   const sseProgressStage = sseProgress?.stage
   const sseProgressPercent = sseProgress?.percent
   const sseProgressMessage = sseProgress?.message
@@ -44,27 +47,30 @@ export function AnalyzeButton() {
   /**
    * Fetch completed results
    */
-  const fetchResults = useCallback(async (id: string, authToken: string) => {
-    try {
-      const response = await fetch(`/api/word-addin/results/${id}`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      })
+  const fetchResults = useCallback(
+    async (id: string, authToken: string) => {
+      try {
+        const response = await fetch(`/api/word-addin/results/${id}`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error?.message || "Failed to fetch results")
+        if (!response.ok || !data.success) {
+          throw new Error(data.error?.message || "Failed to fetch results")
+        }
+
+        setResults(data.data as AnalysisResults)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch results")
       }
+    },
+    [setResults, setError]
+  )
 
-      setResults(data.data as AnalysisResults)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch results")
-    }
-  }, [setResults, setError])
-
-  // Update store when SSE progress changes (using primitive dependencies)
+  // Update store when SSE progress changes
   useEffect(() => {
     if (sseProgressStage !== undefined && sseProgressPercent !== undefined) {
       updateProgress({
@@ -78,7 +84,15 @@ export function AnalyzeButton() {
         fetchResults(analysisId, token)
       }
     }
-  }, [sseProgressStage, sseProgressPercent, sseProgressMessage, analysisId, token, updateProgress, fetchResults])
+  }, [
+    sseProgressStage,
+    sseProgressPercent,
+    sseProgressMessage,
+    analysisId,
+    token,
+    updateProgress,
+    fetchResults,
+  ])
 
   // Handle SSE errors
   useEffect(() => {
@@ -138,37 +152,46 @@ export function AnalyzeButton() {
   const isFailed = status === "failed"
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border bg-card p-4">
-        <h3 className="font-medium">Analyze Current Document</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Extract clauses and assess risks in your NDA
-        </p>
-        <Button
+    <div className="flex flex-col gap-3">
+      {/* Main action card */}
+      <div className="addin-card animate-slide-up">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+            <FileSearch className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="addin-display-sm text-foreground">Analyze Document</h3>
+            <p className="addin-caption mt-0.5">
+              Extract clauses and assess risks in your NDA
+            </p>
+          </div>
+        </div>
+
+        <button
           onClick={handleAnalyze}
           disabled={isLoading || isAnalyzing || !token}
-          className="mt-4 w-full gap-2"
+          className="addin-btn addin-btn-primary w-full"
         >
           {isLoading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              {isExtracting ? "Extracting..." : "Submitting..."}
+              <span>{isExtracting ? "Extracting..." : "Submitting..."}</span>
             </>
           ) : isAnalyzing ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Analyzing...
+              <span>Analyzing...</span>
             </>
           ) : (
             <>
-              <FileSearch className="h-4 w-4" />
-              Analyze NDA
+              <Sparkles className="h-4 w-4" />
+              <span>Analyze NDA</span>
             </>
           )}
-        </Button>
+        </button>
 
         {!token && (
-          <p className="mt-2 text-center text-xs text-muted-foreground">
+          <p className="mt-2 text-center text-xs text-neutral-400">
             Sign in to analyze documents
           </p>
         )}
@@ -176,46 +199,49 @@ export function AnalyzeButton() {
 
       {/* Progress indicator */}
       {isAnalyzing && progress && (
-        <div className="rounded-lg border bg-card p-4">
-          <div className="flex items-center gap-2 text-sm">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span className="font-medium">{progress.message}</span>
+        <div className="addin-card animate-slide-up">
+          <div className="addin-progress-label">
+            <span className="addin-progress-message flex items-center gap-2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-500" />
+              {progress.message || "Processing..."}
+            </span>
+            <span className="addin-progress-percent">{progress.percent}%</span>
           </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+          <div className="addin-progress">
             <div
-              className="h-full bg-primary transition-all duration-300"
+              className="addin-progress-fill"
               style={{ width: `${progress.percent}%` }}
             />
           </div>
-          <p className="mt-1 text-right text-xs text-muted-foreground">
-            {progress.percent}%
-          </p>
         </div>
       )}
 
       {/* Success message */}
       {isComplete && (
-        <div className="flex items-center gap-2 rounded-md bg-green-50 p-3 text-sm text-green-700 dark:bg-green-900/20 dark:text-green-400">
-          <CheckCircle2 className="h-4 w-4" />
-          Analysis complete! View results below.
+        <div className="addin-status addin-status-success animate-slide-up">
+          <CheckCircle2 className="addin-status-icon" />
+          <div>
+            <p className="font-medium">Analysis complete</p>
+            <p className="text-xs mt-0.5 opacity-80">View the results below</p>
+          </div>
         </div>
       )}
 
       {/* Error message */}
       {(error || isFailed) && (
-        <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          <div>
+        <div className="addin-status addin-status-error animate-slide-up">
+          <AlertCircle className="addin-status-icon" />
+          <div className="flex-1 min-w-0">
             <p className="font-medium">Analysis failed</p>
-            <p className="mt-1">{error || "An unknown error occurred"}</p>
-            <Button
-              variant="outline"
-              size="sm"
+            <p className="text-xs mt-0.5 opacity-80 break-words">
+              {error || "An unknown error occurred"}
+            </p>
+            <button
               onClick={reset}
-              className="mt-2"
+              className="addin-btn addin-btn-secondary mt-2 text-xs py-1.5 px-3"
             >
               Try Again
-            </Button>
+            </button>
           </div>
         </div>
       )}

@@ -1,35 +1,35 @@
 "use client"
 
-import { type RiskLevel, RISK_BADGE_CONFIG } from "@/types/word-addin"
-// Direct import for tree-shaking (bundle-barrel-imports)
+import { useMemo } from "react"
+import { type RiskLevel } from "@/types/word-addin"
 import { useAnalysisStore } from "../store/analysis"
 
 /**
- * Extended risk level configuration with label and color class for gauge display
+ * Risk gauge configuration with colors and labels
  */
-const RISK_GAUGE_CONFIG: Record<
+const RISK_CONFIG: Record<
   RiskLevel,
-  { label: string; colorClass: string; strokeColor: string }
+  { label: string; color: string; glowColor: string }
 > = {
   standard: {
     label: "Standard Risk",
-    colorClass: "text-success-600 dark:text-success-400",
-    strokeColor: RISK_BADGE_CONFIG.standard.strokeColor,
+    color: "oklch(0.65 0.2 145)",
+    glowColor: "oklch(0.65 0.2 145 / 0.3)",
   },
   cautious: {
-    label: "Cautious Risk",
-    colorClass: "text-warning-600 dark:text-warning-400",
-    strokeColor: RISK_BADGE_CONFIG.cautious.strokeColor,
+    label: "Moderate Risk",
+    color: "oklch(0.8 0.18 85)",
+    glowColor: "oklch(0.8 0.18 85 / 0.3)",
   },
   aggressive: {
-    label: "Aggressive Risk",
-    colorClass: "text-error-600 dark:text-error-400",
-    strokeColor: RISK_BADGE_CONFIG.aggressive.strokeColor,
+    label: "High Risk",
+    color: "oklch(0.63 0.24 25)",
+    glowColor: "oklch(0.63 0.24 25 / 0.3)",
   },
   unknown: {
     label: "Unknown",
-    colorClass: "text-muted-foreground",
-    strokeColor: RISK_BADGE_CONFIG.unknown.strokeColor,
+    color: "oklch(0.55 0 0)",
+    glowColor: "oklch(0.55 0 0 / 0.2)",
   },
 }
 
@@ -37,137 +37,217 @@ const RISK_GAUGE_CONFIG: Record<
  * Derive risk level from score if not provided
  */
 function deriveRiskLevel(score: number | null, level: string | null): RiskLevel {
-  // If we have a valid level, use it
-  if (level && level in RISK_GAUGE_CONFIG) {
+  if (level && level in RISK_CONFIG) {
     return level as RiskLevel
   }
-
-  // If we have a score, derive level from it
   if (score !== null) {
     if (score <= 33) return "standard"
     if (score <= 66) return "cautious"
     return "aggressive"
   }
-
   return "unknown"
 }
 
 /**
- * Semi-circular gauge SVG component
- */
-function GaugeSvg({
-  score,
-  strokeColor,
-}: {
-  score: number
-  strokeColor: string
-}) {
-  // SVG dimensions
-  const size = 180
-  const strokeWidth = 12
-  const radius = (size - strokeWidth) / 2
-  const center = size / 2
-
-  // Semi-circle arc (180 degrees, from left to right)
-  // Start at left (9 o'clock), end at right (3 o'clock)
-  const circumference = Math.PI * radius // Half circle
-  const progress = (score / 100) * circumference
-
-  return (
-    <svg
-      width={size}
-      height={size / 2 + 10}
-      viewBox={`0 0 ${size} ${size / 2 + 10}`}
-      className="mx-auto"
-    >
-      {/* Background arc (gray) */}
-      <path
-        d={`M ${strokeWidth / 2} ${center} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${center}`}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        className="text-muted/30"
-      />
-      {/* Progress arc (colored) */}
-      <path
-        d={`M ${strokeWidth / 2} ${center} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${center}`}
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={circumference - progress}
-        className="transition-all duration-500 ease-out"
-      />
-      {/* Needle indicator */}
-      <g
-        transform={`rotate(${-90 + (score / 100) * 180}, ${center}, ${center})`}
-        className="transition-transform duration-500 ease-out"
-      >
-        <line
-          x1={center}
-          y1={center}
-          x2={center}
-          y2={strokeWidth + 15}
-          stroke={strokeColor}
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-        <circle cx={center} cy={center} r="6" fill={strokeColor} />
-      </g>
-    </svg>
-  )
-}
-
-/**
- * RiskGauge component displays the overall risk score as a semi-circular gauge.
+ * RiskGauge - A dramatic, animated semi-circular gauge for risk visualization.
  *
- * Shows:
- * - A visual gauge from 0-100
- * - The numeric score
- * - The risk level label (standard/cautious/aggressive)
- * - Color coding: green for standard, yellow for cautious, red for aggressive
+ * Features:
+ * - Smooth spring animations on value changes
+ * - Gradient fill with glow effects
+ * - Needle indicator with drop shadow
+ * - Color-coded risk levels
  */
 export function RiskGauge() {
   const results = useAnalysisStore((state) => state.results)
 
-  // Don't render if no results
-  if (!results) {
+  // Memoize calculations
+  const gaugeData = useMemo(() => {
+    if (!results) return null
+
+    const { overallRiskScore, overallRiskLevel } = results
+    const riskLevel = deriveRiskLevel(overallRiskScore, overallRiskLevel)
+    const config = RISK_CONFIG[riskLevel]
+    const score = overallRiskScore ?? 0
+
+    // SVG dimensions
+    const size = 160
+    const strokeWidth = 14
+    const radius = (size - strokeWidth) / 2
+    const center = size / 2
+
+    // Semi-circle arc calculation
+    const circumference = Math.PI * radius
+    const progress = (score / 100) * circumference
+    const dashOffset = circumference - progress
+
+    // Needle rotation (0 = left, 180 = right)
+    const needleRotation = -90 + (score / 100) * 180
+
+    return {
+      score,
+      riskLevel,
+      config,
+      size,
+      strokeWidth,
+      radius,
+      center,
+      circumference,
+      dashOffset,
+      needleRotation,
+    }
+  }, [results])
+
+  if (!gaugeData) {
     return null
   }
 
-  const { overallRiskScore, overallRiskLevel } = results
-  const riskLevel = deriveRiskLevel(overallRiskScore, overallRiskLevel)
-  const config = RISK_GAUGE_CONFIG[riskLevel]
-  const displayScore = overallRiskScore ?? 0
+  const {
+    score,
+    riskLevel,
+    config,
+    size,
+    strokeWidth,
+    radius,
+    center,
+    circumference,
+    dashOffset,
+    needleRotation,
+  } = gaugeData
 
   return (
-    <div className="rounded-lg border bg-card p-4">
-      <h3 className="text-center font-medium">Risk Assessment</h3>
+    <div className={`addin-card addin-risk-gauge risk-${riskLevel} animate-scale-in`}>
+      <h3 className="addin-risk-gauge-title">Risk Assessment</h3>
 
-      {/* Gauge */}
-      <div className="mt-2">
-        <GaugeSvg score={displayScore} strokeColor={config.strokeColor} />
-      </div>
+      {/* Gauge SVG */}
+      <div className="addin-gauge-container">
+        <svg
+          width={size}
+          height={size / 2 + 12}
+          viewBox={`0 0 ${size} ${size / 2 + 12}`}
+          className="addin-gauge-svg"
+        >
+          {/* Gradient definition */}
+          <defs>
+            <linearGradient id={`gauge-gradient-${riskLevel}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={config.color} stopOpacity={0.6} />
+              <stop offset="50%" stopColor={config.color} stopOpacity={1} />
+              <stop offset="100%" stopColor={config.color} stopOpacity={0.8} />
+            </linearGradient>
+            <filter id="gauge-glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="needle-shadow">
+              <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.3" />
+            </filter>
+          </defs>
 
-      {/* Score display */}
-      <div className="-mt-2 text-center">
-        <span className={`text-4xl font-bold ${config.colorClass}`}>
-          {overallRiskScore !== null ? displayScore : "--"}
-        </span>
-        <span className="text-lg text-muted-foreground">/100</span>
+          {/* Background arc */}
+          <path
+            d={`M ${strokeWidth / 2} ${center} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${center}`}
+            className="addin-gauge-bg"
+          />
+
+          {/* Progress arc with gradient and glow */}
+          <path
+            d={`M ${strokeWidth / 2} ${center} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${center}`}
+            className="addin-gauge-fill"
+            stroke={`url(#gauge-gradient-${riskLevel})`}
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+            filter="url(#gauge-glow)"
+            style={{
+              transition: "stroke-dashoffset 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            }}
+          />
+
+          {/* Tick marks */}
+          {[0, 25, 50, 75, 100].map((tick) => {
+            const angle = (-90 + (tick / 100) * 180) * (Math.PI / 180)
+            const innerR = radius - strokeWidth / 2 - 4
+            const outerR = radius - strokeWidth / 2 - 10
+            const x1 = center + innerR * Math.cos(angle)
+            const y1 = center + innerR * Math.sin(angle)
+            const x2 = center + outerR * Math.cos(angle)
+            const y2 = center + outerR * Math.sin(angle)
+            return (
+              <line
+                key={tick}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="currentColor"
+                strokeWidth={tick % 50 === 0 ? 2 : 1}
+                strokeLinecap="round"
+                className="text-neutral-300 dark:text-neutral-600"
+              />
+            )
+          })}
+
+          {/* Needle */}
+          <g
+            className="addin-gauge-needle"
+            style={{
+              transform: `rotate(${needleRotation}deg)`,
+              transformOrigin: `${center}px ${center}px`,
+              transition: "transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            }}
+            filter="url(#needle-shadow)"
+          >
+            <line
+              x1={center}
+              y1={center}
+              x2={center}
+              y2={strokeWidth + 18}
+              stroke={config.color}
+              strokeWidth={3}
+              strokeLinecap="round"
+              className="addin-gauge-needle-line"
+            />
+            <circle
+              cx={center}
+              cy={center}
+              r={7}
+              fill={config.color}
+              className="addin-gauge-needle-dot"
+            />
+            <circle
+              cx={center}
+              cy={center}
+              r={3}
+              fill="white"
+            />
+          </g>
+        </svg>
+
+        {/* Score display */}
+        <div className="addin-gauge-score">
+          <span
+            className="addin-gauge-score-value"
+            style={{ color: config.color }}
+          >
+            {score}
+          </span>
+          <span className="addin-gauge-score-max">/100</span>
+        </div>
       </div>
 
       {/* Risk level label */}
-      <p className={`mt-1 text-center text-sm font-medium ${config.colorClass}`}>
+      <p
+        className="addin-gauge-label"
+        style={{ color: config.color }}
+      >
         {config.label}
       </p>
 
-      {/* Score scale */}
-      <div className="mt-4 flex justify-between text-xs text-muted-foreground">
-        <span>0 - Low</span>
-        <span>100 - High</span>
+      {/* Scale labels */}
+      <div className="addin-gauge-scale">
+        <span>Low Risk</span>
+        <span>High Risk</span>
       </div>
     </div>
   )

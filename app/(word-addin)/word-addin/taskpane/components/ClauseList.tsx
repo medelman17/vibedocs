@@ -1,14 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-// Direct imports for tree-shaking (bundle-barrel-imports)
+import { Filter, ArrowUpDown, Inbox } from "lucide-react"
 import { useAnalysisStore } from "../store/analysis"
 import type { ClauseResult } from "../store/analysis"
 import { ClauseCard } from "./ClauseCard"
@@ -57,27 +50,39 @@ function sortClauses(clauses: ClauseResult[], sortBy: SortOption): ClauseResult[
 
   switch (sortBy) {
     case "confidence":
-      // High confidence first
       return sorted.sort((a, b) => b.confidence - a.confidence)
     case "risk":
-      // High risk first
-      return sorted.sort((a, b) => getRiskPriority(b.riskLevel) - getRiskPriority(a.riskLevel))
+      return sorted.sort(
+        (a, b) => getRiskPriority(b.riskLevel) - getRiskPriority(a.riskLevel)
+      )
     case "category":
-      // Alphabetical by category
       return sorted.sort((a, b) => a.category.localeCompare(b.category))
     default:
       return sorted
   }
 }
 
+const FILTER_OPTIONS: { value: RiskFilter; label: string }[] = [
+  { value: "all", label: "All Risks" },
+  { value: "aggressive", label: "Aggressive" },
+  { value: "cautious", label: "Cautious" },
+  { value: "standard", label: "Standard" },
+]
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "risk", label: "Risk Level" },
+  { value: "confidence", label: "Confidence" },
+  { value: "category", label: "Category" },
+]
+
 /**
- * ClauseList displays a filterable, sortable list of extracted clauses.
+ * ClauseList - A filterable, sortable list of extracted clauses.
  *
  * Features:
- * - Filter by risk level (All, Standard, Cautious, Aggressive)
- * - Sort by confidence, risk level, or category
- * - Shows count of displayed clauses
- * - Each card is clickable to select the clause
+ * - Custom select dropdowns with refined styling
+ * - Staggered animation on list items
+ * - Empty state with illustration
+ * - Count display with filtering
  */
 export function ClauseList() {
   const results = useAnalysisStore((state) => state.results)
@@ -95,7 +100,6 @@ export function ClauseList() {
     return sortClauses(filtered, sortBy)
   }, [results, riskFilter, sortBy])
 
-  // Don't render if no results
   if (!results) {
     return null
   }
@@ -104,12 +108,12 @@ export function ClauseList() {
   const displayedCount = displayedClauses.length
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">
+        <h3 className="addin-display-sm text-foreground">
           Clauses
-          <span className="ml-1.5 text-sm text-muted-foreground">
+          <span className="ml-1.5 text-sm font-normal text-neutral-500">
             ({displayedCount}
             {riskFilter !== "all" && ` of ${totalCount}`})
           </span>
@@ -119,42 +123,56 @@ export function ClauseList() {
       {/* Filters row */}
       <div className="flex gap-2">
         {/* Risk filter */}
-        <Select
-          value={riskFilter}
-          onValueChange={(value) => setRiskFilter(value as RiskFilter)}
-        >
-          <SelectTrigger size="sm" className="h-7 flex-1 text-xs">
-            <SelectValue placeholder="Filter by risk" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Risks</SelectItem>
-            <SelectItem value="aggressive">Aggressive</SelectItem>
-            <SelectItem value="cautious">Cautious</SelectItem>
-            <SelectItem value="standard">Standard</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="relative flex-1">
+          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400 pointer-events-none" />
+          <select
+            value={riskFilter}
+            onChange={(e) => setRiskFilter(e.target.value as RiskFilter)}
+            className="w-full h-8 pl-8 pr-3 text-xs bg-muted border border-border rounded-md appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-400"
+          >
+            {FILTER_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Sort option */}
-        <Select
-          value={sortBy}
-          onValueChange={(value) => setSortBy(value as SortOption)}
-        >
-          <SelectTrigger size="sm" className="h-7 flex-1 text-xs">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="risk">Sort: Risk Level</SelectItem>
-            <SelectItem value="confidence">Sort: Confidence</SelectItem>
-            <SelectItem value="category">Sort: Category</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="relative flex-1">
+          <ArrowUpDown className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400 pointer-events-none" />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="w-full h-8 pl-8 pr-3 text-xs bg-muted border border-border rounded-md appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-400"
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                Sort: {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Clause cards */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 animate-stagger">
         {displayedClauses.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-            No clauses match the current filter.
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-3">
+              <Inbox className="h-5 w-5 text-neutral-400" />
+            </div>
+            <p className="text-sm text-neutral-500">
+              No clauses match the current filter.
+            </p>
+            {riskFilter !== "all" && (
+              <button
+                onClick={() => setRiskFilter("all")}
+                className="mt-2 text-xs text-violet-600 hover:text-violet-700 dark:text-violet-400"
+              >
+                Clear filter
+              </button>
+            )}
           </div>
         ) : (
           displayedClauses.map((clause) => (
