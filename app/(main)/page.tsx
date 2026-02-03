@@ -309,6 +309,12 @@ export default function Home() {
           >
             2026 VibeDocs. Crafted with care.
           </p>
+          <a
+            href="/chat"
+            className="mt-4 block text-xs text-violet-500 hover:underline"
+          >
+            Try the chat interface →
+          </a>
         </div>
       </div>
 
