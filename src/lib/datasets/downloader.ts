@@ -15,7 +15,8 @@ import type { DatasetSource } from "./types"
 const CACHE_DIR = ".cache/datasets"
 
 const DATASET_URLS: Record<DatasetSource, string> = {
-  cuad: "https://huggingface.co/api/datasets/theatticusproject/cuad/parquet/default/train/0.parquet",
+  // CUAD from GitHub repo (has full clause annotations in SQuAD format)
+  cuad: "https://github.com/TheAtticusProject/cuad/raw/main/data.zip",
   contract_nli:
     "https://huggingface.co/api/datasets/kiddothe2b/contract-nli/parquet/contractnli_a/train/0.parquet",
   bonterms: "https://github.com/Bonterms/Mutual-NDA/archive/refs/heads/main.zip",
@@ -23,7 +24,7 @@ const DATASET_URLS: Record<DatasetSource, string> = {
 }
 
 const DATASET_PATHS: Record<DatasetSource, string> = {
-  cuad: "cuad_train.parquet",
+  cuad: "cuad-v1", // Directory containing CUAD_v1.json and full_contract_txt/
   contract_nli: "contract_nli_train.parquet",
   bonterms: "bonterms-nda",
   commonaccord: "commonaccord-nda",

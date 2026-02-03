@@ -6,7 +6,7 @@
  * @module inngest/functions/bootstrap/__tests__/ingest-reference-data.test
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 
 // Mock all dependencies before importing the function
 vi.mock("@/lib/datasets/downloader", () => ({

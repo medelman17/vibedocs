@@ -3,13 +3,10 @@
  *
  * Inngest function that orchestrates the full reference data ingestion pipeline:
  * 1. Download/cache datasets from remote sources
- * 2. Parse each dataset into NormalizedRecords
- * 3. Generate embeddings in batches (with rate limiting)
- * 4. Insert into database with deduplication
- * 5. Create HNSW indexes after bulk load
+ * 2. Parse each dataset and stream records through embedding + insert
+ * 3. Create HNSW indexes after bulk load
  *
- * This is a long-running operation (potentially hours for full dataset).
- * Progress events are emitted for monitoring.
+ * Uses streaming to avoid memory issues with large datasets.
  *
  * @module inngest/functions/bootstrap/ingest-reference-data
  */
@@ -42,14 +39,6 @@ const PARSERS: Record<DatasetSource, Parser> = {
 const BATCH_SIZE = VOYAGE_CONFIG.batchLimit // 128
 const RATE_LIMIT_DELAY_MS = 200 // 300 RPM = 200ms between calls
 
-interface BootstrapStats {
-  downloaded: string[]
-  recordsProcessed: number
-  embeddingsCreated: number
-  errors: string[]
-  startedAt: number
-}
-
 /**
  * Bootstrap reference data ingestion function.
  *
@@ -69,105 +58,56 @@ export const ingestReferenceData = inngest.createFunction(
     id: "bootstrap-ingest-reference-data",
     name: "Bootstrap: Ingest Reference Data",
     concurrency: { limit: 1 }, // Only one bootstrap at a time
-    retries: 3,
+    retries: 1, // Reduce retries for long-running function
   },
   { event: "bootstrap/ingest.requested" },
   async ({ event, step }) => {
     const { sources, forceRefresh = false } = event.data
+    const startedAt = Date.now()
 
-    const stats: BootstrapStats = {
-      downloaded: [],
-      recordsProcessed: 0,
-      embeddingsCreated: 0,
-      errors: [],
-      startedAt: Date.now(),
-    }
+    const downloaded: string[] = []
+    let totalProcessed = 0
+    let totalEmbedded = 0
+    let totalErrors = 0
 
     // Step 1: Download all datasets
     for (const source of sources) {
       const result = await step.run(`download-${source}`, async () => {
         const downloadResult = await downloadDataset(source, forceRefresh)
-        return downloadResult
+        return { cached: downloadResult.cached }
       })
 
       if (!result.cached) {
-        stats.downloaded.push(source)
+        downloaded.push(source)
       }
     }
 
-    // Step 2: Process each source
+    // Step 2: Process each source with streaming (one step per source)
     for (const source of sources) {
-      // Parse and collect records
-      const records = await step.run(`parse-${source}`, async () => {
-        const path = getDatasetPath(source)
-        const parser = PARSERS[source]
-
-        if (!parser) {
-          throw new NonRetriableError(`Unknown source: ${source}`)
-        }
-
-        const allRecords: NormalizedRecord[] = []
-        for await (const record of parser(path)) {
-          // Filter out empty content (Voyage AI rejects empty strings)
-          if (record.content && record.content.trim().length > 0) {
-            allRecords.push(record)
-          }
-        }
-        return allRecords
+      const result = await step.run(`ingest-${source}`, async () => {
+        return await streamIngestSource(source)
       })
 
-      // Process records in batches with rate limiting
-      const numBatches = Math.ceil(records.length / BATCH_SIZE)
+      totalProcessed += result.processed
+      totalEmbedded += result.embedded
+      totalErrors += result.errorCount
 
-      for (let batchIdx = 0; batchIdx < numBatches; batchIdx++) {
-        const batchStart = batchIdx * BATCH_SIZE
-        const batchEnd = Math.min(batchStart + BATCH_SIZE, records.length)
-        const batch = records.slice(batchStart, batchEnd)
-
-        // Rate limit between batches (skip first batch)
-        if (batchIdx > 0) {
-          await step.sleep(
-            `rate-limit-${source}-${batchIdx}`,
-            `${RATE_LIMIT_DELAY_MS}ms`
-          )
-        }
-
-        // Process batch: embed and insert
-        const batchResult = await step.run(
-          `process-batch-${source}-${batchIdx}`,
-          async () => {
-            return await processBatch(batch, source, batchIdx, stats)
-          }
-        )
-
-        stats.recordsProcessed += batchResult.processed
-        stats.embeddingsCreated += batchResult.embedded
-        stats.errors.push(...batchResult.errors)
-
-        // Emit progress event
-        await step.sendEvent(`progress-${source}-${batchIdx}`, {
-          name: "bootstrap/ingest.progress",
-          data: {
-            source,
-            step: "embedding" as const,
-            recordsProcessed: Math.min(batchEnd, records.length),
-            totalRecords: records.length,
-            percent: Math.round((batchEnd / records.length) * 100),
-          },
-        })
-      }
+      // Emit progress event
+      await step.sendEvent(`progress-${source}`, {
+        name: "bootstrap/ingest.progress",
+        data: {
+          source,
+          step: "complete" as const,
+          recordsProcessed: result.processed,
+          totalRecords: result.processed,
+          percent: 100,
+        },
+      })
     }
 
     // Step 3: Create HNSW indexes (after bulk load)
     await step.run("create-hnsw-indexes", async () => {
-      // Drop existing index if any
-      await db.execute(sql`
-        DROP INDEX IF EXISTS ref_embeddings_hnsw_idx
-      `)
-
-      // Create new HNSW index
-      // m=16: connections per layer (good for ~33K vectors)
-      // ef_construction=64: build-time quality factor
+      await db.execute(sql`DROP INDEX IF EXISTS ref_embeddings_hnsw_idx`)
       await db.execute(sql`
         CREATE INDEX ref_embeddings_hnsw_idx
         ON reference_embeddings
@@ -176,49 +116,117 @@ export const ingestReferenceData = inngest.createFunction(
       `)
     })
 
-    const durationMs = Date.now() - stats.startedAt
+    const durationMs = Date.now() - startedAt
 
     // Emit completion event
     await step.sendEvent("emit-completed", {
       name: "bootstrap/ingest.completed",
       data: {
         sources,
-        totalRecords: stats.recordsProcessed,
-        totalEmbeddings: stats.embeddingsCreated,
+        totalRecords: totalProcessed,
+        totalEmbeddings: totalEmbedded,
         durationMs,
       },
     })
 
     return {
       success: true,
-      downloaded: stats.downloaded,
-      recordsProcessed: stats.recordsProcessed,
-      embeddingsCreated: stats.embeddingsCreated,
-      errors: stats.errors,
+      downloaded,
+      recordsProcessed: totalProcessed,
+      embeddingsCreated: totalEmbedded,
+      errorCount: totalErrors,
       durationMs,
     }
   }
 )
 
-interface BatchProcessResult {
+interface IngestResult {
   processed: number
   embedded: number
-  errors: string[]
+  errorCount: number
 }
 
 /**
- * Process a batch of records: generate embeddings and insert into database.
+ * Stream ingest a source: parse once, batch embed, insert.
+ * Memory efficient - processes in batches without loading all records.
+ */
+async function streamIngestSource(source: DatasetSource): Promise<IngestResult> {
+  const path = getDatasetPath(source)
+  const parser = PARSERS[source]
+
+  if (!parser) {
+    throw new NonRetriableError(`Unknown source: ${source}`)
+  }
+
+  let processed = 0
+  let embedded = 0
+  let errorCount = 0
+
+  // Collect batch
+  let batch: NormalizedRecord[] = []
+  let batchIdx = 0
+
+  for await (const record of parser(path)) {
+    // Filter empty content
+    if (!record.content || record.content.trim().length === 0) {
+      continue
+    }
+
+    batch.push(record)
+
+    // Process batch when full
+    if (batch.length >= BATCH_SIZE) {
+      const result = await processBatch(batch, source, batchIdx)
+      processed += result.processed
+      embedded += result.embedded
+      errorCount += result.errorCount
+
+      // Rate limit
+      if (batchIdx > 0) {
+        await sleep(RATE_LIMIT_DELAY_MS)
+      }
+
+      batch = []
+      batchIdx++
+
+      // Log progress every 10 batches
+      if (batchIdx % 10 === 0) {
+        console.log(`[${source}] Processed ${processed} records...`)
+      }
+    }
+  }
+
+  // Process remaining records
+  if (batch.length > 0) {
+    const result = await processBatch(batch, source, batchIdx)
+    processed += result.processed
+    embedded += result.embedded
+    errorCount += result.errorCount
+  }
+
+  console.log(`[${source}] Complete: ${processed} processed, ${embedded} embedded, ${errorCount} errors`)
+
+  return { processed, embedded, errorCount }
+}
+
+interface BatchResult {
+  processed: number
+  embedded: number
+  errorCount: number
+}
+
+/**
+ * Process a batch: generate embeddings and insert into database.
  */
 async function processBatch(
   batch: NormalizedRecord[],
   source: DatasetSource,
-  batchIndex: number,
-  _stats: BootstrapStats
-): Promise<BatchProcessResult> {
-  const result: BatchProcessResult = {
+  batchIndex: number
+): Promise<BatchResult> {
+  const result: BatchResult = {
     processed: 0,
     embedded: 0,
-    errors: [],
+    errorCount: 0,
   }
 
   // Generate embeddings
@@ -232,20 +240,18 @@ async function processBatch(
     embeddings = embedResult.embeddings
     tokensPerText = Math.floor(embedResult.totalTokens / texts.length)
   } catch (error) {
-    const message = `Embedding failed for ${source} batch ${batchIndex}: ${error}`
-    result.errors.push(message)
-    console.error(message)
+    console.error(`Embedding failed for ${source} batch ${batchIndex}: ${error}`)
+    result.errorCount = batch.length
     return result
   }
 
-  // Insert documents and embeddings sequentially
-  // Note: neon-http driver doesn't support transactions, using idempotent inserts instead
+  // Insert documents and embeddings
   for (let i = 0; i < batch.length; i++) {
     const record = batch[i]
     const embedding = embeddings[i]
 
     if (!embedding) {
-      result.errors.push(`Missing embedding for record ${record.sourceId}`)
+      result.errorCount++
       continue
     }
 
@@ -263,14 +269,11 @@ async function processBatch(
         })
         .onConflictDoUpdate({
           target: referenceDocuments.contentHash,
-          set: {
-            // Return existing record on conflict
-            source: record.source,
-          },
+          set: { source: record.source },
         })
         .returning({ id: referenceDocuments.id })
 
-      // Insert embedding (skip if already exists via contentHash)
+      // Insert embedding (skip if exists)
       await db
         .insert(referenceEmbeddings)
         .values({
@@ -283,20 +286,21 @@ async function processBatch(
           hypothesisId: record.hypothesisId ?? null,
           nliLabel: record.nliLabel ?? null,
           contentHash: record.contentHash,
-          metadata: {
-            tokenCount: tokensPerText,
-          },
+          metadata: { tokenCount: tokensPerText },
         })
         .onConflictDoNothing({ target: referenceEmbeddings.contentHash })
 
       result.processed++
       result.embedded++
     } catch (error) {
-      const message = `Insert failed for ${record.sourceId}: ${error}`
-      result.errors.push(message)
-      console.error(message)
+      console.error(`Insert failed for ${record.sourceId}: ${error}`)
+      result.errorCount++
     }
   }
 
   return result
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
