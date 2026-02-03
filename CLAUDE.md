@@ -321,7 +321,7 @@ Note: `.claude/settings.local.json` is gitignored (user-specific permissions)
 
 ## Ignored Files
 
-- `.serena/` - Serena MCP local project cache (do not commit)
+- `.serena/cache/`, `.serena/memories/` - Serena MCP local data (do not commit; `project.yml` is shared)
 - `.claude/settings.local.json` - User-specific Claude permissions (do not commit)
 
 ## Documentation

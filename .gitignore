@@ -43,13 +43,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.env*.local
 
-# Serena MCP
-.serena/
+# Turbopack
+.turbo/
 
-# Drizzle
-drizzle/
+# Serena MCP (keep project.yml for shared config)
+.serena/cache/
+.serena/memories/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+playwright/.auth/
 
 # Git worktrees
 .worktrees/
