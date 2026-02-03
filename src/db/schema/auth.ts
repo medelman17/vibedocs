@@ -91,8 +91,9 @@ export const users = pgTable("users", {
    * Timestamp indicating when the user's email was verified.
    * Null indicates the email has not been verified.
    * Set automatically by Auth.js when user clicks verification link.
+   * NOTE: Must use camelCase column name "emailVerified" to match Auth.js adapter expectations.
    */
-  emailVerified: timestamp("email_verified", { withTimezone: true }),
+  emailVerified: timestamp("emailVerified", { withTimezone: true }),
 
   /** Profile image URL, typically sourced from OAuth provider (Google, GitHub, etc.) */
   image: text("image"),
@@ -184,8 +185,9 @@ export const accounts = pgTable(
     /**
      * Foreign key reference to the users table.
      * Cascades on delete to remove orphaned account links.
+     * NOTE: Must use camelCase column name "userId" to match Auth.js adapter expectations.
      */
-    userId: uuid("user_id")
+    userId: uuid("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
 
@@ -205,8 +207,9 @@ export const accounts = pgTable(
     /**
      * The user's unique identifier from the OAuth provider.
      * Combined with `provider`, forms the composite primary key.
+     * NOTE: Must use camelCase column name "providerAccountId" to match Auth.js adapter expectations.
      */
-    providerAccountId: text("provider_account_id").notNull(),
+    providerAccountId: text("providerAccountId").notNull(),
 
     /**
      * OAuth refresh token for obtaining new access tokens.
@@ -304,14 +307,16 @@ export const sessions = pgTable("sessions", {
    * Opaque session token serving as the primary key.
    * This token is stored in the user's browser cookie and used
    * to look up the session on each request.
+   * NOTE: Must use camelCase column name "sessionToken" to match Auth.js adapter expectations.
    */
-  sessionToken: text("session_token").primaryKey(),
+  sessionToken: text("sessionToken").primaryKey(),
 
   /**
    * Foreign key reference to the authenticated user.
    * Cascades on delete to invalidate all sessions when user is removed.
+   * NOTE: Must use camelCase column name "userId" to match Auth.js adapter expectations.
    */
-  userId: uuid("user_id")
+  userId: uuid("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
 
@@ -327,9 +332,10 @@ export const sessions = pgTable("sessions", {
    * This is a custom extension to the Auth.js session model.
    * Used by the DAL (`withTenant()`) to scope queries to the correct tenant.
    * Null when user hasn't selected an organization or is in a personal context.
+   * NOTE: Custom field, using camelCase for consistency with Auth.js adapter.
    * @see {@link module:lib/dal} for tenant context utilities
    */
-  activeOrganizationId: uuid("active_organization_id"),
+  activeOrganizationId: uuid("activeOrganizationId"),
 })
 
 /**

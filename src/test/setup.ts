@@ -25,7 +25,7 @@ const createSchema = async () => {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name TEXT,
       email TEXT UNIQUE NOT NULL,
-      email_verified TIMESTAMPTZ,
+      "emailVerified" TIMESTAMPTZ,
       image TEXT,
       password_hash TEXT,
       failed_login_attempts INTEGER NOT NULL DEFAULT 0,
@@ -66,19 +66,19 @@ const createSchema = async () => {
 
   await testDb.execute(sql`
     CREATE TABLE IF NOT EXISTS sessions (
-      session_token TEXT PRIMARY KEY,
-      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      "sessionToken" TEXT PRIMARY KEY,
+      "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       expires TIMESTAMPTZ NOT NULL,
-      active_organization_id UUID
+      "activeOrganizationId" UUID
     )
   `)
 
   await testDb.execute(sql`
     CREATE TABLE IF NOT EXISTS accounts (
-      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       type TEXT NOT NULL,
       provider TEXT NOT NULL,
-      provider_account_id TEXT NOT NULL,
+      "providerAccountId" TEXT NOT NULL,
       refresh_token TEXT,
       access_token TEXT,
       expires_at INTEGER,
@@ -86,7 +86,7 @@ const createSchema = async () => {
       scope TEXT,
       id_token TEXT,
       session_state TEXT,
-      PRIMARY KEY(provider, provider_account_id)
+      PRIMARY KEY(provider, "providerAccountId")
     )
   `)
 
