@@ -57,6 +57,7 @@
     "@xyflow/react": "^12.10.0",
     "ai": "^6.0.67",
     "ansi-to-react": "^6.2.6",
+    "apache-arrow": "^21.1.0",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
