@@ -31,21 +31,33 @@ export default function WordAddInAuthCallbackPage() {
           user: data.user,
         })
 
+        // Always store in localStorage as fallback (taskpane polls for this)
+        localStorage.setItem(
+          "word-addin-auth",
+          JSON.stringify({
+            token: data.token,
+            user: data.user,
+            timestamp: Date.now(),
+          })
+        )
+
         if (window.Office?.context?.ui) {
-          window.Office.context.ui.messageParent(message)
-        } else {
-          // Fallback: store in localStorage for task pane to read
-          localStorage.setItem(
-            "word-addin-auth",
-            JSON.stringify({
-              token: data.token,
-              user: data.user,
-              timestamp: Date.now(),
-            })
-          )
-          // Close the window after a brief delay
-          setTimeout(() => window.close(), 100)
+          // Try Office.js messaging if available
+          try {
+            window.Office.context.ui.messageParent(message)
+          } catch {
+            console.log("[AuthCallback] Office.js messageParent failed, using localStorage fallback")
+          }
         }
+
+        // Try to close the window/dialog
+        setTimeout(() => {
+          try {
+            window.close()
+          } catch {
+            // Window may not be closeable, that's okay
+          }
+        }, 500)
 
         setMessageSent(true)
       } catch (e) {
@@ -84,10 +96,37 @@ export default function WordAddInAuthCallbackPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground">
-        {messageSent ? "You can close this window." : "Completing sign in..."}
-      </p>
+    <div className="flex min-h-screen items-center justify-center p-6">
+      <div className="text-center space-y-4">
+        {messageSent ? (
+          <>
+            <div className="text-green-600 dark:text-green-400">
+              <svg
+                className="mx-auto h-12 w-12"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <p className="text-lg font-medium">Sign in successful!</p>
+            <p className="text-sm text-muted-foreground">
+              You can close this window and return to the add-in.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="animate-spin mx-auto h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+            <p className="text-muted-foreground">Completing sign in...</p>
+          </>
+        )}
+      </div>
     </div>
   )
 }
