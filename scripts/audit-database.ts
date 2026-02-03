@@ -21,9 +21,9 @@ async function main() {
   console.log("✅ DATABASE_URL is set")
 
   // Import db client
-  const { db } = await import("../src/db/client")
+  const { db } = await import("../db/client")
   const { referenceDocuments, referenceEmbeddings } = await import(
-    "../src/db/schema/reference"
+    "../db/schema/reference"
   )
   const { sql } = await import("drizzle-orm")
 

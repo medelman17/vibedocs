@@ -49,7 +49,7 @@ async function auditCuad(): Promise<AuditResult> {
   const startMem = getMemoryUsage()
 
   try {
-    const { parseCuadDataset } = await import("../src/lib/datasets/cuad-parser")
+    const { parseCuadDataset } = await import("../lib/datasets/cuad-parser")
     const path = join(CACHE_DIR, "cuad-v1")
 
     let count = 0
@@ -96,7 +96,7 @@ async function auditContractNli(): Promise<AuditResult> {
 
   try {
     const { parseContractNliDataset } = await import(
-      "../src/lib/datasets/contractnli-parser"
+      "../lib/datasets/contractnli-parser"
     )
     const path = join(CACHE_DIR, "contract_nli_train.parquet")
 
@@ -144,7 +144,7 @@ async function auditBonterms(): Promise<AuditResult> {
 
   try {
     const { parseBontermsDataset } = await import(
-      "../src/lib/datasets/template-parser"
+      "../lib/datasets/template-parser"
     )
     const path = join(CACHE_DIR, "bonterms-nda")
 
@@ -185,7 +185,7 @@ async function auditCommonAccord(): Promise<AuditResult> {
 
   try {
     const { parseCommonAccordDataset } = await import(
-      "../src/lib/datasets/template-parser"
+      "../lib/datasets/template-parser"
     )
     const path = join(CACHE_DIR, "commonaccord-nda")
 

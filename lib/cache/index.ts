@@ -14,3 +14,9 @@ export {
   type CachedEmbedding,
   type EmbeddingCacheStats,
 } from "./embedding-cache"
+
+export {
+  responseCache,
+  getResponseCacheKey,
+  type CachedResponse,
+} from "./response-cache"

@@ -58,7 +58,7 @@ Auth.js v5 DrizzleAdapter expects **camelCase** column names for specific fields
 - `sessions.sessionToken` (NOT `session_token`)
 - `sessions.userId` (NOT `user_id`)
 
-Using snake_case for these columns causes `AdapterError` (PostgreSQL 42703: undefined column) on OAuth callback. See `src/db/schema/auth.ts` for the correct schema definition.
+Using snake_case for these columns causes `AdapterError` (PostgreSQL 42703: undefined column) on OAuth callback. See `db/schema/auth.ts` for the correct schema definition.
 
 ### Data Access Layer (DAL)
 
@@ -73,9 +73,17 @@ const ctx = await requireRole(["owner", "admin"])        // Role-based access
 
 ### Next.js 16 Patterns
 
-- **Proxy file**: `src/proxy.ts` (renamed from middleware.ts in v16)
+- **Proxy file**: `proxy.ts` (renamed from middleware.ts in v16)
 - **DAL**: Uses React `cache()` for request memoization
 - **Server-only**: Import `"server-only"` in DAL to prevent client bundling
+
+### Word Add-in Integration
+
+Microsoft Word Add-in uses OAuth code flow with Upstash Redis for secure token exchange:
+- **Auth**: Microsoft Entra ID via Auth.js, auth code cached in Redis (5-min TTL, one-time use)
+- **Files**: `lib/word-addin-auth.ts`, `lib/auth-code-cache.ts`
+- **PRD**: See `docs/PRD-word-addin.md` for full specification
+- **App routes**: `app/(word-addin)/` for add-in specific pages
 
 ### Agent Pipeline (Inngest + AI SDK 6)
 
@@ -109,12 +117,12 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
   - `/api/auth/[...nextauth]` - Auth.js routes
   - `/api/comparisons/` - NDA comparison endpoints
   - `/api/generate/` - NDA generation endpoints (includes `/[id]/export`)
-- `src/db/` - Drizzle schema and client
+- `db/` - Drizzle schema and client
   - `schema/` - Table definitions (auth, organizations, documents, analyses, etc.)
   - `queries/` - Prepared queries (documents, analyses, similarity)
   - `_columns.ts` - Reusable column helpers (timestamps, tenantId, etc.)
   - `client.ts` - Neon serverless connection
-- `src/lib/` - Core utilities
+- `lib/` - Core utilities
   - `auth.ts` - Auth.js configuration
   - `dal.ts` - Data Access Layer (verifySession, withTenant, requireRole)
   - `errors.ts` - Custom error classes (AppError, NotFoundError, etc.)
@@ -123,21 +131,27 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
   - `clause-alignment.ts` - Hungarian algorithm for clause matching
   - `document-export.ts` - DOCX/PDF export utilities
   - `template-service.ts` - Bonterms/CommonAccord template retrieval
-- `src/proxy.ts` - Next.js 16 auth redirects (formerly middleware.ts)
-- `src/test/` - Test setup (PGlite)
-- `src/inngest/` - Inngest client and pipeline functions
-- `src/agents/` - AI SDK 6 agent definitions
+  - `cache/` - LRU caching (embeddings, responses)
+  - `datasets/` - Dataset parsing utilities (CUAD, ContractNLI)
+  - `embeddings.ts` - Voyage AI embedding utilities
+- `proxy.ts` - Next.js 16 auth redirects (formerly middleware.ts)
+- `test/` - Test setup (PGlite)
+- `inngest/` - Inngest client and pipeline functions
+  - `functions/` - Inngest function definitions (bootstrap, demo)
+  - `utils/` - Shared utilities (rate limiting, tenant context, test helpers)
+- `agents/` - AI SDK 6 agent definitions (🚧 placeholder structure)
   - `prompts/` - System prompts for each agent
   - `tools/` - Vector search and other agent tools
   - `testing/` - Mock AI and fixtures for agent tests
   - `comparison/` - Comparison pipeline schemas and prompts
-- `src/lib/cache/` - LRU caching (embeddings, responses, search)
 - `components/` - shadcn/ui + AI SDK Elements
+- `hooks/` - React hooks (includes shadcn hooks)
+- `types/` - TypeScript type definitions
 
 ## Conventions
 
 ### Database (Drizzle)
-- All tenant tables use `...tenantId` spread from `src/db/_columns.ts`
+- All tenant tables use `...tenantId` spread from `db/_columns.ts`
 - Use column helpers: `primaryId`, `timestamps`, `softDelete`, `tenantId`
 - **CUAD Categories**: Use title case for abbreviations (e.g., `"Ip Ownership Assignment"` not `"IP Ownership Assignment"`)
 - Use `cosineDistance()` for vector similarity queries
@@ -156,16 +170,16 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
   - Zod 4 renamed `ZodError.errors` → `ZodError.issues` for clarity
 
 ### Error Handling
-- Use custom errors from `src/lib/errors.ts`: `NotFoundError`, `ValidationError`, `ForbiddenError`, etc.
-- API routes: Wrap with `withErrorHandling()` from `src/lib/api-utils.ts`
+- Use custom errors from `lib/errors.ts`: `NotFoundError`, `ValidationError`, `ForbiddenError`, etc.
+- API routes: Wrap with `withErrorHandling()` from `lib/api-utils.ts`
 - Server actions: Use `withActionErrorHandling()` or return `ActionResult<T>` type
 - Convert Zod errors: `ValidationError.fromZodError(zodError)`
 
 ### Testing (Vitest + PGlite)
 - Tests use in-memory PGlite (WASM Postgres) - no Docker needed
-- Test files: `*.test.ts` in `src/` directory
+- Test files: `*.test.ts` colocated with source files
 - ContractNLI parser tests require Parquet fixtures (use `ParquetWriter` from `@dsnp/parquetjs`)
-- Setup file: `src/test/setup.ts` creates schema before each test
+- Setup file: `test/setup.ts` creates schema before each test
 - Run: `pnpm test` or `pnpm test:coverage`
 - Use `vi.resetModules()` in `beforeEach` when mocks need fresh state between tests
 
@@ -224,7 +238,7 @@ await withTenantContext(tenantId, async (ctx) => {
 })
 ```
 
-**Error Classes**: Use Inngest-specific errors (different from `src/lib/errors.ts`):
+**Error Classes**: Use Inngest-specific errors (different from `lib/errors.ts`):
 - `RetriableError` - Inngest will retry (network issues, rate limits)
 - `NonRetriableError` - No retry (validation, not found)
 - `ApiError` - Auto-determines retriability from HTTP status
@@ -245,9 +259,9 @@ import { createMockEvent, createMockStep, testEventData } from "@/inngest/utils/
 ```
 
 ### Caching (LRU)
-- **Embedding cache**: 1-hour TTL, 10K entries - `src/lib/cache/embedding-cache.ts`
-- **Response cache**: 30-min TTL, 1K entries - `src/lib/cache/response-cache.ts`
-- **Vector search cache**: 5-min TTL, 500 entries - `src/agents/tools/vector-search.ts`
+- **Embedding cache**: 1-hour TTL, 10K entries - `lib/cache/embedding-cache.ts`
+- **Response cache**: 30-min TTL, 1K entries - `lib/cache/response-cache.ts` (🚧 placeholder)
+- **Vector search cache**: 5-min TTL, 500 entries - `agents/tools/vector-search.ts` (🚧 placeholder)
 - Package: `lru-cache` (not Redis for MVP)
 
 ### Component Patterns
@@ -265,6 +279,11 @@ pnpm dlx shadcn@latest add <component-name> -r @ai-elements
 ### ESLint
 - `components/ui/**` and `components/ai-elements/**` are excluded (shadcn-generated)
 - Underscore prefix (`_var`) marks intentionally unused variables
+
+### Git Worktrees
+- **CRITICAL**: Before removing a worktree, always `cd` to the main repo first
+- Shell breaks irrecoverably if CWD is inside the worktree being removed
+- Use `/clean-worktree <name>` skill for safe cleanup
 
 ### pnpm Workspace
 - Single-package projects need `packages: []` in `pnpm-workspace.yaml` for `actions/setup-node` cache to work
@@ -287,6 +306,7 @@ Project-level automations in `.claude/` (shared via git):
 ### Skills
 - `/drizzle-migration <description>` - Create Drizzle migrations following project conventions
 - `/inngest-function <description>` - Create durable Inngest workflows with rate limiting
+- `/clean-worktree <name>` - Safely remove git worktree and associated branches
 - `error-response` (Claude-only) - Automatically apply error handling conventions
 
 ### Agents
@@ -308,19 +328,19 @@ Note: `.claude/settings.local.json` is gitignored (user-specific permissions)
 
 Detailed specs in `docs/`:
 - `PRD.md` - Full product requirements (authoritative source)
+- `PRD-word-addin.md` - Word Add-in product requirements
 - `schema.md` - Database schema details
 - `agents.md` - Agent architecture specs
 - `api-patterns.md` - API design patterns
 - `embedding-strategy.md` - Vector embedding approach
 
-Implementation plans in `docs/plans/`:
-- `2026-02-01-database-foundation-design.md` - Database architecture decisions
-- `2026-02-01-database-foundation-implementation.md` - Step-by-step implementation
-- `2026-02-01-inngest-infrastructure.md` - Inngest setup (Plan 1)
-- `2026-02-01-inngest-bootstrap.md` - Bootstrap pipeline for reference data (Plan 2)
-- `2026-02-01-inngest-agents-foundation.md` - AI SDK 6 base patterns (Plan 3)
-- `2026-02-01-inngest-analysis-pipeline.md` - Full analysis pipeline (Plan 4)
-- `2026-02-01-inngest-comparison-generation.md` - Comparison & generation pipelines (Plan 5)
+Implementation plans in `docs/plans/` (18+ detailed plans covering):
+- Database foundation (design, implementation, testing)
+- Inngest infrastructure and bootstrap pipeline
+- Agent foundation, analysis pipeline, comparison/generation
+- Auth hardening, server actions, TypeScript advanced types
+- SOC2 Type 1 readiness, GitHub Actions efficiency
+- Word Add-in integration
 
 ## Environment Variables
 
@@ -328,7 +348,12 @@ See `.env.example` for required variables:
 - `DATABASE_URL` - Neon PostgreSQL connection string
 - `AUTH_SECRET` - Auth.js session secret
 - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` - Google OAuth credentials
+- `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` - GitHub OAuth credentials
+- `AUTH_MICROSOFT_ENTRA_ID_ID` / `AUTH_MICROSOFT_ENTRA_ID_SECRET` - Microsoft Entra ID (for Word Add-in)
 - `RESEND_API_KEY` - Email provider for password reset
 - `BLOB_READ_WRITE_TOKEN` - Vercel Blob for file uploads
+- `INNGEST_DEV` - Set to `1` for local development
 - `INNGEST_EVENT_KEY` - Inngest event key for sending events
 - `INNGEST_SIGNING_KEY` - Inngest webhook signature verification
+- `VOYAGE_API_KEY` - Voyage AI embeddings (voyage-law-2 model)
+- `KV_REST_API_URL` / `KV_REST_API_TOKEN` - Upstash Redis for auth code flow
