@@ -2,6 +2,17 @@
 
 import { useEffect, useState, useRef } from "react"
 
+/**
+ * OAuth Callback Page for Word Add-in
+ *
+ * IMPORTANT: This page runs in an Office dialog which has ISOLATED cookies.
+ * We CANNOT fetch session data here - cookies are blocked by third-party restrictions.
+ *
+ * Instead, we just signal "auth-complete" and let the TASKPANE fetch the session
+ * (the taskpane CAN access cookies since it's the main frame).
+ *
+ * See: https://learn.microsoft.com/en-us/office/dev/add-ins/develop/auth-with-office-dialog-api
+ */
 export default function WordAddInAuthCallbackPage() {
   const [messageSent, setMessageSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -16,123 +27,107 @@ export default function WordAddInAuthCallbackPage() {
     setDebugInfo([...logsRef.current])
   }
 
-  // Check for Office.js on mount (don't load it - it's already in the layout)
+  // Check for Office.js on mount
   useEffect(() => {
     addLog("Checking for Office.js...")
 
     if (window.Office) {
-      addLog("Office.js already available, waiting for onReady...")
+      addLog("Office.js available, waiting for onReady...")
       window.Office.onReady(() => {
         addLog("Office.onReady fired!")
-        const hasContext = !!window.Office?.context
         const hasMessageParent = typeof window.Office?.context?.ui?.messageParent === "function"
-        addLog(`Office context: ${hasContext ? "YES" : "NO"}`)
-        addLog(`messageParent: ${hasMessageParent ? "YES" : "NO"}`)
+        addLog(`messageParent available: ${hasMessageParent ? "YES" : "NO"}`)
         setReady(true)
       })
     } else {
-      addLog("Office.js not available, proceeding without it")
+      addLog("Office.js not available, proceeding anyway")
       setReady(true)
     }
   }, [])
 
-  // Main auth effect - runs when ready
+  // Main effect - signal auth complete to taskpane
   useEffect(() => {
     if (!ready || messageSent || hasRun.current) {
       return
     }
     hasRun.current = true
 
-    async function completeAuth() {
-      try {
-        // Step 1: Fetch session token from our API (uses httpOnly cookie)
-        addLog("Fetching session token...")
-        const response = await fetch("/api/word-addin/session", {
-          credentials: "include", // Important for cookies
-        })
-        addLog(`Session API response: ${response.status}`)
+    // Check for OAuth errors in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const errorParam = urlParams.get("error")
+    if (errorParam) {
+      addLog(`OAuth error in URL: ${errorParam}`)
+      setError(`OAuth error: ${errorParam}`)
 
-        if (!response.ok) {
-          // If session fails, try getting from URL params (OAuth state)
-          const urlParams = new URLSearchParams(window.location.search)
-          const errorParam = urlParams.get("error")
-          if (errorParam) {
-            addLog(`OAuth error: ${errorParam}`)
-            setError(`OAuth error: ${errorParam}`)
-            return
-          }
+      // Send error to taskpane
+      const errorMessage = JSON.stringify({
+        type: "auth-error",
+        error: errorParam,
+      })
+      sendMessage(errorMessage)
+      return
+    }
 
-          const text = await response.text()
-          addLog(`Session API error: ${text}`)
-          setError("Not authenticated. Session may have expired.")
-          return
-        }
+    // OAuth completed - signal taskpane to fetch session
+    // NOTE: We don't fetch the session here because cookies are blocked in Office dialogs
+    // The taskpane will fetch the session after receiving this message
+    addLog("OAuth flow completed, signaling taskpane...")
 
-        const data = await response.json()
-        addLog(`Got token for user: ${data.user?.email}`)
+    const message = JSON.stringify({
+      type: "auth-complete", // Changed from auth-success - taskpane will fetch token
+    })
 
-        // Step 2: Send token back via messageParent
-        const message = JSON.stringify({
-          type: "auth-success",
-          token: data.token,
-          user: data.user,
-        })
+    sendMessage(message)
 
-        // Also store in localStorage (cross-context fallback)
+    function sendMessage(msg: string) {
+      // Try Office.js messageParent first
+      if (window.Office?.context?.ui?.messageParent) {
+        addLog("Sending via messageParent...")
         try {
-          localStorage.setItem("word-addin-auth", JSON.stringify({
-            token: data.token,
-            user: data.user,
-            timestamp: Date.now(),
-          }))
-          addLog("Stored in localStorage")
+          window.Office.context.ui.messageParent(msg)
+          addLog("messageParent sent!")
+          setMessageSent(true)
         } catch (e) {
-          addLog(`localStorage failed: ${e}`)
+          addLog(`messageParent error: ${e}`)
         }
+      } else {
+        addLog("messageParent not available")
+      }
 
-        // Try Office.js messageParent
-        if (window.Office?.context?.ui?.messageParent) {
-          addLog("Calling messageParent...")
-          try {
-            window.Office.context.ui.messageParent(message)
-            addLog("messageParent succeeded!")
-          } catch (e) {
-            addLog(`messageParent error: ${e}`)
-          }
-        } else {
-          addLog("Office.js messageParent not available")
-          // Fallback: try window.opener.postMessage
-          if (window.opener) {
-            addLog("Trying window.opener.postMessage...")
-            try {
-              window.opener.postMessage(message, window.location.origin)
-              addLog("postMessage sent to opener")
-            } catch (e) {
-              addLog(`postMessage error: ${e}`)
-            }
-          }
+      // Also try postMessage as fallback
+      if (window.opener) {
+        addLog("Sending via window.opener.postMessage...")
+        try {
+          window.opener.postMessage(msg, window.location.origin)
+          addLog("postMessage sent!")
+          setMessageSent(true)
+        } catch (e) {
+          addLog(`postMessage error: ${e}`)
         }
+      }
 
-        addLog("Auth complete! Close this window.")
-        setMessageSent(true)
-
-        // Auto-close after delay
-        setTimeout(() => {
-          addLog("Attempting to close...")
-          try {
-            window.close()
-          } catch {
-            addLog("window.close failed")
-          }
-        }, 2000)
-
+      // Store flag in localStorage (for non-Office environments)
+      try {
+        localStorage.setItem("word-addin-auth-complete", JSON.stringify({
+          complete: true,
+          timestamp: Date.now(),
+        }))
+        addLog("Stored completion flag in localStorage")
       } catch (e) {
-        addLog(`Error: ${e}`)
-        setError(`Authentication failed: ${e}`)
+        addLog(`localStorage failed: ${e}`)
       }
     }
 
-    completeAuth()
+    // Auto-close after delay
+    setTimeout(() => {
+      addLog("Attempting to close dialog...")
+      try {
+        window.close()
+      } catch {
+        addLog("window.close failed - please close manually")
+      }
+    }, 1500)
+
   }, [ready, messageSent])
 
   return (
