@@ -235,66 +235,65 @@ async function processBatch(
     return result
   }
 
-  // Insert documents and embeddings in a transaction
-  await db.transaction(async (tx) => {
-    for (let i = 0; i < batch.length; i++) {
-      const record = batch[i]
-      const embedding = embeddings[i]
+  // Insert documents and embeddings sequentially
+  // Note: neon-http driver doesn't support transactions, using idempotent inserts instead
+  for (let i = 0; i < batch.length; i++) {
+    const record = batch[i]
+    const embedding = embeddings[i]
 
-      if (!embedding) {
-        result.errors.push(`Missing embedding for record ${record.sourceId}`)
-        continue
-      }
-
-      try {
-        // Upsert document
-        const [doc] = await tx
-          .insert(referenceDocuments)
-          .values({
-            source: record.source,
-            sourceId: record.sourceId,
-            title: record.sectionPath.join(" > ") || record.sourceId,
-            rawText: record.content,
-            metadata: record.metadata,
-            contentHash: record.contentHash,
-          })
-          .onConflictDoUpdate({
-            target: referenceDocuments.contentHash,
-            set: {
-              // Touch updatedAt on conflict - but referenceDocuments doesn't have updatedAt
-              // Just skip the update, record already exists
-            },
-          })
-          .returning({ id: referenceDocuments.id })
-
-        // Insert embedding (skip if already exists)
-        await tx
-          .insert(referenceEmbeddings)
-          .values({
-            documentId: doc.id,
-            content: record.content,
-            embedding: embedding,
-            granularity: record.granularity,
-            sectionPath: record.sectionPath,
-            category: record.category ?? null,
-            hypothesisId: record.hypothesisId ?? null,
-            nliLabel: record.nliLabel ?? null,
-            contentHash: record.contentHash,
-            metadata: {
-              tokenCount: tokensPerText,
-            },
-          })
-          .onConflictDoNothing({ target: referenceEmbeddings.contentHash })
-
-        result.processed++
-        result.embedded++
-      } catch (error) {
-        const message = `Insert failed for ${record.sourceId}: ${error}`
-        result.errors.push(message)
-        console.error(message)
-      }
+    if (!embedding) {
+      result.errors.push(`Missing embedding for record ${record.sourceId}`)
+      continue
     }
-  })
+
+    try {
+      // Upsert document (idempotent via contentHash)
+      const [doc] = await db
+        .insert(referenceDocuments)
+        .values({
+          source: record.source,
+          sourceId: record.sourceId,
+          title: record.sectionPath.join(" > ") || record.sourceId,
+          rawText: record.content,
+          metadata: record.metadata,
+          contentHash: record.contentHash,
+        })
+        .onConflictDoUpdate({
+          target: referenceDocuments.contentHash,
+          set: {
+            // Return existing record on conflict
+            source: record.source,
+          },
+        })
+        .returning({ id: referenceDocuments.id })
+
+      // Insert embedding (skip if already exists via contentHash)
+      await db
+        .insert(referenceEmbeddings)
+        .values({
+          documentId: doc.id,
+          content: record.content,
+          embedding: embedding,
+          granularity: record.granularity,
+          sectionPath: record.sectionPath,
+          category: record.category ?? null,
+          hypothesisId: record.hypothesisId ?? null,
+          nliLabel: record.nliLabel ?? null,
+          contentHash: record.contentHash,
+          metadata: {
+            tokenCount: tokensPerText,
+          },
+        })
+        .onConflictDoNothing({ target: referenceEmbeddings.contentHash })
+
+      result.processed++
+      result.embedded++
+    } catch (error) {
+      const message = `Insert failed for ${record.sourceId}: ${error}`
+      result.errors.push(message)
+      console.error(message)
+    }
+  }
 
   return result
 }
