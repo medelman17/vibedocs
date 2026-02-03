@@ -360,8 +360,9 @@ export const referenceEmbeddings = pgTable(
     /**
      * SHA-256 hash of content for deduplication.
      * Prevents duplicate embeddings for identical content.
+     * Unique constraint enables ON CONFLICT DO NOTHING for idempotent inserts.
      */
-    contentHash: text("content_hash"),
+    contentHash: text("content_hash").unique(),
 
     /** Timestamp when embedding was created */
     createdAt: timestamp("created_at", { withTimezone: true })
