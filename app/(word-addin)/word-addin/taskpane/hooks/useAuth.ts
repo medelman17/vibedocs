@@ -4,7 +4,7 @@ import { useCallback, useEffect } from "react"
 import { useAuthStore } from "../store/auth"
 
 interface AuthDialogResult {
-  type: "auth-success" | "auth-error"
+  type: "auth-success" | "auth-complete" | "auth-error"
   token?: string
   user?: {
     id: string
@@ -12,6 +12,32 @@ interface AuthDialogResult {
     name?: string | null
   }
   error?: string
+}
+
+/**
+ * Fetch session from our API - this works from the taskpane because
+ * the taskpane (unlike the dialog) can access cookies.
+ */
+async function fetchSessionFromTaskpane(): Promise<{ token: string; user: { id: string; email: string; name?: string | null } } | null> {
+  console.log("[useAuth] Fetching session from taskpane...")
+  try {
+    const response = await fetch("/api/word-addin/session", {
+      credentials: "include",
+    })
+    console.log("[useAuth] Session API response:", response.status)
+
+    if (!response.ok) {
+      console.log("[useAuth] Session API failed:", response.status)
+      return null
+    }
+
+    const data = await response.json()
+    console.log("[useAuth] Session fetched for:", data.user?.email)
+    return { token: data.token, user: data.user }
+  } catch (e) {
+    console.error("[useAuth] Session fetch error:", e)
+    return null
+  }
 }
 
 /**
@@ -29,10 +55,11 @@ export function useAuth() {
     }
   }, [isAuthenticated, isTokenValid, clearAuth])
 
-  // Poll localStorage for auth data (fallback when Office.js dialog messaging fails)
+  // Poll localStorage for auth completion flag (fallback when Office.js messaging fails)
   const pollLocalStorage = useCallback(() => {
     return new Promise<AuthDialogResult | null>((resolve) => {
-      const AUTH_KEY = "word-addin-auth"
+      const AUTH_COMPLETE_KEY = "word-addin-auth-complete"
+      const AUTH_KEY = "word-addin-auth" // Legacy key for backward compatibility
       const MAX_POLL_TIME = 5 * 60 * 1000 // 5 minutes max
       const POLL_INTERVAL = 500 // Check every 500ms
 
@@ -41,7 +68,7 @@ export function useAuth() {
 
       console.log("[useAuth] Starting localStorage polling...")
 
-      const poll = () => {
+      const poll = async () => {
         pollCount++
         // Check if we've exceeded max time
         if (Date.now() - startTime > MAX_POLL_TIME) {
@@ -50,28 +77,52 @@ export function useAuth() {
           return
         }
 
-        const stored = localStorage.getItem(AUTH_KEY)
         if (pollCount % 10 === 0) {
-          console.log(`[useAuth] Poll #${pollCount}, found: ${stored ? "YES" : "NO"}`)
+          console.log(`[useAuth] Poll #${pollCount}, found: NO`)
         }
 
+        // Check for auth-complete flag (new approach)
+        const completeFlag = localStorage.getItem(AUTH_COMPLETE_KEY)
+        if (completeFlag) {
+          try {
+            const data = JSON.parse(completeFlag)
+            const age = Date.now() - (data.timestamp || 0)
+            if (data.complete && data.timestamp && age < 60000) {
+              console.log("[useAuth] Found auth-complete flag, fetching session...")
+              localStorage.removeItem(AUTH_COMPLETE_KEY)
+
+              // Fetch session from taskpane (we can access cookies here)
+              const session = await fetchSessionFromTaskpane()
+              if (session) {
+                console.log("[useAuth] Session fetched successfully!")
+                resolve({
+                  type: "auth-success",
+                  token: session.token,
+                  user: session.user,
+                })
+                return
+              }
+            }
+          } catch (e) {
+            console.error("[useAuth] Failed to parse auth-complete flag:", e)
+          }
+        }
+
+        // Also check legacy auth key (backward compatibility)
+        const stored = localStorage.getItem(AUTH_KEY)
         if (stored) {
           try {
             const data = JSON.parse(stored)
             const age = Date.now() - (data.timestamp || 0)
-            console.log(`[useAuth] Found auth data, age: ${age}ms`)
-            // Check if this is a fresh auth (within last 60 seconds - increased from 30)
-            if (data.timestamp && age < 60000) {
-              console.log("[useAuth] Auth data is fresh, using it!")
-              localStorage.removeItem(AUTH_KEY) // Clean up
+            if (data.token && data.user && data.timestamp && age < 60000) {
+              console.log("[useAuth] Found legacy auth data!")
+              localStorage.removeItem(AUTH_KEY)
               resolve({
                 type: "auth-success",
                 token: data.token,
                 user: data.user,
               })
               return
-            } else {
-              console.log("[useAuth] Auth data is stale, ignoring")
             }
           } catch (e) {
             console.error("[useAuth] Failed to parse stored auth:", e)
@@ -93,7 +144,7 @@ export function useAuth() {
       let resolved = false
 
       // Set up postMessage listener as fallback
-      const messageHandler = (event: MessageEvent) => {
+      const messageHandler = async (event: MessageEvent) => {
         console.log("[useAuth] postMessage received from:", event.origin)
         if (event.origin !== window.location.origin) {
           console.log("[useAuth] Ignoring message from different origin")
@@ -101,8 +152,25 @@ export function useAuth() {
         }
         try {
           const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data
+
+          // Handle auth-complete: dialog finished OAuth, we need to fetch session
+          if (data.type === "auth-complete" && !resolved) {
+            console.log("[useAuth] Got auth-complete, fetching session...")
+            const session = await fetchSessionFromTaskpane()
+            if (session) {
+              resolved = true
+              window.removeEventListener("message", messageHandler)
+              setAuth(session.token, session.user)
+              resolve({ type: "auth-success", token: session.token, user: session.user })
+            } else {
+              console.log("[useAuth] Session fetch failed after auth-complete")
+            }
+            return
+          }
+
+          // Handle legacy auth-success with token (backward compatibility)
           if (data.type === "auth-success" && data.token && data.user && !resolved) {
-            console.log("[useAuth] Got auth from postMessage!")
+            console.log("[useAuth] Got auth-success with token!")
             resolved = true
             window.removeEventListener("message", messageHandler)
             setAuth(data.token, data.user)
@@ -165,18 +233,37 @@ export function useAuth() {
           const dialog = result.value
 
           // Handle messages from dialog
-          dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
+          dialog.addEventHandler(Office.EventType.DialogMessageReceived, async (arg) => {
             console.log("[useAuth] DialogMessageReceived:", arg)
             if ("message" in arg && arg.message && !resolved) {
               try {
                 const data = JSON.parse(arg.message) as AuthDialogResult
                 console.log("[useAuth] Parsed message:", data.type)
+
+                // Handle auth-complete: dialog finished OAuth, we fetch session from taskpane
+                if (data.type === "auth-complete") {
+                  console.log("[useAuth] Auth complete, fetching session from taskpane...")
+                  const session = await fetchSessionFromTaskpane()
+                  if (session) {
+                    resolved = true
+                    window.removeEventListener("message", messageHandler)
+                    setAuth(session.token, session.user)
+                    resolve({ type: "auth-success", token: session.token, user: session.user })
+                  } else {
+                    console.log("[useAuth] Session fetch failed - user may not be authenticated")
+                    resolve({ type: "auth-error", error: "Session not found after OAuth" })
+                  }
+                  dialog.close()
+                  return
+                }
+
+                // Handle legacy auth-success with token
                 if (data.type === "auth-success" && data.token && data.user) {
                   resolved = true
                   window.removeEventListener("message", messageHandler)
                   setAuth(data.token, data.user)
                   resolve(data)
-                } else {
+                } else if (data.type === "auth-error") {
                   resolve(data)
                 }
               } catch (e) {
