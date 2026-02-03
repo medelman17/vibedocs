@@ -36,7 +36,7 @@ async function main() {
 
   // Import embedding client
   const { getVoyageAIClient, VOYAGE_CONFIG } = await import(
-    "../src/lib/embeddings"
+    "../lib/embeddings"
   )
   console.log(`✅ Using model: ${VOYAGE_CONFIG.model}`)
   console.log(`   Batch limit: ${VOYAGE_CONFIG.batchLimit}`)
@@ -44,7 +44,7 @@ async function main() {
 
   // Collect sample texts from parsers
   console.log("\nCollecting sample texts...")
-  const { parseCuadDataset } = await import("../src/lib/datasets/cuad-parser")
+  const { parseCuadDataset } = await import("../lib/datasets/cuad-parser")
   const path = join(CACHE_DIR, "cuad-v1")
 
   const texts: string[] = []
