@@ -21,10 +21,13 @@ describe("analyses queries", () => {
     it("returns most recent analysis for document", async () => {
       const org = await createTestOrg()
       const doc = await createTestDocument(org.id)
-      await createTestAnalysis(org.id, doc.id)
-      // Small delay to ensure different timestamps
-      await new Promise((r) => setTimeout(r, 10))
-      const recent = await createTestAnalysis(org.id, doc.id)
+      // Use explicit timestamps since now() returns same value within transaction
+      const olderDate = new Date("2024-01-01T10:00:00Z")
+      const newerDate = new Date("2024-01-02T10:00:00Z")
+      await createTestAnalysis(org.id, doc.id, { createdAt: olderDate })
+      const recent = await createTestAnalysis(org.id, doc.id, {
+        createdAt: newerDate,
+      })
 
       const found = await getAnalysisByDocument(doc.id, org.id)
 

@@ -12,6 +12,8 @@
     "test": "vitest",
     "test:ci": "vitest run --coverage",
     "test:coverage": "vitest --coverage",
+    "test:unit": "vitest -c vitest.unit.config.ts",
+    "test:integration": "vitest run",
     "typecheck": "tsc --noEmit",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
