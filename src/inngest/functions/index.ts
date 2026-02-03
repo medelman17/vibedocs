@@ -12,6 +12,7 @@ import { demoProcess, demoMultiStep } from "./demo"
 
 // Bootstrap pipeline
 import { ingestReferenceData } from "./bootstrap/ingest-reference-data"
+import { ingestCoordinator } from "./bootstrap/ingest-coordinator"
 
 // Production functions - will be populated as functions are created
 // import { processDocument } from "./process-document"
@@ -31,6 +32,7 @@ export const functions = [
 
   // Bootstrap functions
   ingestReferenceData,
+  ingestCoordinator,
 
   // Production functions
   // processDocument,
