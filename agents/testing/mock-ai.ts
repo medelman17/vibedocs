@@ -1,16 +1,29 @@
 import { vi } from 'vitest'
 
+/** Usage options - accepts both AI SDK naming and common aliases */
+interface UsageOptions {
+  promptTokens?: number
+  completionTokens?: number
+  // Aliases for convenience
+  inputTokens?: number
+  outputTokens?: number
+}
+
+function normalizeUsage(usage?: UsageOptions) {
+  return {
+    promptTokens: usage?.promptTokens ?? usage?.inputTokens ?? 100,
+    completionTokens: usage?.completionTokens ?? usage?.outputTokens ?? 50,
+  }
+}
+
 /** Mock generateObject response */
 export function mockGenerateObject<T>(
   response: T,
-  usage?: { promptTokens?: number; completionTokens?: number }
+  usage?: UsageOptions
 ) {
   return vi.fn().mockResolvedValue({
     object: response,
-    usage: {
-      promptTokens: usage?.promptTokens ?? 100,
-      completionTokens: usage?.completionTokens ?? 50,
-    },
+    usage: normalizeUsage(usage),
     finishReason: 'stop',
   })
 }
@@ -18,14 +31,11 @@ export function mockGenerateObject<T>(
 /** Mock generateText response */
 export function mockGenerateText(
   text: string,
-  usage?: { promptTokens?: number; completionTokens?: number }
+  usage?: UsageOptions
 ) {
   return vi.fn().mockResolvedValue({
     text,
-    usage: {
-      promptTokens: usage?.promptTokens ?? 100,
-      completionTokens: usage?.completionTokens ?? 50,
-    },
+    usage: normalizeUsage(usage),
     finishReason: 'stop',
   })
 }
