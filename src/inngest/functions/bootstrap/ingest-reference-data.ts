@@ -108,7 +108,10 @@ export const ingestReferenceData = inngest.createFunction(
 
         const allRecords: NormalizedRecord[] = []
         for await (const record of parser(path)) {
-          allRecords.push(record)
+          // Filter out empty content (Voyage AI rejects empty strings)
+          if (record.content && record.content.trim().length > 0) {
+            allRecords.push(record)
+          }
         }
         return allRecords
       })
