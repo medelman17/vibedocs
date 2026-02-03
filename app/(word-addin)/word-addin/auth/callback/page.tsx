@@ -1,13 +1,12 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import Script from "next/script"
 
 export default function WordAddInAuthCallbackPage() {
   const [messageSent, setMessageSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string[]>([])
-  const [officeLoaded, setOfficeLoaded] = useState(false)
+  const [ready, setReady] = useState(false)
   const hasRun = useRef(false)
   const logsRef = useRef<string[]>([])
 
@@ -17,24 +16,29 @@ export default function WordAddInAuthCallbackPage() {
     setDebugInfo([...logsRef.current])
   }
 
-  // Handle Office.js script load
-  const handleOfficeLoad = () => {
-    addLog("Office.js script loaded, initializing...")
+  // Check for Office.js on mount (don't load it - it's already in the layout)
+  useEffect(() => {
+    addLog("Checking for Office.js...")
+
     if (window.Office) {
+      addLog("Office.js already available, waiting for onReady...")
       window.Office.onReady(() => {
         addLog("Office.onReady fired!")
-        setOfficeLoaded(true)
+        const hasContext = !!window.Office?.context
+        const hasMessageParent = typeof window.Office?.context?.ui?.messageParent === "function"
+        addLog(`Office context: ${hasContext ? "YES" : "NO"}`)
+        addLog(`messageParent: ${hasMessageParent ? "YES" : "NO"}`)
+        setReady(true)
       })
     } else {
-      addLog("Office not on window after script load")
-      // Still try to proceed without Office.js
-      setOfficeLoaded(true)
+      addLog("Office.js not available, proceeding without it")
+      setReady(true)
     }
-  }
+  }, [])
 
-  // Main auth effect - runs when Office is ready
+  // Main auth effect - runs when ready
   useEffect(() => {
-    if (!officeLoaded || messageSent || hasRun.current) {
+    if (!ready || messageSent || hasRun.current) {
       return
     }
     hasRun.current = true
@@ -129,21 +133,10 @@ export default function WordAddInAuthCallbackPage() {
     }
 
     completeAuth()
-  }, [officeLoaded, messageSent])
+  }, [ready, messageSent])
 
   return (
-    <>
-      {/* Load Office.js for messageParent */}
-      <Script
-        src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"
-        onLoad={handleOfficeLoad}
-        onError={() => {
-          addLog("Office.js failed to load, proceeding anyway...")
-          setOfficeLoaded(true)
-        }}
-      />
-
-      <div className="flex min-h-screen items-center justify-center p-6">
+    <div className="flex min-h-screen items-center justify-center p-6">
         <div className="text-center space-y-4 max-w-md">
           {error ? (
             <>
@@ -193,7 +186,7 @@ export default function WordAddInAuthCallbackPage() {
             <>
               <div className="animate-spin mx-auto h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
               <p className="text-muted-foreground">
-                {officeLoaded ? "Completing sign in..." : "Loading..."}
+                {ready ? "Completing sign in..." : "Loading..."}
               </p>
             </>
           )}
@@ -210,7 +203,6 @@ export default function WordAddInAuthCallbackPage() {
             )}
           </div>
         </div>
-      </div>
-    </>
+    </div>
   )
 }
