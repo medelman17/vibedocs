@@ -1,172 +1,216 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { useSession } from "next-auth/react"
+import Script from "next/script"
 
 export default function WordAddInAuthCallbackPage() {
-  const { status } = useSession()
   const [messageSent, setMessageSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string[]>([])
+  const [officeLoaded, setOfficeLoaded] = useState(false)
   const hasRun = useRef(false)
+  const logsRef = useRef<string[]>([])
 
-  // Separate effect for debug logging that doesn't trigger re-renders
-  useEffect(() => {
-    console.log("[AuthCallback] Session status:", status)
-  }, [status])
+  const addLog = (msg: string) => {
+    console.log("[AuthCallback]", msg)
+    logsRef.current = [...logsRef.current, `${new Date().toISOString().slice(11, 19)}: ${msg}`]
+    setDebugInfo([...logsRef.current])
+  }
 
+  // Handle Office.js script load
+  const handleOfficeLoad = () => {
+    addLog("Office.js script loaded, initializing...")
+    if (window.Office) {
+      window.Office.onReady(() => {
+        addLog("Office.onReady fired!")
+        setOfficeLoaded(true)
+      })
+    } else {
+      addLog("Office not on window after script load")
+      // Still try to proceed without Office.js
+      setOfficeLoaded(true)
+    }
+  }
+
+  // Main auth effect - runs when Office is ready
   useEffect(() => {
-    if (status !== "authenticated" || messageSent || hasRun.current) {
+    if (!officeLoaded || messageSent || hasRun.current) {
       return
     }
     hasRun.current = true
 
-    const logs: string[] = []
-    const addLog = (msg: string) => {
-      console.log("[AuthCallback]", msg)
-      logs.push(`${new Date().toISOString().slice(11, 19)}: ${msg}`)
-    }
-
-    // Fetch the session token from our API
-    async function fetchAndSendToken() {
+    async function completeAuth() {
       try {
+        // Step 1: Fetch session token from our API (uses httpOnly cookie)
         addLog("Fetching session token...")
-        const response = await fetch("/api/word-addin/session")
+        const response = await fetch("/api/word-addin/session", {
+          credentials: "include", // Important for cookies
+        })
         addLog(`Session API response: ${response.status}`)
 
         if (!response.ok) {
+          // If session fails, try getting from URL params (OAuth state)
+          const urlParams = new URLSearchParams(window.location.search)
+          const errorParam = urlParams.get("error")
+          if (errorParam) {
+            addLog(`OAuth error: ${errorParam}`)
+            setError(`OAuth error: ${errorParam}`)
+            return
+          }
+
           const text = await response.text()
           addLog(`Session API error: ${text}`)
-          setDebugInfo([...logs])
-          setError("Failed to get session token")
+          setError("Not authenticated. Session may have expired.")
           return
         }
 
         const data = await response.json()
         addLog(`Got token for user: ${data.user?.email}`)
 
-        // Send token and user info back to the parent task pane
+        // Step 2: Send token back via messageParent
         const message = JSON.stringify({
           type: "auth-success",
           token: data.token,
           user: data.user,
         })
 
-        // Always store in localStorage as fallback (taskpane polls for this)
-        const authData = {
-          token: data.token,
-          user: data.user,
-          timestamp: Date.now(),
+        // Also store in localStorage (cross-context fallback)
+        try {
+          localStorage.setItem("word-addin-auth", JSON.stringify({
+            token: data.token,
+            user: data.user,
+            timestamp: Date.now(),
+          }))
+          addLog("Stored in localStorage")
+        } catch (e) {
+          addLog(`localStorage failed: ${e}`)
         }
-        localStorage.setItem("word-addin-auth", JSON.stringify(authData))
-        addLog("Stored to localStorage: word-addin-auth")
 
-        // Verify it was stored
-        const verify = localStorage.getItem("word-addin-auth")
-        addLog(`Verified localStorage: ${verify ? "YES" : "NO"}`)
-
-        if (window.Office?.context?.ui) {
-          addLog("Office.js context available, trying messageParent...")
+        // Try Office.js messageParent
+        if (window.Office?.context?.ui?.messageParent) {
+          addLog("Calling messageParent...")
           try {
             window.Office.context.ui.messageParent(message)
-            addLog("messageParent sent")
+            addLog("messageParent succeeded!")
           } catch (e) {
-            addLog(`messageParent failed: ${e}`)
+            addLog(`messageParent error: ${e}`)
           }
         } else {
-          addLog("Office.js context NOT available")
+          addLog("Office.js messageParent not available")
+          // Fallback: try window.opener.postMessage
+          if (window.opener) {
+            addLog("Trying window.opener.postMessage...")
+            try {
+              window.opener.postMessage(message, window.location.origin)
+              addLog("postMessage sent to opener")
+            } catch (e) {
+              addLog(`postMessage error: ${e}`)
+            }
+          }
         }
 
-        addLog("Auth callback complete!")
-        setDebugInfo([...logs])
+        addLog("Auth complete! Close this window.")
         setMessageSent(true)
 
-        // Try to close the window/dialog after a longer delay
+        // Auto-close after delay
         setTimeout(() => {
-          console.log("[AuthCallback] Attempting to close window...")
+          addLog("Attempting to close...")
           try {
             window.close()
           } catch {
-            console.log("[AuthCallback] window.close() failed")
+            addLog("window.close failed")
           }
         }, 2000)
+
       } catch (e) {
-        console.error("[AuthCallback] Failed to complete authentication:", e)
         addLog(`Error: ${e}`)
-        setDebugInfo([...logs])
-        setError("Failed to complete authentication")
+        setError(`Authentication failed: ${e}`)
       }
     }
 
-    fetchAndSendToken()
-  }, [status, messageSent])
-
-  if (status === "loading") {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Completing sign in...</p>
-      </div>
-    )
-  }
-
-  if (status === "unauthenticated") {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-destructive">
-          Sign in failed. Please close this window and try again.
-        </p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-destructive">{error}</p>
-      </div>
-    )
-  }
+    completeAuth()
+  }, [officeLoaded, messageSent])
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
-      <div className="text-center space-y-4 max-w-md">
-        {messageSent ? (
-          <>
-            <div className="text-green-600 dark:text-green-400">
-              <svg
-                className="mx-auto h-12 w-12"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <p className="text-lg font-medium">Sign in successful!</p>
-            <p className="text-sm text-muted-foreground">
-              Close this window and return to the add-in.
-            </p>
-          </>
-        ) : (
-          <>
-            <div className="animate-spin mx-auto h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-            <p className="text-muted-foreground">Completing sign in...</p>
-          </>
-        )}
+    <>
+      {/* Load Office.js for messageParent */}
+      <Script
+        src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"
+        onLoad={handleOfficeLoad}
+        onError={() => {
+          addLog("Office.js failed to load, proceeding anyway...")
+          setOfficeLoaded(true)
+        }}
+      />
 
-        {/* Debug output */}
-        <div className="mt-6 p-3 bg-muted rounded text-left text-xs font-mono overflow-auto max-h-48">
-          <div className="font-bold mb-1">Debug Log:</div>
-          {debugInfo.map((line, i) => (
-            <div key={i}>{line}</div>
-          ))}
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <div className="text-center space-y-4 max-w-md">
+          {error ? (
+            <>
+              <div className="text-red-600 dark:text-red-400">
+                <svg
+                  className="mx-auto h-12 w-12"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </div>
+              <p className="text-lg font-medium text-destructive">{error}</p>
+              <p className="text-sm text-muted-foreground">
+                Close this window and try again.
+              </p>
+            </>
+          ) : messageSent ? (
+            <>
+              <div className="text-green-600 dark:text-green-400">
+                <svg
+                  className="mx-auto h-12 w-12"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <p className="text-lg font-medium">Sign in successful!</p>
+              <p className="text-sm text-muted-foreground">
+                Close this window and return to the add-in.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="animate-spin mx-auto h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+              <p className="text-muted-foreground">
+                {officeLoaded ? "Completing sign in..." : "Loading..."}
+              </p>
+            </>
+          )}
+
+          {/* Debug output - always visible */}
+          <div className="mt-6 p-3 bg-muted rounded text-left text-xs font-mono overflow-auto max-h-48">
+            <div className="font-bold mb-1">Debug Log:</div>
+            {debugInfo.length === 0 ? (
+              <div className="text-muted-foreground">Initializing...</div>
+            ) : (
+              debugInfo.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

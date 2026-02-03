@@ -90,13 +90,36 @@ export function useAuth() {
   const openAuthDialog = useCallback(() => {
     return new Promise<AuthDialogResult>((resolve) => {
       console.log("[useAuth] Opening auth dialog...")
+      let resolved = false
+
+      // Set up postMessage listener as fallback
+      const messageHandler = (event: MessageEvent) => {
+        console.log("[useAuth] postMessage received from:", event.origin)
+        if (event.origin !== window.location.origin) {
+          console.log("[useAuth] Ignoring message from different origin")
+          return
+        }
+        try {
+          const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data
+          if (data.type === "auth-success" && data.token && data.user && !resolved) {
+            console.log("[useAuth] Got auth from postMessage!")
+            resolved = true
+            window.removeEventListener("message", messageHandler)
+            setAuth(data.token, data.user)
+            resolve(data)
+          }
+        } catch (e) {
+          console.log("[useAuth] Failed to parse postMessage:", e)
+        }
+      }
+      window.addEventListener("message", messageHandler)
 
       // Start localStorage polling as fallback
-      let localStorageResolved = false
       const localStoragePromise = pollLocalStorage().then((result) => {
         console.log("[useAuth] localStorage poll result:", result ? "GOT AUTH" : "null")
-        if (result && !localStorageResolved) {
-          localStorageResolved = true
+        if (result && !resolved) {
+          resolved = true
+          window.removeEventListener("message", messageHandler)
           return result
         }
         return null
@@ -107,10 +130,12 @@ export function useAuth() {
         // Fallback for non-Office environment (development)
         const popup = window.open("/word-addin/auth", "auth", "width=500,height=600")
 
-        // Poll for localStorage result since we can't use Office.js messaging
+        // Wait for auth via postMessage or localStorage
         localStoragePromise.then((result) => {
-          if (result) {
+          if (result && !resolved) {
             console.log("[useAuth] Got auth from localStorage polling!")
+            resolved = true
+            window.removeEventListener("message", messageHandler)
             setAuth(result.token!, result.user!)
             resolve(result)
             popup?.close()
@@ -142,12 +167,13 @@ export function useAuth() {
           // Handle messages from dialog
           dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg) => {
             console.log("[useAuth] DialogMessageReceived:", arg)
-            if ("message" in arg && arg.message) {
+            if ("message" in arg && arg.message && !resolved) {
               try {
                 const data = JSON.parse(arg.message) as AuthDialogResult
                 console.log("[useAuth] Parsed message:", data.type)
                 if (data.type === "auth-success" && data.token && data.user) {
-                  localStorageResolved = true
+                  resolved = true
+                  window.removeEventListener("message", messageHandler)
                   setAuth(data.token, data.user)
                   resolve(data)
                 } else {
@@ -157,7 +183,7 @@ export function useAuth() {
                 console.error("[useAuth] Failed to parse auth response:", e)
                 resolve({ type: "auth-error", error: "Failed to parse auth response" })
               }
-            } else if ("error" in arg) {
+            } else if ("error" in arg && !resolved) {
               console.error("[useAuth] Dialog error in arg:", arg)
               resolve({ type: "auth-error", error: `Dialog error: ${arg.error}` })
             }
@@ -167,19 +193,26 @@ export function useAuth() {
           // Handle dialog closed by user - also check localStorage as fallback
           dialog.addEventHandler(Office.EventType.DialogEventReceived, (arg) => {
             console.log("[useAuth] DialogEventReceived:", arg)
-            if ("error" in arg && arg.error === 12006) {
-              console.log("[useAuth] Dialog closed by user, checking localStorage...")
-              // User closed the dialog - check if auth completed via localStorage
-              localStoragePromise.then((result) => {
-                if (result) {
-                  console.log("[useAuth] Found auth in localStorage after dialog close!")
-                  setAuth(result.token!, result.user!)
-                  resolve(result)
-                } else {
-                  console.log("[useAuth] No auth found in localStorage")
-                  resolve({ type: "auth-error", error: "Dialog closed by user" })
+            if ("error" in arg && arg.error === 12006 && !resolved) {
+              console.log("[useAuth] Dialog closed, waiting for auth data...")
+              // Give some time for localStorage/postMessage to come through
+              setTimeout(() => {
+                if (!resolved) {
+                  localStoragePromise.then((result) => {
+                    if (result && !resolved) {
+                      console.log("[useAuth] Found auth in localStorage after dialog close!")
+                      resolved = true
+                      window.removeEventListener("message", messageHandler)
+                      setAuth(result.token!, result.user!)
+                      resolve(result)
+                    } else if (!resolved) {
+                      console.log("[useAuth] No auth found after dialog close")
+                      window.removeEventListener("message", messageHandler)
+                      resolve({ type: "auth-error", error: "Dialog closed - auth not completed" })
+                    }
+                  })
                 }
-              })
+              }, 1000) // Wait 1 second for async operations
             }
           })
         }
