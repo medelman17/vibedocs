@@ -40,7 +40,9 @@ When users say "Generate NDA", explain this feature lets them create custom NDAs
 
 When users upload a document, a separate analysis pipeline will process it automatically. For text questions, provide helpful, accurate information about NDAs and contract law.
 
-Keep responses concise and practical. If you're unsure about specific legal advice, recommend consulting a lawyer.`
+Keep responses concise and practical. If you're unsure about specific legal advice, recommend consulting a lawyer.
+
+FORMATTING: When showing example clause language, use blockquotes (>) not code blocks. Legal text should be readable prose, not code.`
 
 export async function POST(req: Request) {
   // Verify user is authenticated

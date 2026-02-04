@@ -61,7 +61,9 @@ async function executeVectorSearch({
   const { embedding } = await voyageClient.embed(query, 'query')
 
   // Search with cosine distance
-  const distanceThreshold = 0.3 // similarity > 0.7
+  // Note: Legal clause similarity tends to be lower than exact matches
+  // 0.5 threshold = similarity > 0.5, which works well for semantic search
+  const distanceThreshold = 0.5
 
   const whereConditions = [
     lt(cosineDistance(referenceEmbeddings.embedding, embedding), distanceThreshold),
