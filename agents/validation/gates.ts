@@ -76,3 +76,69 @@ export function validateClassifierOutput(
 
   return { valid: true }
 }
+
+// ============================================================================
+// Token Budget Validation
+// ============================================================================
+
+import {
+  checkTokenBudget,
+  truncateToTokenBudget,
+  type TokenEstimate,
+  type TruncationResult,
+} from "@/lib/budget"
+import type { DocumentChunk } from "@/lib/document-processing"
+
+/**
+ * Result of token budget validation.
+ */
+export interface TokenBudgetValidation {
+  /** Whether validation passed (always true - truncation handles excess) */
+  passed: boolean
+  /** Token estimate for the document */
+  estimate: TokenEstimate
+  /** Truncation result if document exceeded budget */
+  truncation?: TruncationResult
+  /** Warning if document was truncated */
+  warning?: {
+    code: "DOCUMENT_TRUNCATED"
+    message: string
+    removedSections: string[]
+  }
+}
+
+/**
+ * Validates document against token budget after parsing.
+ *
+ * Unlike other validation gates, this gate ALWAYS passes because it
+ * truncates oversized documents instead of rejecting them outright.
+ * The truncation result is returned for the pipeline to use.
+ *
+ * @param rawText - The full extracted document text
+ * @param chunks - Document chunks with section boundaries
+ * @returns Validation result with optional truncation data
+ */
+export function validateTokenBudget(
+  rawText: string,
+  chunks: DocumentChunk[]
+): TokenBudgetValidation {
+  const estimate = checkTokenBudget(rawText)
+
+  if (estimate.withinBudget) {
+    return { passed: true, estimate }
+  }
+
+  // Document exceeds budget - truncate at section boundaries
+  const truncation = truncateToTokenBudget(rawText, chunks)
+
+  return {
+    passed: true, // Truncated version passes
+    estimate,
+    truncation,
+    warning: {
+      code: "DOCUMENT_TRUNCATED",
+      message: `Document exceeded ${estimate.tokenCount.toLocaleString()} tokens (limit: ${(200_000).toLocaleString()}). Analysis will cover the first ${truncation.truncatedTokens.toLocaleString()} tokens.`,
+      removedSections: truncation.removedSections,
+    },
+  }
+}

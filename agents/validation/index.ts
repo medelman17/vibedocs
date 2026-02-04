@@ -10,7 +10,12 @@
  * @module agents/validation
  */
 
-export { validateParserOutput, validateClassifierOutput } from "./gates"
+export {
+  validateParserOutput,
+  validateClassifierOutput,
+  validateTokenBudget,
+  type TokenBudgetValidation,
+} from "./gates"
 export {
   VALIDATION_MESSAGES,
   formatValidationError,
