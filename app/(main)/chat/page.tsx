@@ -219,21 +219,7 @@ export default function ChatPage() {
   }
 
   const handleSuggestion = async (suggestion: string) => {
-    if (suggestion === "Analyze NDA") {
-      openArtifact({
-        type: "analysis",
-        id: "demo-analysis",
-        title: "Demo NDA Analysis",
-      })
-    } else if (suggestion === "Compare documents") {
-      openArtifact({
-        type: "document",
-        id: "demo-doc",
-        title: "Demo Document",
-      })
-    }
-
-    // Send suggestion as user message
+    // Send suggestion as user message - AI will guide user on next steps
     await sendMessage(suggestion)
   }
 
