@@ -1,6 +1,7 @@
 /* =============================================================================
    VibeDocs Design System - Brand Palette
-   Generated: 2026-02-02
+   Theme: Mira (compact) + Fuchsia
+   Generated: 2026-02-03
 
    Usage: Import before globals.css or include these variables in :root
    These provide the raw color palette. Semantic tokens in globals.css
@@ -9,15 +10,28 @@
 
 :root {
   /* ---------------------------------------------------------------------------
-     Violet (Primary Brand Color)
-     Base: #7C3AED → oklch(0.541 0.281 293)
+     Fuchsia (Primary Brand Color)
+     Tailwind CSS v4 fuchsia scale in oklch
      --------------------------------------------------------------------------- */
+  --fuchsia-50: oklch(0.977 0.017 320.058);
+  --fuchsia-100: oklch(0.952 0.037 318.852);
+  --fuchsia-200: oklch(0.903 0.076 319.62);
+  --fuchsia-300: oklch(0.833 0.145 321.434);
+  --fuchsia-400: oklch(0.74 0.238 322.16);
+  --fuchsia-500: oklch(0.667 0.295 322.15);   /* Base */
+  --fuchsia-600: oklch(0.591 0.293 322.896);
+  --fuchsia-700: oklch(0.518 0.253 323.949);
+  --fuchsia-800: oklch(0.452 0.211 324.591);
+  --fuchsia-900: oklch(0.401 0.17 325.612);
+  --fuchsia-950: oklch(0.293 0.136 325.661);
+
+  /* Keep violet as secondary option */
   --violet-50: oklch(0.97 0.02 293);
   --violet-100: oklch(0.93 0.05 293);
   --violet-200: oklch(0.85 0.1 293);
   --violet-300: oklch(0.75 0.17 293);
   --violet-400: oklch(0.65 0.23 293);
-  --violet-500: oklch(0.541 0.281 293);  /* Base */
+  --violet-500: oklch(0.541 0.281 293);
   --violet-600: oklch(0.48 0.26 293);
   --violet-700: oklch(0.42 0.23 293);
   --violet-800: oklch(0.35 0.19 293);

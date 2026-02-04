@@ -137,12 +137,9 @@ export function AppSidebar({
           isCollapsed && "justify-center"
         )}>
           <div
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg"
-            style={{
-              background: "oklch(0.55 0.24 293)",
-            }}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary"
           >
-            <FileText className="size-4 text-white" />
+            <FileText className="size-4 text-primary-foreground" />
           </div>
           {!isCollapsed && (
             <span className="text-sm font-semibold tracking-tight">VibeDocs</span>
