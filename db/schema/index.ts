@@ -1,6 +1,7 @@
 // src/db/schema/index.ts
 export * from "./auth"
 export * from "./organizations"
+export * from "./invitations"
 export * from "./documents"
 export * from "./analyses"
 export * from "./comparisons"
