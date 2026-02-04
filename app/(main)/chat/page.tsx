@@ -77,6 +77,9 @@ export default function ChatPage() {
       try {
         // Fetch the blob from the URL and create FormData
         const response = await fetch(file.url)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file: ${response.statusText}`)
+        }
         const blob = await response.blob()
         const formData = new FormData()
         formData.append("file", blob, file.filename || "document")

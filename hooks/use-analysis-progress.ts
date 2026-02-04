@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { getAnalysisStatus } from "@/app/(main)/(dashboard)/analyses/actions"
 import type { AnalysisStatus } from "@/app/(main)/(dashboard)/analyses/actions"
 
@@ -31,35 +31,11 @@ export function useAnalysisProgress(
   })
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const analysisIdRef = useRef(analysisId)
 
-  const poll = useCallback(async () => {
-    if (!analysisId) return
-
-    try {
-      const result = await getAnalysisStatus(analysisId)
-
-      if (result.success) {
-        setState({
-          status: result.data.status,
-          progress: result.data.progress?.percent ?? 0,
-          stage: result.data.progress?.step ?? "",
-          isLoading: false,
-          error: null,
-        })
-      } else {
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: result.error.message,
-        }))
-      }
-    } catch (err) {
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: err instanceof Error ? err.message : "Unknown error",
-      }))
-    }
+  // Keep analysisId ref in sync
+  useEffect(() => {
+    analysisIdRef.current = analysisId
   }, [analysisId])
 
   useEffect(() => {
@@ -74,28 +50,62 @@ export function useAnalysisProgress(
       return
     }
 
+    const poll = async () => {
+      // Use ref to get current analysisId in case it changed
+      const currentId = analysisIdRef.current
+      if (!currentId) return
+
+      try {
+        const result = await getAnalysisStatus(currentId)
+
+        if (result.success) {
+          // Stop polling if we've reached a terminal state
+          if (
+            result.data.status === "completed" ||
+            result.data.status === "failed"
+          ) {
+            if (intervalRef.current) {
+              clearInterval(intervalRef.current)
+              intervalRef.current = null
+            }
+          }
+
+          setState({
+            status: result.data.status,
+            progress: result.data.progress?.percent ?? 0,
+            stage: result.data.progress?.step ?? "",
+            isLoading: false,
+            error: null,
+          })
+        } else {
+          setState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: result.error.message,
+          }))
+        }
+      } catch (err) {
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: err instanceof Error ? err.message : "Unknown error",
+        }))
+      }
+    }
+
     // Initial fetch
     poll()
 
-    // Set up polling
+    // Set up polling - poll function is stable (no deps that change)
     intervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
-      }
-    }
-  }, [analysisId, poll])
-
-  // Stop polling when in terminal state
-  useEffect(() => {
-    if (state.status === "completed" || state.status === "failed") {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
         intervalRef.current = null
       }
     }
-  }, [state.status])
+  }, [analysisId]) // Only re-run when analysisId changes
 
   return state
 }

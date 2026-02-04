@@ -51,15 +51,15 @@ import { primaryId, timestamps, tenantId } from "../_columns"
 import { documents, documentChunks } from "./documents"
 
 /**
- * Risk level classification for documents and clauses.
+ * Risk level classification for documents and clauses (PRD-aligned).
  *
- * @typedef {'low' | 'medium' | 'high' | 'critical'} RiskLevel
+ * @typedef {'standard' | 'cautious' | 'aggressive' | 'unknown'} RiskLevel
  *
  * Risk levels are determined by the Risk Scorer Agent based on:
- * - **low**: Standard, market-friendly terms with minimal concern
- * - **medium**: Terms requiring review but generally acceptable
- * - **high**: Terms that may require negotiation or senior review
- * - **critical**: Terms presenting significant legal/business risk requiring immediate attention
+ * - **standard**: Typical NDA terms, acceptable risk
+ * - **cautious**: Requires review, potentially unfavorable
+ * - **aggressive**: Significantly one-sided, legal review recommended
+ * - **unknown**: Unable to classify risk level
  */
 
 /**
