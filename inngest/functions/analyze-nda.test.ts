@@ -135,7 +135,7 @@ describe('analyzeNda Pipeline', () => {
     const event = {
       data: {
         documentId: 'doc-123',
-        tenantId: 'tenant-456',
+        tenantId: '550e8400-e29b-41d4-a716-446655440000',
         source: 'web' as const,
       },
     }
@@ -158,7 +158,7 @@ describe('analyzeNda Pipeline', () => {
     const event = {
       data: {
         documentId: 'doc-123',
-        tenantId: 'tenant-456',
+        tenantId: '550e8400-e29b-41d4-a716-446655440000',
         source: 'web' as const,
       },
     }
@@ -180,7 +180,7 @@ describe('analyzeNda Pipeline', () => {
     const event = {
       data: {
         documentId: 'doc-789',
-        tenantId: 'tenant-456',
+        tenantId: '550e8400-e29b-41d4-a716-446655440000',
         source: 'word-addin' as const,
         content: {
           rawText: 'NDA content from Word',
@@ -206,7 +206,7 @@ describe('analyzeNda Pipeline', () => {
     const event = {
       data: {
         documentId: 'doc-123',
-        tenantId: 'tenant-456',
+        tenantId: '550e8400-e29b-41d4-a716-446655440000',
         source: 'web' as const,
       },
     }
