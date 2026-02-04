@@ -20,9 +20,13 @@ interface ArtifactState {
   content: ArtifactContent | null
 }
 
+interface SidebarState {
+  collapsed: boolean
+}
+
 interface ShellState {
   artifact: ArtifactState
-  drawer: { open: boolean }
+  sidebar: SidebarState
   palette: { open: boolean }
 }
 
@@ -33,9 +37,9 @@ interface ShellActions {
   setArtifactWidth: (width: number) => void
   toggleArtifactExpanded: () => void
 
-  // Drawer
-  toggleDrawer: () => void
-  setDrawerOpen: (open: boolean) => void
+  // Sidebar
+  toggleSidebar: () => void
+  setSidebarCollapsed: (collapsed: boolean) => void
 
   // Palette
   togglePalette: () => void
@@ -58,7 +62,7 @@ export const useShellStore = create<ShellState & ShellActions>()(
         expanded: false,
         content: null,
       },
-      drawer: { open: false },
+      sidebar: { collapsed: false },
       palette: { open: false },
 
       // Artifact actions
@@ -88,13 +92,13 @@ export const useShellStore = create<ShellState & ShellActions>()(
           artifact: { ...state.artifact, expanded: !state.artifact.expanded },
         })),
 
-      // Drawer actions
-      toggleDrawer: () =>
+      // Sidebar actions
+      toggleSidebar: () =>
         set((state) => ({
-          drawer: { open: !state.drawer.open },
+          sidebar: { collapsed: !state.sidebar.collapsed },
         })),
 
-      setDrawerOpen: (open) => set({ drawer: { open } }),
+      setSidebarCollapsed: (collapsed) => set({ sidebar: { collapsed } }),
 
       // Palette actions
       togglePalette: () =>
@@ -104,13 +108,15 @@ export const useShellStore = create<ShellState & ShellActions>()(
 
       setPaletteOpen: (open) => set({ palette: { open } }),
 
-      // Close topmost overlay (palette -> drawer -> artifact)
+      // Close topmost overlay (palette -> artifact expanded -> artifact)
       closeTopmost: () => {
         const state = get()
         if (state.palette.open) {
           set({ palette: { open: false } })
-        } else if (state.drawer.open) {
-          set({ drawer: { open: false } })
+        } else if (state.artifact.expanded) {
+          set((s) => ({
+            artifact: { ...s.artifact, expanded: false },
+          }))
         } else if (state.artifact.open) {
           set((s) => ({
             artifact: { ...s.artifact, open: false, content: null },
@@ -122,6 +128,7 @@ export const useShellStore = create<ShellState & ShellActions>()(
       name: "vibedocs-shell",
       partialize: (state) => ({
         artifact: { width: state.artifact.width },
+        sidebar: { collapsed: state.sidebar.collapsed },
       }),
     }
   )

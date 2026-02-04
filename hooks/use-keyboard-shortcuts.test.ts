@@ -6,7 +6,7 @@ import { useKeyboardShortcuts } from "./use-keyboard-shortcuts"
 describe("useKeyboardShortcuts", () => {
   const mockHandlers = {
     onTogglePalette: vi.fn(),
-    onToggleDrawer: vi.fn(),
+    onToggleSidebar: vi.fn(),
     onCloseTopmost: vi.fn(),
     onFocusChatInput: vi.fn(),
     onCollapseArtifact: vi.fn(),
@@ -37,7 +37,7 @@ describe("useKeyboardShortcuts", () => {
     expect(mockHandlers.onTogglePalette).toHaveBeenCalledTimes(1)
   })
 
-  it("calls onToggleDrawer on Ctrl+B", () => {
+  it("calls onToggleSidebar on Ctrl+B", () => {
     renderHook(() => useKeyboardShortcuts(mockHandlers))
 
     const event = new KeyboardEvent("keydown", {
@@ -47,7 +47,7 @@ describe("useKeyboardShortcuts", () => {
     })
     document.dispatchEvent(event)
 
-    expect(mockHandlers.onToggleDrawer).toHaveBeenCalledTimes(1)
+    expect(mockHandlers.onToggleSidebar).toHaveBeenCalledTimes(1)
   })
 
   it("calls onCloseTopmost on Escape", () => {

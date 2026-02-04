@@ -5,7 +5,7 @@ describe("shell-store", () => {
   beforeEach(() => {
     useShellStore.setState({
       artifact: { open: false, width: 50, expanded: false, content: null },
-      drawer: { open: false },
+      sidebar: { collapsed: false },
       palette: { open: false },
     })
   })
@@ -28,7 +28,7 @@ describe("shell-store", () => {
           expanded: false,
           content: { type: "document", id: "doc-1", title: "Test" },
         },
-        drawer: { open: false },
+        sidebar: { collapsed: false },
         palette: { open: false },
       })
 
@@ -56,13 +56,21 @@ describe("shell-store", () => {
     })
   })
 
-  describe("drawer", () => {
-    it("toggles drawer", () => {
-      useShellStore.getState().toggleDrawer()
-      expect(useShellStore.getState().drawer.open).toBe(true)
+  describe("sidebar", () => {
+    it("toggles sidebar collapsed state", () => {
+      useShellStore.getState().toggleSidebar()
+      expect(useShellStore.getState().sidebar.collapsed).toBe(true)
 
-      useShellStore.getState().toggleDrawer()
-      expect(useShellStore.getState().drawer.open).toBe(false)
+      useShellStore.getState().toggleSidebar()
+      expect(useShellStore.getState().sidebar.collapsed).toBe(false)
+    })
+
+    it("sets sidebar collapsed directly", () => {
+      useShellStore.getState().setSidebarCollapsed(true)
+      expect(useShellStore.getState().sidebar.collapsed).toBe(true)
+
+      useShellStore.getState().setSidebarCollapsed(false)
+      expect(useShellStore.getState().sidebar.collapsed).toBe(false)
     })
   })
 
@@ -79,8 +87,8 @@ describe("shell-store", () => {
   describe("closeTopmost", () => {
     it("closes palette first if open", () => {
       useShellStore.setState({
-        artifact: { open: true, width: 50, expanded: false, content: null },
-        drawer: { open: true },
+        artifact: { open: true, width: 50, expanded: true, content: null },
+        sidebar: { collapsed: false },
         palette: { open: true },
       })
 
@@ -88,28 +96,28 @@ describe("shell-store", () => {
 
       const state = useShellStore.getState()
       expect(state.palette.open).toBe(false)
-      expect(state.drawer.open).toBe(true)
+      expect(state.artifact.expanded).toBe(true)
       expect(state.artifact.open).toBe(true)
     })
 
-    it("closes drawer second if palette closed", () => {
+    it("closes artifact expanded second if palette closed", () => {
       useShellStore.setState({
-        artifact: { open: true, width: 50, expanded: false, content: null },
-        drawer: { open: true },
+        artifact: { open: true, width: 50, expanded: true, content: null },
+        sidebar: { collapsed: false },
         palette: { open: false },
       })
 
       useShellStore.getState().closeTopmost()
 
       const state = useShellStore.getState()
-      expect(state.drawer.open).toBe(false)
+      expect(state.artifact.expanded).toBe(false)
       expect(state.artifact.open).toBe(true)
     })
 
     it("closes artifact last", () => {
       useShellStore.setState({
         artifact: { open: true, width: 50, expanded: false, content: null },
-        drawer: { open: false },
+        sidebar: { collapsed: false },
         palette: { open: false },
       })
 

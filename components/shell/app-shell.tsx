@@ -7,17 +7,17 @@ import { cn } from "@/lib/utils"
 
 interface AppShellProps {
   children: React.ReactNode
+  sidebar: React.ReactNode
   header: React.ReactNode
-  drawer?: React.ReactNode
   palette?: React.ReactNode
 }
 
-export function AppShell({ children, header, drawer, palette }: AppShellProps) {
+export function AppShell({ children, sidebar, header, palette }: AppShellProps) {
   const chatInputRef = React.useRef<HTMLTextAreaElement>(null)
 
   const {
     togglePalette,
-    toggleDrawer,
+    toggleSidebar,
     closeTopmost,
     closeArtifact,
     toggleArtifactExpanded,
@@ -26,7 +26,7 @@ export function AppShell({ children, header, drawer, palette }: AppShellProps) {
 
   useKeyboardShortcuts({
     onTogglePalette: togglePalette,
-    onToggleDrawer: toggleDrawer,
+    onToggleSidebar: toggleSidebar,
     onCloseTopmost: closeTopmost,
     onFocusChatInput: () => chatInputRef.current?.focus(),
     onCollapseArtifact: () => {
@@ -42,23 +42,33 @@ export function AppShell({ children, header, drawer, palette }: AppShellProps) {
       <div
         data-slot="app-shell"
         className={cn(
-          "flex h-dvh flex-col overflow-hidden",
+          "flex h-dvh overflow-hidden",
           "bg-gradient-to-br from-neutral-50 to-neutral-100"
         )}
       >
-        {/* Header */}
-        <div data-slot="app-shell-header">{header}</div>
+        {/* Sidebar */}
+        <div data-slot="app-shell-sidebar" className="shrink-0">
+          {sidebar}
+        </div>
 
-        {/* Body */}
+        {/* Main content area */}
         <div
-          data-slot="app-shell-body"
-          className="relative flex flex-1 overflow-hidden"
+          data-slot="app-shell-main"
+          className="flex flex-1 flex-col overflow-hidden"
         >
-          {children}
+          {/* Header */}
+          <div data-slot="app-shell-header">{header}</div>
+
+          {/* Body */}
+          <div
+            data-slot="app-shell-body"
+            className="relative flex flex-1 overflow-hidden"
+          >
+            {children}
+          </div>
         </div>
 
         {/* Overlays */}
-        {drawer}
         {palette}
       </div>
     </ChatInputRefContext.Provider>

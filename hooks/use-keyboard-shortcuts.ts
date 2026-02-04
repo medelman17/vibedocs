@@ -2,7 +2,7 @@ import { useEffect, useCallback, useMemo } from "react"
 
 interface KeyboardShortcutHandlers {
   onTogglePalette: () => void
-  onToggleDrawer: () => void
+  onToggleSidebar: () => void
   onCloseTopmost: () => void
   onFocusChatInput: () => void
   onCollapseArtifact: () => void
@@ -49,10 +49,10 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
         return
       }
 
-      // Cmd/Ctrl + B: Toggle history drawer
+      // Cmd/Ctrl + B: Toggle sidebar
       if (modifier && event.key === "b") {
         event.preventDefault()
-        handlers.onToggleDrawer()
+        handlers.onToggleSidebar()
         return
       }
 
