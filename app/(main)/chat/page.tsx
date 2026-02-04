@@ -362,61 +362,88 @@ export default function ChatPage() {
     }
   }
 
-  // Render message parts - combines text parts and shows tool states
+  // Render message parts in order - interleaving text and tool states
   const renderMessageParts = (message: UIMessage) => {
-    // Collect all text content
-    const textContent = message.parts
-      .filter((part): part is { type: "text"; text: string } => part.type === "text")
-      .map((part) => part.text)
-      .join("\n\n")
-
-    // Check for active/completed tool calls
-    const toolParts = message.parts.filter((part) => part.type.startsWith("tool-"))
-    const hasActiveToolCall = toolParts.some((part) => {
-      const toolPart = part as { state: string }
-      return (
-        toolPart.state === "input-streaming" ||
-        toolPart.state === "input-available"
-      )
-    })
-
-    // Get completed search results (dedupe by toolCallId)
-    const completedSearches = new Map<string, number>()
-    toolParts.forEach((part) => {
-      if (part.type === "tool-search_references") {
-        const toolPart = part as { toolCallId: string; state: string; output?: unknown }
-        if (toolPart.state === "output-available" && toolPart.output) {
-          const results = toolPart.output as Array<{ id: string }>
-          completedSearches.set(toolPart.toolCallId, results?.length || 0)
-        }
+    return message.parts.map((part, index) => {
+      // Text parts
+      if (part.type === "text") {
+        return (
+          <MessageResponse key={index}>{part.text}</MessageResponse>
+        )
       }
+
+      // Tool parts
+      if (part.type.startsWith("tool-")) {
+        const toolPart = part as {
+          type: string
+          toolCallId: string
+          state: string
+          input?: unknown
+          output?: unknown
+        }
+
+        // Skip silent tools (showArtifact)
+        if (part.type === "tool-showArtifact") return null
+
+        // Search tool
+        if (part.type === "tool-search_references") {
+          // Active search - show spinner
+          if (
+            toolPart.state === "input-streaming" ||
+            toolPart.state === "input-available"
+          ) {
+            return (
+              <div
+                key={index}
+                className="my-2 flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground"
+              >
+                <Loader2 className="size-4 animate-spin" />
+                <span>Searching reference corpus...</span>
+              </div>
+            )
+          }
+
+          // Completed search - show results count
+          if (toolPart.state === "output-available") {
+            const results = toolPart.output as Array<{ id: string; content: string; source: string }> | null
+            const count = results?.length || 0
+            if (count > 0) {
+              return (
+                <div
+                  key={index}
+                  className="my-2 rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground"
+                >
+                  <span className="font-medium">Found {count} relevant clauses</span>
+                  {results && results.length > 0 && (
+                    <span className="ml-1">
+                      from {[...new Set(results.map(r => r.source))].slice(0, 2).join(", ")}
+                      {[...new Set(results.map(r => r.source))].length > 2 && " and more"}
+                    </span>
+                  )}
+                </div>
+              )
+            }
+          }
+        }
+
+        return null
+      }
+
+      // File parts (shouldn't appear in assistant messages, but handle anyway)
+      if (part.type === "file") {
+        return (
+          <div
+            key={index}
+            className="mb-2 flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs"
+          >
+            <FileTextIcon className="size-3" />
+            {part.filename || "Attachment"}
+          </div>
+        )
+      }
+
+      return null
     })
-
-    return (
-      <>
-        {/* Show searching indicator if any tool is active */}
-        {hasActiveToolCall && (
-          <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            <span>Searching reference corpus...</span>
-          </div>
-        )}
-
-        {/* Show combined text response */}
-        {textContent && (
-          <MessageResponse>{textContent}</MessageResponse>
-        )}
-
-        {/* Show search results summary (only if we have results and text) */}
-        {completedSearches.size > 0 && textContent && (
-          <div className="mt-2 text-xs text-muted-foreground">
-            {Array.from(completedSearches.values()).reduce((a, b) => a + b, 0) > 0
-              ? `Referenced ${Array.from(completedSearches.values()).reduce((a, b) => a + b, 0)} clauses from the corpus`
-              : null}
-          </div>
-        )}
-      </>
-    )
   }
 
   return (
