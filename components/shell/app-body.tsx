@@ -36,16 +36,17 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
 
   // Desktop: side-by-side layout (like Vercel AI Chatbot)
   // Fixed chat width, artifact takes remaining space
+  // Each panel uses overflow-hidden to contain scroll within their children
   return (
     <div className="flex h-full w-full flex-1 overflow-hidden">
-      {/* Chat panel - fixed width */}
+      {/* Chat panel - fixed width, children handle scrolling */}
       <main className="flex h-full min-h-0 w-[400px] shrink-0 flex-col overflow-hidden border-r border-border/50">
         {chat}
       </main>
 
-      {/* Artifact panel - takes remaining width */}
+      {/* Artifact panel - takes remaining width, children handle scrolling */}
       <aside
-        className={cn("flex h-full flex-1 flex-col overflow-hidden")}
+        className={cn("flex h-full min-h-0 flex-1 flex-col overflow-hidden")}
         style={{
           background: "oklch(0.97 0.015 290 / 0.9)",
         }}
