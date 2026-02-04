@@ -9,11 +9,14 @@
  * @module inngest/functions/analyze-nda
  */
 
+import { createHash } from 'crypto'
 import { inngest, CONCURRENCY, RETRY_CONFIG, withTenantContext, getRateLimitDelay } from '@/inngest'
+import { NonRetriableError } from '@/inngest/utils/errors'
 import { runParserAgent } from '@/agents/parser'
 import { runClassifierAgent } from '@/agents/classifier'
 import { runRiskScorerAgent } from '@/agents/risk-scorer'
 import { runGapAnalystAgent } from '@/agents/gap-analyst'
+import { validateParserOutput, validateClassifierOutput } from '@/agents/validation'
 import { BudgetTracker } from '@/lib/ai/budget'
 import { analyses } from '@/db/schema/analyses'
 import { eq } from 'drizzle-orm'
@@ -45,17 +48,28 @@ export const analyzeNda = inngest.createFunction(
 
     // Wrap all tenant-scoped operations in withTenantContext
     return await withTenantContext(tenantId, async (ctx) => {
-      // Step 1: Create analysis record
-      const analysisId = await step.run('create-analysis', async () => {
-        const [analysis] = await ctx.db
+      // Step 1: Create or update analysis record (idempotent)
+      // Deterministic ID: derived from documentId + requestedAt so retries always use same analysisId
+      // This works because the same event always produces the same analysis ID
+      const requestedAt = event.data.requestedAt ?? Date.now()
+      const analysisId = createHash('sha256')
+        .update(`analysis:${documentId}:${requestedAt}`)
+        .digest('hex')
+        .slice(0, 32)
+        .replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5')
+
+      await step.run('create-analysis', async () => {
+        await ctx.db
           .insert(analyses)
           .values({
+            id: analysisId,
             documentId,
             tenantId,
             status: 'processing',
+            progressStage: 'parsing',
+            progressPercent: 0,
           })
-          .returning({ id: analyses.id })
-        return analysis.id
+          .onConflictDoNothing() // Safe: if ID exists, analysis already started
       })
 
       // Helper to emit progress events AND persist to DB
@@ -97,6 +111,33 @@ export const analyzeNda = inngest.createFunction(
       const parserResult = await step.run('parser-agent', () =>
         runParserAgent({ documentId, tenantId, source, content, metadata })
       )
+
+      // Parser validation gate - runs AFTER step completes, OUTSIDE step.run()
+      // Validation is fast and deterministic, so no durability needed
+      const parserValidation = validateParserOutput(
+        parserResult.document.rawText,
+        parserResult.document.chunks
+      )
+      if (!parserValidation.valid) {
+        // Persist failure state (durable step for DB write)
+        await step.run('mark-parser-failed', async () => {
+          await ctx.db
+            .update(analyses)
+            .set({
+              status: 'failed',
+              progressStage: 'failed',
+              metadata: {
+                failedAt: 'parsing',
+                errorCode: parserValidation.error!.code,
+                errorMessage: parserValidation.error!.userMessage,
+              },
+            })
+            .where(eq(analyses.id, analysisId))
+        })
+        // Throw non-retriable error with user-friendly message
+        throw new NonRetriableError(parserValidation.error!.userMessage)
+      }
+
       await emitProgress(
         'parsing',
         20,
@@ -113,6 +154,27 @@ export const analyzeNda = inngest.createFunction(
           budgetTracker,
         })
       )
+
+      // Classifier validation gate - 0 clauses = always halt (per CONTEXT.md)
+      const classifierValidation = validateClassifierOutput(classifierResult.clauses)
+      if (!classifierValidation.valid) {
+        await step.run('mark-classifier-failed', async () => {
+          await ctx.db
+            .update(analyses)
+            .set({
+              status: 'failed',
+              progressStage: 'failed',
+              metadata: {
+                failedAt: 'classifying',
+                errorCode: classifierValidation.error!.code,
+                errorMessage: classifierValidation.error!.userMessage,
+              },
+            })
+            .where(eq(analyses.id, analysisId))
+        })
+        throw new NonRetriableError(classifierValidation.error!.userMessage)
+      }
+
       await emitProgress(
         'classifying',
         45,
