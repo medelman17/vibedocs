@@ -29,6 +29,10 @@ export type ErrorCode =
   | "ANALYSIS_FAILED"
   | "EMBEDDING_FAILED"
   | "LLM_FAILED"
+  // Document extraction error codes
+  | "ENCRYPTED_DOCUMENT"
+  | "CORRUPT_DOCUMENT"
+  | "OCR_REQUIRED"
 
 export interface ErrorDetail {
   field?: string
@@ -195,6 +199,40 @@ export class EmbeddingFailedError extends AppError {
 export class LlmFailedError extends AppError {
   constructor(message = "Language model request failed") {
     super("LLM_FAILED", message, 500)
+  }
+}
+
+/**
+ * 400 Encrypted Document - Password-protected document
+ *
+ * User-facing: They can fix this by providing unprotected version.
+ */
+export class EncryptedDocumentError extends AppError {
+  constructor(message = "Please upload an unprotected version of this document.") {
+    super("ENCRYPTED_DOCUMENT", message, 400)
+  }
+}
+
+/**
+ * 400 Corrupt Document - Invalid or damaged file
+ *
+ * User-facing: They can fix this by re-uploading or using different format.
+ */
+export class CorruptDocumentError extends AppError {
+  constructor(message = "Could not process this file. Try re-uploading or use a different format.") {
+    super("CORRUPT_DOCUMENT", message, 400)
+  }
+}
+
+/**
+ * 422 OCR Required - Document needs OCR processing
+ *
+ * Not an error per se - signals document should route to OCR pipeline.
+ * 422 because the entity is valid but requires different processing.
+ */
+export class OcrRequiredError extends AppError {
+  constructor(message = "Document requires OCR processing (may take longer)") {
+    super("OCR_REQUIRED", message, 422)
   }
 }
 
