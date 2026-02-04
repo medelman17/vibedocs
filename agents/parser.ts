@@ -11,11 +11,12 @@
  * @module agents/parser
  */
 
+import { chunkDocument, type DocumentChunk } from '@/lib/document-processing'
 import {
-  extractText,
-  chunkDocument,
-  type DocumentChunk,
-} from '@/lib/document-processing'
+  extractDocument,
+  detectStructure,
+  type DocumentStructure,
+} from '@/lib/document-extraction'
 import { getVoyageAIClient } from '@/lib/embeddings'
 import { db } from '@/db/client'
 import { documents } from '@/db/schema/documents'
@@ -54,9 +55,17 @@ export interface ParserOutput {
     title: string
     rawText: string
     chunks: ParsedChunk[]
+    structure: DocumentStructure
   }
   tokenUsage: {
     embeddingTokens: number
+  }
+  quality: {
+    charCount: number
+    wordCount: number
+    pageCount: number
+    confidence: number
+    warnings: string[]
   }
 }
 
@@ -78,6 +87,8 @@ export async function runParserAgent(input: ParserInput): Promise<ParserOutput> 
 
   let rawText: string
   let title: string
+  let structure: DocumentStructure
+  let quality: ParserOutput['quality']
 
   if (source === 'web' || source === 'web-upload') {
     // Fetch document from database to get blob URL
@@ -89,7 +100,7 @@ export async function runParserAgent(input: ParserInput): Promise<ParserOutput> 
       throw new NotFoundError(`Document ${documentId} not found or has no file URL`)
     }
 
-    // Download from Vercel Blob URL directly
+    // Download from Vercel Blob URL
     const response = await fetch(doc.fileUrl)
     if (!response.ok) {
       throw new InternalError(`Failed to download document: ${response.statusText}`)
@@ -97,17 +108,43 @@ export async function runParserAgent(input: ParserInput): Promise<ParserOutput> 
     const arrayBuffer = await response.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     const contentType = response.headers.get('content-type') ?? 'application/pdf'
-    const extracted = await extractText(buffer, contentType)
 
-    rawText = extracted.text
-    title = doc.title ?? 'Untitled'
+    // Use new extraction with quality metrics
+    const extraction = await extractDocument(buffer, contentType, {
+      fileSize: doc.fileSize ?? undefined,
+    })
+
+    rawText = extraction.text
+    title = doc.title ?? extraction.metadata.title ?? 'Untitled'
+
+    // Run structure detection on extracted text
+    structure = await detectStructure(rawText)
+
+    quality = {
+      charCount: extraction.quality.charCount,
+      wordCount: extraction.quality.wordCount,
+      pageCount: extraction.pageCount,
+      confidence: extraction.quality.confidence,
+      warnings: extraction.quality.warnings.map((w) => w.message),
+    }
   } else {
     // Word Add-in: use provided content
     if (!content) {
       throw new ValidationError('Word Add-in source requires content')
     }
-    rawText = content.rawText
+    rawText = content.rawText.normalize('NFC')
     title = metadata?.title ?? 'Untitled'
+
+    // Still run structure detection on Word Add-in content
+    structure = await detectStructure(rawText)
+
+    quality = {
+      charCount: rawText.length,
+      wordCount: rawText.split(/\s+/).filter(Boolean).length,
+      pageCount: 1,
+      confidence: 1.0, // Word provides clean text
+      warnings: [],
+    }
   }
 
   // Chunk with section detection and position tracking
@@ -130,9 +167,11 @@ export async function runParserAgent(input: ParserInput): Promise<ParserOutput> 
       title,
       rawText,
       chunks,
+      structure,
     },
     tokenUsage: {
       embeddingTokens: embeddingResult.totalTokens,
     },
+    quality,
   }
 }
