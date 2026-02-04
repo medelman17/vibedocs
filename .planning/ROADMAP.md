@@ -47,14 +47,17 @@ Plans:
 **Depends on**: Phase 1
 **Requirements**: FND-04, FND-05, FND-06
 **Success Criteria** (what must be TRUE):
-  1. User sees estimated cost before analysis begins
-  2. Analysis aborts with clear message if document exceeds budget limits
-  3. Documents over 50 pages or 10MB are rejected at upload with explanation
-  4. Token usage tracked and visible per analysis
-**Plans**: TBD
+  1. Documents over 50 pages or 10MB are rejected at upload with clear explanation
+  2. Oversized documents (>200K tokens) are truncated at section boundaries with warning
+  3. Token usage tracked internally per analysis (admin-only visibility)
+  4. Admin API provides aggregate usage statistics
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md — Create budget infrastructure (limits, estimation, truncation, schema)
+- [ ] 02-02-PLAN.md — Integrate upload validation and token budget gate
+- [ ] 02-03-PLAN.md — Pipeline integration with truncation and cost tracking
+- [ ] 02-04-PLAN.md — Admin usage API endpoint
 
 ### Phase 3: Document Extraction
 **Goal**: Raw text reliably extracted from PDF and DOCX documents with structure preserved
@@ -196,7 +199,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation Hardening | 3/3 | Complete | 2026-02-04 |
-| 2. Budget Protection | 0/TBD | Not started | - |
+| 2. Budget Protection | 0/4 | Not started | - |
 | 3. Document Extraction | 0/TBD | Not started | - |
 | 4. OCR Processing | 0/TBD | Not started | - |
 | 5. Legal Chunking | 0/TBD | Not started | - |
@@ -209,4 +212,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 (Phase 1 complete)*
+*Last updated: 2026-02-04 (Phase 2 planned)*
