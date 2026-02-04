@@ -11,6 +11,7 @@ import {
   ConversationScrollButton,
   Message,
   MessageContent,
+  MessageResponse,
   Suggestions,
   Suggestion,
   PromptInput,
@@ -268,22 +269,28 @@ export default function ChatPage() {
               <ConversationContent>
                 {messages.map((message) => (
                   <Message key={message.id} from={message.role as "user" | "assistant"}>
-                    <MessageContent>
-                      {fileAttachments[message.id] && fileAttachments[message.id].length > 0 && (
-                        <div className="mb-2 flex flex-wrap gap-2">
-                          {fileAttachments[message.id].map((file, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs"
-                            >
-                              <FileTextIcon className="size-3" />
-                              {file.filename || "Attachment"}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {message.content}
-                    </MessageContent>
+                    {message.role === "user" ? (
+                      <MessageContent>
+                        {fileAttachments[message.id] && fileAttachments[message.id].length > 0 && (
+                          <div className="mb-2 flex flex-wrap gap-2">
+                            {fileAttachments[message.id].map((file, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs"
+                              >
+                                <FileTextIcon className="size-3" />
+                                {file.filename || "Attachment"}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {message.content}
+                      </MessageContent>
+                    ) : (
+                      <MessageContent>
+                        <MessageResponse>{message.content}</MessageResponse>
+                      </MessageContent>
+                    )}
                   </Message>
                 ))}
               </ConversationContent>
