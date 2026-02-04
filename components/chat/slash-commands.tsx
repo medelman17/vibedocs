@@ -143,7 +143,7 @@ export function SlashCommands({
 
   return (
     <Popover open={isOpen}>
-      <PopoverAnchor virtualRef={anchorRef} />
+      <PopoverAnchor virtualRef={anchorRef as React.RefObject<HTMLElement>} />
       <PopoverContent
         className="w-[300px] p-0"
         align="start"
@@ -297,7 +297,7 @@ export function Mentions({
 
   return (
     <Popover open={isOpen}>
-      <PopoverAnchor virtualRef={anchorRef} />
+      <PopoverAnchor virtualRef={anchorRef as React.RefObject<HTMLElement>} />
       <PopoverContent
         className="w-[300px] p-0"
         align="start"
