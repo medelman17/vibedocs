@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 3 of 11 (Document Extraction)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-04 - Completed 03-01-PLAN.md (Extraction Infrastructure)
+Last activity: 2026-02-04 - Completed 03-02-PLAN.md (Structure Detection)
 
-Progress: [███████░░░] ~26% (8 plans of ~30+ total)
+Progress: [████████░░] ~30% (9 plans of ~30+ total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 3.8 min
-- Total execution time: 30.5 min
+- Total plans completed: 9
+- Average duration: 3.7 min
+- Total execution time: 33.5 min
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [███████░░░] ~26% (8 plans of ~30+ total)
 |-------|-------|-------|----------|
 | 01 | 3 | 8.5 min | 2.8 min |
 | 02 | 4 | 19.5 min | 4.9 min |
-| 03 | 1 | 2.5 min | 2.5 min |
+| 03 | 2 | 5.5 min | 2.75 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (3.5 min), 02-03 (5 min), 02-04 (4 min), 03-01 (2.5 min)
-- Trend: Fast (03-01 straightforward type/class additions)
+- Last 5 plans: 02-03 (5 min), 02-04 (4 min), 03-01 (2.5 min), 03-02 (3 min)
+- Trend: Fast (03-02 structure types already existed from 03-01)
 
 *Updated after each plan completion*
 
@@ -65,6 +65,9 @@ Recent decisions affecting current work:
 - [03-01]: PasswordException/InvalidPDFException as primary error detection, message fallback for safety
 - [03-01]: OCR threshold at 100 chars per CONTEXT.md decision
 - [03-01]: Confidence score based on text-to-file-size ratio
+- [03-02]: Regex patterns for ARTICLE/Section/numbered headings detect "obvious" structure
+- [03-02]: LLM fallback with 50K char limit to prevent token overflow
+- [03-02]: Character positions computed via indexOf with sequential offset tracking
 
 ### Pending Todos
 
@@ -77,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04T23:36:29Z
-Stopped at: Completed 03-01-PLAN.md (Extraction Infrastructure)
+Last session: 2026-02-04T23:38:50Z
+Stopped at: Completed 03-02-PLAN.md (Structure Detection)
 Resume file: None
