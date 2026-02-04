@@ -363,6 +363,38 @@ import { createMockEvent, createMockStep, testEventData } from "@/inngest/utils/
 - **Vector search cache**: 5-min TTL, 500 entries - `agents/tools/vector-search.ts` (🚧 placeholder)
 - Package: `lru-cache` (not Redis for MVP)
 
+### Barrel Exports (CRITICAL)
+
+**DO NOT create or extend barrel exports (`index.ts` files with `export * from`).**
+
+Barrel exports cause production crashes because:
+1. Production builds evaluate entire module graphs at startup
+2. Even unused exports get loaded, pulling in heavy dependencies
+3. Server-side code breaks when browser-only modules get bundled
+
+**Root cause example (Feb 2026):** `@/inngest/index.ts` re-exported `functions`, which pulled in:
+```
+@/inngest → functions → analyze-nda → agents/parser → lib/document-processing
+  → pdf-parse → pdfjs-dist → DOMMatrix (browser-only!) → CRASH
+```
+
+**Rules:**
+1. **Never add heavy dependencies to barrels** - PDF processing, image processing, ML models
+2. **Import directly for heavy modules:**
+   ```typescript
+   // ❌ Bad - barrel might pull in heavy deps
+   import { functions } from "@/inngest"
+
+   // ✅ Good - explicit path
+   import { functions } from "@/inngest/functions"
+   ```
+3. **Existing barrels allowed for lightweight exports:**
+   - `@/db` (client, schema, queries) - safe
+   - `@/inngest` (client, utils, types) - safe (functions removed)
+   - `@/db/schema` (table definitions) - safe
+
+**See:** [Issue #43](https://github.com/medelman17/vibedocs/issues/43) for full barrel export audit.
+
 ### Component Patterns
 - UI components use `data-slot` attributes for styling hooks
 - Use `cva` (class-variance-authority) for component variants
