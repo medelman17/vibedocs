@@ -53,5 +53,5 @@ export async function POST(req: Request) {
     maxSteps: 5, // Allow up to 5 tool calls per conversation turn
   })
 
-  return result.toTextStreamResponse()
+  return result.toDataStreamResponse()
 }
