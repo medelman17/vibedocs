@@ -88,6 +88,7 @@ vi.mock('@/agents/gap-analyst', () => ({
 // Mock database
 vi.mock('@/db/client', () => ({
   db: {
+    execute: vi.fn().mockResolvedValue({ rows: [] }),
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockReturnValue({
         returning: vi.fn().mockResolvedValue([{ id: 'analysis-123' }]),
