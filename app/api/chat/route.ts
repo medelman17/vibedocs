@@ -1,4 +1,4 @@
-import { streamText } from "ai"
+import { streamText, stepCountIs } from "ai"
 import { gateway } from "ai"
 import { verifySession } from "@/lib/dal"
 import { vectorSearchTool } from "@/agents/tools/vector-search"
@@ -50,8 +50,8 @@ export async function POST(req: Request) {
     tools: {
       search_references: vectorSearchTool,
     },
-    maxSteps: 5, // Allow up to 5 tool calls per conversation turn
+    stopWhen: stepCountIs(5), // Allow up to 5 tool calls per conversation turn
   })
 
-  return result.toDataStreamResponse()
+  return result.toTextStreamResponse()
 }
