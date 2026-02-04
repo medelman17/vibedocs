@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 2 of 11 (Budget Protection)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-04 - Completed 02-02-PLAN.md (Validation Integration)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-04 - Completed 02-03-PLAN.md (Pipeline Budget Integration)
 
-Progress: [████░░░░░░] ~17% (5 plans of ~30+ total)
+Progress: [█████░░░░░] ~20% (6 plans of ~30+ total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 3.5 min
-- Total execution time: 19 min
+- Total plans completed: 6
+- Average duration: 4.0 min
+- Total execution time: 24 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 3 | 8.5 min | 2.8 min |
-| 02 | 2 | 10.5 min | 5.25 min |
+| 02 | 3 | 15.5 min | 5.2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (3 min), 01-03 (3.5 min), 02-01 (7 min), 02-02 (3.5 min)
-- Trend: Steady (02-02 faster than 02-01, simpler integration work)
+- Last 5 plans: 01-03 (3.5 min), 02-01 (7 min), 02-02 (3.5 min), 02-03 (5 min)
+- Trend: Steady (02-03 moderate complexity with integration work)
 
 *Updated after each plan completion*
 
@@ -58,6 +58,8 @@ Recent decisions affecting current work:
 - [02-01]: Schema versioning in test/setup.ts for automatic recreation on changes
 - [02-02]: Token budget gate always passes - truncation handles excess instead of rejection
 - [02-02]: Graceful fallback when PDF page count fails - let downstream budget check catch
+- [02-03]: Token budget validation runs outside step.run (consistent with other gates)
+- [02-03]: workingDocument pattern passes truncated version to downstream agents
 
 ### Pending Todos
 
@@ -70,6 +72,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04T22:10:36Z
-Stopped at: Completed 02-02-PLAN.md (Validation Integration)
+Last session: 2026-02-04T22:13:23Z
+Stopped at: Completed 02-03-PLAN.md (Pipeline Budget Integration) - Phase 2 complete
 Resume file: None
