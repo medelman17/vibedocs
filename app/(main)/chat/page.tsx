@@ -6,6 +6,7 @@ import { UIMessage, DefaultChatTransport } from "ai"
 import { FileTextIcon, PlusIcon, SparklesIcon, BrainIcon } from "lucide-react"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { AppBody } from "@/components/shell"
+import { toast } from "sonner"
 import {
   Conversation,
   ConversationContent,
@@ -18,6 +19,7 @@ import {
   Suggestion,
   PromptInput,
   PromptInputProvider,
+  PromptInputHeader,
   PromptInputTextarea,
   PromptInputFooter,
   PromptInputTools,
@@ -28,6 +30,7 @@ import {
   PromptInputActionMenuItem,
   PromptInputActionAddAttachments,
   InputAutocomplete,
+  AttachmentPreview,
   type SlashCommand,
   type Mention,
   type PromptInputMessage,
@@ -527,9 +530,28 @@ export default function ChatPage() {
               <PromptInputProvider initialInput={inputValue}>
                 <PromptInput
                   onSubmit={handleSubmit}
-                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.docx"
+                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,.pdf,.docx,.txt"
                   multiple
+                  maxFileSize={50 * 1024 * 1024} // 50MB max file size
+                  onError={(err) => {
+                    if (err.code === "max_file_size") {
+                      toast.error("File too large", {
+                        description: "Maximum file size is 50MB. Please choose a smaller file.",
+                      })
+                    } else if (err.code === "accept") {
+                      toast.error("Unsupported file type", {
+                        description: "Please upload PDF, DOCX, or TXT files only.",
+                      })
+                    } else if (err.code === "max_files") {
+                      toast.warning("Too many files", {
+                        description: err.message,
+                      })
+                    }
+                  }}
                 >
+                  <PromptInputHeader>
+                    <AttachmentPreview />
+                  </PromptInputHeader>
                   <PromptInputTextarea
                     placeholder="Ask about NDAs or upload a document... (try /help)"
                     value={inputValue}
