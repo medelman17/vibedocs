@@ -46,6 +46,7 @@ import {
   index,
   jsonb,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core"
 import { primaryId, timestamps, tenantId } from "../_columns"
 import { documents, documentChunks } from "./documents"
@@ -676,5 +677,12 @@ export const clauseExtractions = pgTable(
      * Ensures RLS-filtered queries remain performant.
      */
     index("idx_clauses_tenant").on(table.tenantId),
+
+    /**
+     * Unique constraint for idempotent clause inserts.
+     * Each chunk should produce at most one extraction per analysis.
+     * Enables ON CONFLICT DO UPDATE for safe retries.
+     */
+    unique("clause_analysis_chunk").on(table.analysisId, table.chunkId),
   ]
 )
