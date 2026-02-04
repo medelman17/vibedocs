@@ -21,6 +21,7 @@
  */
 
 import { z } from "zod";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { verifySession } from "@/lib/dal";
 import { ok, err, type ApiResponse } from "@/lib/api-response";
 import { db } from "@/db/client";
@@ -83,7 +84,12 @@ export async function signOutAction(): Promise<ApiResponse<void>> {
   try {
     await signOut({ redirectTo: "/" });
     return ok(undefined);
-  } catch {
+  } catch (error) {
+    // Auth.js signOut throws a NEXT_REDIRECT error to trigger the redirect
+    // We must re-throw it so Next.js can handle the redirect
+    if (isRedirectError(error)) {
+      throw error;
+    }
     return err("INTERNAL_ERROR", "Failed to sign out. Please try again.");
   }
 }

@@ -1,11 +1,11 @@
 import { streamText, convertToModelMessages, UIMessage, tool, stepCountIs } from "ai"
 import { gateway } from "ai"
-import { verifySession } from "@/lib/dal"
+import { withTenant } from "@/lib/dal"
 import { vectorSearchTool } from "@/agents/tools/vector-search"
 import {
-  createConversation,
-  createMessage,
-  updateConversationTitle,
+  createConversationInternal,
+  createMessageInternal,
+  updateConversationTitleInternal,
 } from "@/app/(main)/chat/actions"
 import { z } from "zod"
 import { nanoid } from "nanoid"
@@ -45,9 +45,12 @@ Keep responses concise and practical. If you're unsure about specific legal advi
 FORMATTING: When showing example clause language, use blockquotes (>) not code blocks. Legal text should be readable prose, not code.`
 
 export async function POST(req: Request) {
-  // Verify user is authenticated
+  // Verify user is authenticated and get tenant context
+  // IMPORTANT: Capture context BEFORE streaming starts - it won't be available in onFinish callback
+  let tenantContext: { tenantId: string; userId: string }
   try {
-    await verifySession()
+    const ctx = await withTenant()
+    tenantContext = { tenantId: ctx.tenantId as string, userId: ctx.userId as string }
   } catch {
     return new Response("Unauthorized", { status: 401 })
   }
@@ -101,12 +104,17 @@ export async function POST(req: Request) {
           }
           const title = userContent.slice(0, 50) || "New chat"
 
-          const convResult = await createConversation({ title })
+          // Use internal function with pre-captured context (doesn't rely on request context)
+          const convResult = await createConversationInternal({
+            title,
+            tenantId: tenantContext.tenantId,
+            userId: tenantContext.userId,
+          })
           if (convResult.success) {
             convId = convResult.data.id
 
             // Generate better title asynchronously (fire and forget)
-            generateAndUpdateTitle(convId, userContent).catch(console.error)
+            generateAndUpdateTitle(convId, userContent, tenantContext).catch(console.error)
           } else {
             console.error(
               "[chat/route] Failed to create conversation:",
@@ -119,18 +127,22 @@ export async function POST(req: Request) {
         // Persist user message (the one that triggered this response)
         const userMsg = messages[messages.length - 1]
         if (userMsg) {
-          await createMessage({
+          await createMessageInternal({
             conversationId: convId,
             role: "user",
             content: JSON.stringify(userMsg.parts || []),
+            tenantId: tenantContext.tenantId,
+            userId: tenantContext.userId,
           })
         }
 
         // Persist assistant response message
-        await createMessage({
+        await createMessageInternal({
           conversationId: convId,
           role: "assistant",
           content: JSON.stringify(responseMessage.parts || []),
+          tenantId: tenantContext.tenantId,
+          userId: tenantContext.userId,
         })
       } catch (error) {
         console.error("[chat/route] Failed to persist messages:", error)
@@ -144,7 +156,8 @@ export async function POST(req: Request) {
  */
 async function generateAndUpdateTitle(
   conversationId: string,
-  userMessage: string
+  userMessage: string,
+  tenantContext: { tenantId: string; userId: string }
 ): Promise<void> {
   if (!userMessage || userMessage.length < 10) return
 
@@ -160,7 +173,12 @@ async function generateAndUpdateTitle(
 
     const title = text.trim().slice(0, 50)
     if (title) {
-      await updateConversationTitle({ conversationId, title })
+      await updateConversationTitleInternal({
+        conversationId,
+        title,
+        tenantId: tenantContext.tenantId,
+        userId: tenantContext.userId,
+      })
     }
   } catch (error) {
     console.error("[chat/route] Failed to generate title:", error)

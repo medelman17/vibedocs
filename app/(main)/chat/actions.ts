@@ -12,6 +12,7 @@
 import { z } from "zod"
 import { desc, eq, and, isNull, sql } from "drizzle-orm"
 import { withTenant } from "@/lib/dal"
+import { db } from "@/db"
 import { conversations, messages } from "@/db/schema"
 import { ok, wrapError, type ApiResponse } from "@/lib/api-response"
 import {
@@ -456,6 +457,192 @@ export async function getMessages(
       .orderBy(messages.createdAt)
 
     return ok(result)
+  } catch (e) {
+    return wrapError(e)
+  }
+}
+
+// ============================================================================
+// Internal Functions (bypass withTenant for use in streaming callbacks)
+// ============================================================================
+// These functions accept pre-captured tenant context directly, avoiding the
+// request-context dependency that causes issues in onFinish callbacks.
+// IMPORTANT: Only use from API routes that have already verified auth.
+
+/**
+ * Schema for internal conversation creation (includes tenant context).
+ */
+const createConversationInternalSchema = z.object({
+  title: z.string().min(1).max(200),
+  documentId: z.string().uuid().optional(),
+  tenantId: z.string(),
+  userId: z.string(),
+})
+
+/**
+ * Internal: Create conversation with pre-captured context.
+ * Use this from streaming callbacks where request context is unavailable.
+ */
+export async function createConversationInternal(
+  data: z.infer<typeof createConversationInternalSchema>
+): Promise<ApiResponse<{ id: string; title: string }>> {
+  try {
+    const parsed = createConversationInternalSchema.safeParse(data)
+    if (!parsed.success) {
+      return wrapError(ValidationError.fromZodError(parsed.error))
+    }
+
+    const { tenantId, userId, title, documentId } = parsed.data
+
+    const [conversation] = await db
+      .insert(conversations)
+      .values({
+        tenantId,
+        userId,
+        title,
+        documentId,
+      })
+      .returning({ id: conversations.id, title: conversations.title })
+
+    return ok(conversation)
+  } catch (e) {
+    return wrapError(e)
+  }
+}
+
+/**
+ * Schema for internal message creation (includes tenant context).
+ */
+const createMessageInternalSchema = z.object({
+  conversationId: z.string().uuid(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1),
+  attachments: z
+    .array(
+      z.object({
+        url: z.string().url(),
+        filename: z.string().optional(),
+        mediaType: z.string().optional(),
+      })
+    )
+    .optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  tenantId: z.string(),
+  userId: z.string(),
+})
+
+/**
+ * Internal: Create message with pre-captured context.
+ * Use this from streaming callbacks where request context is unavailable.
+ */
+export async function createMessageInternal(
+  data: z.infer<typeof createMessageInternalSchema>
+): Promise<ApiResponse<{ id: string; createdAt: Date }>> {
+  try {
+    const parsed = createMessageInternalSchema.safeParse(data)
+    if (!parsed.success) {
+      return wrapError(ValidationError.fromZodError(parsed.error))
+    }
+
+    const { tenantId, userId, conversationId, role, content, attachments, metadata } = parsed.data
+
+    // Verify conversation exists and user owns it
+    const [conversation] = await db
+      .select({ userId: conversations.userId })
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.id, conversationId),
+          eq(conversations.tenantId, tenantId),
+          isNull(conversations.deletedAt)
+        )
+      )
+
+    if (!conversation) {
+      return wrapError(new NotFoundError("Conversation not found"))
+    }
+
+    if (conversation.userId !== userId) {
+      return wrapError(new ForbiddenError("Not authorized to add messages to this conversation"))
+    }
+
+    // Insert message
+    const [message] = await db
+      .insert(messages)
+      .values({
+        conversationId,
+        role,
+        content,
+        attachments,
+        metadata,
+      })
+      .returning({ id: messages.id, createdAt: messages.createdAt })
+
+    // Update conversation's lastMessageAt
+    await db
+      .update(conversations)
+      .set({ lastMessageAt: message.createdAt })
+      .where(eq(conversations.id, conversationId))
+
+    return ok(message)
+  } catch (e) {
+    return wrapError(e)
+  }
+}
+
+/**
+ * Schema for internal title update (includes tenant context).
+ */
+const updateConversationTitleInternalSchema = z.object({
+  conversationId: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  tenantId: z.string(),
+  userId: z.string(),
+})
+
+/**
+ * Internal: Update conversation title with pre-captured context.
+ * Use this from streaming callbacks where request context is unavailable.
+ */
+export async function updateConversationTitleInternal(
+  data: z.infer<typeof updateConversationTitleInternalSchema>
+): Promise<ApiResponse<{ id: string; title: string }>> {
+  try {
+    const parsed = updateConversationTitleInternalSchema.safeParse(data)
+    if (!parsed.success) {
+      return wrapError(ValidationError.fromZodError(parsed.error))
+    }
+
+    const { tenantId, userId, conversationId, title } = parsed.data
+
+    // Verify ownership
+    const [existing] = await db
+      .select({ userId: conversations.userId })
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.id, conversationId),
+          eq(conversations.tenantId, tenantId),
+          isNull(conversations.deletedAt)
+        )
+      )
+
+    if (!existing) {
+      return wrapError(new NotFoundError("Conversation not found"))
+    }
+
+    if (existing.userId !== userId) {
+      return wrapError(new ForbiddenError("Not authorized to update this conversation"))
+    }
+
+    // Update title
+    const [updated] = await db
+      .update(conversations)
+      .set({ title })
+      .where(eq(conversations.id, conversationId))
+      .returning({ id: conversations.id, title: conversations.title })
+
+    return ok(updated)
   } catch (e) {
     return wrapError(e)
   }
