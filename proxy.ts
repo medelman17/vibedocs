@@ -5,7 +5,7 @@ import { cookies } from "next/headers"
 const protectedRoutes = ["/chat", "/dashboard", "/documents", "/analysis", "/settings"]
 const authRoutes = ["/login", "/signup", "/forgot-password", "/reset-password"]
 
-export default async function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname
 
   const isProtectedRoute = protectedRoutes.some((route) =>
