@@ -1,12 +1,15 @@
 "use client"
 
+import * as React from "react"
+import { useRouter } from "next/navigation"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar, type User } from "@/components/shell"
+import { AppSidebar, type User, type HistoryItem } from "@/components/shell"
 import { CommandPalette } from "@/components/navigation"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Separator } from "@/components/ui/separator"
 import { signOutAction } from "@/app/(main)/(auth)/actions"
+import { getConversations } from "./actions"
 
 interface ChatLayoutClientProps {
   children: React.ReactNode
@@ -14,6 +17,7 @@ interface ChatLayoutClientProps {
 }
 
 export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
+  const router = useRouter()
   const {
     togglePalette,
     closeArtifact,
@@ -21,7 +25,45 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
     palette,
     artifact,
     setPaletteOpen,
+    openArtifact,
   } = useShellStore()
+
+  const [historyItems, setHistoryItems] = React.useState<HistoryItem[]>([])
+
+  // Load conversation history
+  const loadHistory = React.useCallback(async () => {
+    const result = await getConversations({ limit: 20, offset: 0 })
+    if (result.success) {
+      const items: HistoryItem[] = result.data.map((conv) => ({
+        id: conv.id,
+        type: "conversation" as const,
+        title: conv.title,
+        date: conv.lastMessageAt,
+      }))
+      setHistoryItems(items)
+    }
+  }, [])
+
+  // Load on mount and listen for refresh events
+  React.useEffect(() => {
+    loadHistory()
+
+    // Listen for refresh events from child components
+    const handleRefresh = () => loadHistory()
+    window.addEventListener("refresh-chat-history", handleRefresh)
+    return () => window.removeEventListener("refresh-chat-history", handleRefresh)
+  }, [loadHistory])
+
+  // Handle history item selection
+  const handleSelectItem = (item: HistoryItem) => {
+    if (item.type === "conversation") {
+      router.push(`/chat?conversation=${item.id}`)
+    } else if (item.type === "document") {
+      openArtifact({ type: "document", id: item.id, title: item.title })
+    } else if (item.type === "analysis") {
+      openArtifact({ type: "analysis", id: item.id, title: item.title })
+    }
+  }
 
   // Wire up keyboard shortcuts
   useKeyboardShortcuts({
@@ -57,6 +99,8 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
   return (
     <SidebarProvider>
       <AppSidebar
+        items={historyItems}
+        onSelectItem={handleSelectItem}
         onOpenCommandPalette={togglePalette}
         onNewChat={() => {
           // Hard reload to clear all local state (messages, artifact, etc.)
@@ -65,10 +109,8 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
         user={user}
         onSignOut={handleSignOut}
         // TODO: Wire up remaining data and handlers
-        // items={conversations}
         // organizations={userOrgs}
         // currentOrg={activeOrg}
-        // onSelectItem={handleSelectItem}
         // onSwitchOrg={handleSwitchOrg}
         // onOpenSettings={handleOpenSettings}
       />

@@ -117,7 +117,21 @@ export const vectorSearchTool = tool({
     'Search the CUAD legal reference corpus for similar clauses. ' +
     'Use to find examples of standard clause language for comparison.',
   inputSchema: vectorSearchInputSchema,
-  execute: executeVectorSearch,
+  execute: async (input) => {
+    try {
+      return await executeVectorSearch(input)
+    } catch (error) {
+      console.error('[vector-search] Tool execution failed:', error)
+      // Return empty results with error info instead of throwing
+      return [{
+        id: 'error',
+        content: `Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        category: 'Error',
+        similarity: 0,
+        source: 'System',
+      }]
+    }
+  },
 })
 
 /**

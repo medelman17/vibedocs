@@ -12,9 +12,8 @@
 import { z } from "zod"
 import { desc, eq, and, isNull, sql } from "drizzle-orm"
 import { withTenant } from "@/lib/dal"
-import { conversations, messages, type NewConversation, type NewMessage } from "@/db/schema"
-import type { ApiResponse } from "@/lib/api-utils"
-import { success, error } from "@/lib/api-utils"
+import { conversations, messages } from "@/db/schema"
+import { ok, err, wrapError, type ApiResponse } from "@/lib/api-response"
 import {
   NotFoundError,
   ValidationError,
@@ -83,7 +82,7 @@ export async function createConversation(
   try {
     const parsed = createConversationSchema.safeParse(data)
     if (!parsed.success) {
-      return error(ValidationError.fromZodError(parsed.error))
+      return err(ValidationError.fromZodError(parsed.error))
     }
 
     const { db, tenantId, userId } = await withTenant()
@@ -98,9 +97,9 @@ export async function createConversation(
       })
       .returning({ id: conversations.id, title: conversations.title })
 
-    return success(conversation)
-  } catch (err) {
-    return error(err)
+    return ok(conversation)
+  } catch (e) {
+    return wrapError(e)
   }
 }
 
@@ -130,7 +129,7 @@ export async function getConversations(
   try {
     const parsed = getConversationsSchema.safeParse(params || {})
     if (!parsed.success) {
-      return error(ValidationError.fromZodError(parsed.error))
+      return err(ValidationError.fromZodError(parsed.error))
     }
 
     const { db, tenantId, userId } = await withTenant()
@@ -166,9 +165,9 @@ export async function getConversations(
       .limit(parsed.data.limit)
       .offset(parsed.data.offset)
 
-    return success(result)
-  } catch (err) {
-    return error(err)
+    return ok(result)
+  } catch (e) {
+    return wrapError(e)
   }
 }
 
@@ -214,12 +213,12 @@ export async function getConversation(
       )
 
     if (!conversation) {
-      return error(new NotFoundError("Conversation not found"))
+      return err(new NotFoundError("Conversation not found"))
     }
 
-    return success(conversation)
-  } catch (err) {
-    return error(err)
+    return ok(conversation)
+  } catch (e) {
+    return wrapError(e)
   }
 }
 
@@ -241,7 +240,7 @@ export async function updateConversationTitle(
   try {
     const parsed = updateConversationTitleSchema.safeParse(data)
     if (!parsed.success) {
-      return error(ValidationError.fromZodError(parsed.error))
+      return err(ValidationError.fromZodError(parsed.error))
     }
 
     const { db, tenantId, userId } = await withTenant()
@@ -259,11 +258,11 @@ export async function updateConversationTitle(
       )
 
     if (!existing) {
-      return error(new NotFoundError("Conversation not found"))
+      return err(new NotFoundError("Conversation not found"))
     }
 
     if (existing.userId !== userId) {
-      return error(new ForbiddenError("Not authorized to update this conversation"))
+      return err(new ForbiddenError("Not authorized to update this conversation"))
     }
 
     // Update title
@@ -273,9 +272,9 @@ export async function updateConversationTitle(
       .where(eq(conversations.id, parsed.data.conversationId))
       .returning({ id: conversations.id, title: conversations.title })
 
-    return success(updated)
-  } catch (err) {
-    return error(err)
+    return ok(updated)
+  } catch (e) {
+    return wrapError(e)
   }
 }
 
@@ -307,11 +306,11 @@ export async function deleteConversation(
       )
 
     if (!existing) {
-      return error(new NotFoundError("Conversation not found"))
+      return err(new NotFoundError("Conversation not found"))
     }
 
     if (existing.userId !== userId) {
-      return error(new ForbiddenError("Not authorized to delete this conversation"))
+      return err(new ForbiddenError("Not authorized to delete this conversation"))
     }
 
     // Soft delete
@@ -320,9 +319,9 @@ export async function deleteConversation(
       .set({ deletedAt: new Date() })
       .where(eq(conversations.id, conversationId))
 
-    return success({ deleted: true })
-  } catch (err) {
-    return error(err)
+    return ok({ deleted: true })
+  } catch (e) {
+    return wrapError(e)
   }
 }
 
@@ -347,7 +346,7 @@ export async function createMessage(
   try {
     const parsed = createMessageSchema.safeParse(data)
     if (!parsed.success) {
-      return error(ValidationError.fromZodError(parsed.error))
+      return err(ValidationError.fromZodError(parsed.error))
     }
 
     const { db, tenantId, userId } = await withTenant()
@@ -365,39 +364,34 @@ export async function createMessage(
       )
 
     if (!conversation) {
-      return error(new NotFoundError("Conversation not found"))
+      return err(new NotFoundError("Conversation not found"))
     }
 
     if (conversation.userId !== userId) {
-      return error(new ForbiddenError("Not authorized to add messages to this conversation"))
+      return err(new ForbiddenError("Not authorized to add messages to this conversation"))
     }
 
-    // Create message and update conversation timestamp in a transaction
-    const [message] = await db.transaction(async (tx) => {
-      // Insert message
-      const [msg] = await tx
-        .insert(messages)
-        .values({
-          conversationId: parsed.data.conversationId,
-          role: parsed.data.role,
-          content: parsed.data.content,
-          attachments: parsed.data.attachments,
-          metadata: parsed.data.metadata,
-        })
-        .returning({ id: messages.id, createdAt: messages.createdAt })
+    // Insert message
+    const [message] = await db
+      .insert(messages)
+      .values({
+        conversationId: parsed.data.conversationId,
+        role: parsed.data.role,
+        content: parsed.data.content,
+        attachments: parsed.data.attachments,
+        metadata: parsed.data.metadata,
+      })
+      .returning({ id: messages.id, createdAt: messages.createdAt })
 
-      // Update conversation's lastMessageAt
-      await tx
-        .update(conversations)
-        .set({ lastMessageAt: msg.createdAt })
-        .where(eq(conversations.id, parsed.data.conversationId))
+    // Update conversation's lastMessageAt
+    await db
+      .update(conversations)
+      .set({ lastMessageAt: message.createdAt })
+      .where(eq(conversations.id, parsed.data.conversationId))
 
-      return [msg]
-    })
-
-    return success(message)
-  } catch (err) {
-    return error(err)
+    return ok(message)
+  } catch (e) {
+    return wrapError(e)
   }
 }
 
@@ -440,11 +434,11 @@ export async function getMessages(
       )
 
     if (!conversation) {
-      return error(new NotFoundError("Conversation not found"))
+      return err(new NotFoundError("Conversation not found"))
     }
 
     if (conversation.userId !== userId) {
-      return error(new ForbiddenError("Not authorized to view messages in this conversation"))
+      return err(new ForbiddenError("Not authorized to view messages in this conversation"))
     }
 
     // Fetch messages
@@ -461,8 +455,8 @@ export async function getMessages(
       .where(eq(messages.conversationId, conversationId))
       .orderBy(messages.createdAt)
 
-    return success(result)
-  } catch (err) {
-    return error(err)
+    return ok(result)
+  } catch (e) {
+    return wrapError(e)
   }
 }
