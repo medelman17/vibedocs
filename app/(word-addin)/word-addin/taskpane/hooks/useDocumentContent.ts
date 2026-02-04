@@ -40,16 +40,16 @@ export function useDocumentContent(): UseDocumentContentReturn {
         const paragraphs = body.paragraphs
         const properties = context.document.properties
 
-        // Load document properties for title
-        properties.load("title")
+        // Load document properties for metadata
+        properties.load("title, author, creationDate, lastAuthor, lastSaveTime")
         body.load("text")
         paragraphs.load("items")
         await context.sync()
 
-        // Load each paragraph's details
+        // Load each paragraph's details including outlineLevel
         const structuredParagraphs: Paragraph[] = []
         for (const para of paragraphs.items) {
-          para.load("text, style")
+          para.load("text, style, outlineLevel")
         }
         await context.sync()
 
@@ -58,6 +58,7 @@ export function useDocumentContent(): UseDocumentContentReturn {
             text: para.text,
             style: para.style || "Normal",
             isHeading: para.style?.startsWith("Heading") ?? false,
+            outlineLevel: para.outlineLevel ?? 0,
           })
         }
 
@@ -65,6 +66,13 @@ export function useDocumentContent(): UseDocumentContentReturn {
           fullText: body.text,
           paragraphs: structuredParagraphs,
           title: properties.title || "Untitled Document",
+          properties: {
+            author: properties.author || undefined,
+            creationDate: properties.creationDate || undefined,
+            lastModifiedBy: properties.lastAuthor || undefined,
+            lastModified: properties.lastSaveTime || undefined,
+            wordVersion: Office.context.diagnostics?.version || undefined,
+          },
         }
       })
 
