@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useChat } from "@ai-sdk/react"
 import { UIMessage, DefaultChatTransport } from "ai"
-import { FileTextIcon, PlusIcon, SparklesIcon, Loader2 } from "lucide-react"
+import { FileTextIcon, PlusIcon, SparklesIcon, Loader2, BrainIcon } from "lucide-react"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { AppBody } from "@/components/shell"
 import {
@@ -44,6 +44,7 @@ import {
   DocumentViewer,
   AnalysisView,
 } from "@/components/artifact"
+import { Shimmer } from "@/components/ai-elements/shimmer"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { ExpandIcon, MoreHorizontalIcon } from "lucide-react"
 import { uploadDocument } from "@/app/(main)/(dashboard)/documents/actions"
@@ -361,71 +362,61 @@ export default function ChatPage() {
     }
   }
 
-  // Render message parts
+  // Render message parts - combines text parts and shows tool states
   const renderMessageParts = (message: UIMessage) => {
-    return message.parts.map((part, index) => {
-      switch (part.type) {
-        case "text":
-          return (
-            <MessageResponse key={index}>
-              {part.text}
-            </MessageResponse>
-          )
+    // Collect all text content
+    const textContent = message.parts
+      .filter((part): part is { type: "text"; text: string } => part.type === "text")
+      .map((part) => part.text)
+      .join("\n\n")
 
-        case "file":
-          return (
-            <div
-              key={index}
-              className="mb-2 flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs"
-            >
-              <FileTextIcon className="size-3" />
-              {part.filename || "Attachment"}
-            </div>
-          )
+    // Check for active/completed tool calls
+    const toolParts = message.parts.filter((part) => part.type.startsWith("tool-"))
+    const hasActiveToolCall = toolParts.some((part) => {
+      const toolPart = part as { state: string }
+      return (
+        toolPart.state === "input-streaming" ||
+        toolPart.state === "input-available"
+      )
+    })
 
-        default:
-          // Handle tool parts (type starts with "tool-")
-          if (part.type.startsWith("tool-")) {
-            const toolPart = part as {
-              type: string
-              toolCallId: string
-              state: string
-              input?: unknown
-              output?: unknown
-            }
-
-            // Skip silent tools
-            if (part.type === "tool-showArtifact") return null
-
-            // Show search tool states
-            if (part.type === "tool-search_references") {
-              if (
-                toolPart.state === "input-available" ||
-                toolPart.state === "input-streaming"
-              ) {
-                return (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 text-sm text-muted-foreground"
-                  >
-                    <Loader2 className="size-4 animate-spin" />
-                    <span>Searching reference corpus...</span>
-                  </div>
-                )
-              }
-              if (toolPart.state === "output-available") {
-                const results = toolPart.output as Array<{ id: string }> | null
-                return (
-                  <div key={index} className="text-xs text-muted-foreground">
-                    Found {results?.length || 0} relevant clauses
-                  </div>
-                )
-              }
-            }
-          }
-          return null
+    // Get completed search results (dedupe by toolCallId)
+    const completedSearches = new Map<string, number>()
+    toolParts.forEach((part) => {
+      if (part.type === "tool-search_references") {
+        const toolPart = part as { toolCallId: string; state: string; output?: unknown }
+        if (toolPart.state === "output-available" && toolPart.output) {
+          const results = toolPart.output as Array<{ id: string }>
+          completedSearches.set(toolPart.toolCallId, results?.length || 0)
+        }
       }
     })
+
+    return (
+      <>
+        {/* Show searching indicator if any tool is active */}
+        {hasActiveToolCall && (
+          <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            <span>Searching reference corpus...</span>
+          </div>
+        )}
+
+        {/* Show combined text response */}
+        {textContent && (
+          <MessageResponse>{textContent}</MessageResponse>
+        )}
+
+        {/* Show search results summary (only if we have results and text) */}
+        {completedSearches.size > 0 && textContent && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            {Array.from(completedSearches.values()).reduce((a, b) => a + b, 0) > 0
+              ? `Referenced ${Array.from(completedSearches.values()).reduce((a, b) => a + b, 0)} clauses from the corpus`
+              : null}
+          </div>
+        )}
+      </>
+    )
   }
 
   return (
@@ -476,17 +467,15 @@ export default function ChatPage() {
                   </Message>
                 ))}
 
-                {/* Thinking indicator */}
-                {status === "submitted" && (
-                  <Message from="assistant">
-                    <MessageContent>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="size-4 animate-spin" />
-                        <span>Thinking...</span>
-                      </div>
-                    </MessageContent>
-                  </Message>
-                )}
+                {/* Thinking indicator - fixed height to prevent layout shift */}
+                <div className="h-8">
+                  {status === "submitted" && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <BrainIcon className="size-4" />
+                      <Shimmer duration={1.5}>Thinking...</Shimmer>
+                    </div>
+                  )}
+                </div>
               </ConversationContent>
             )}
             <ConversationScrollButton />
