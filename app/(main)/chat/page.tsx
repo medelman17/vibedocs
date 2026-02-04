@@ -30,7 +30,7 @@ import {
   type Mention,
   type PromptInputMessage,
 } from "@/components/chat"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Artifact,
   ArtifactHeader,
@@ -46,39 +46,132 @@ import { ErrorBoundary } from "@/components/error-boundary"
 import { ExpandIcon, MoreHorizontalIcon } from "lucide-react"
 import { uploadDocument } from "@/app/(main)/(dashboard)/documents/actions"
 import { triggerAnalysis } from "@/app/(main)/(dashboard)/analyses/actions"
+import {
+  createConversation,
+  createMessage,
+  getMessages,
+} from "./actions"
 
 interface ChatMessage {
   id: string
   role: "user" | "assistant"
   content: string
+  attachments?: Array<{ url: string; filename?: string; mediaType?: string }>
 }
 
 export default function ChatPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const conversationId = searchParams.get("conversation")
+
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
   const [inputValue, setInputValue] = React.useState("")
+  const [currentConversationId, setCurrentConversationId] = React.useState<string | null>(
+    conversationId
+  )
   const inputWrapperRef = React.useRef<HTMLDivElement>(null)
   const { artifact, openArtifact, closeArtifact, toggleArtifactExpanded } = useShellStore()
 
-  // Track file uploads separately
+  // Track file uploads separately (for display purposes)
   const [fileAttachments, setFileAttachments] = React.useState<
     Record<string, Array<{ url: string; filename?: string; mediaType?: string }>>
   >({})
 
-  // Send message to AI and stream response
-  const sendMessage = async (text: string) => {
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: text,
+  // Load existing conversation on mount
+  React.useEffect(() => {
+    async function loadConversation() {
+      if (!conversationId) return
+
+      const result = await getMessages(conversationId)
+      if (result.success) {
+        setMessages(
+          result.data.map((msg) => ({
+            id: msg.id,
+            role: msg.role,
+            content: msg.content,
+            attachments: msg.attachments || undefined,
+          }))
+        )
+        setCurrentConversationId(conversationId)
+
+        // Rebuild file attachments map
+        const attachmentsMap: Record<
+          string,
+          Array<{ url: string; filename?: string; mediaType?: string }>
+        > = {}
+        for (const msg of result.data) {
+          if (msg.attachments && msg.attachments.length > 0) {
+            attachmentsMap[msg.id] = msg.attachments
+          }
+        }
+        setFileAttachments(attachmentsMap)
+      }
+    }
+    loadConversation()
+  }, [conversationId])
+
+  // Helper to ensure conversation exists
+  const ensureConversation = async () => {
+    if (currentConversationId) return currentConversationId
+
+    // Create new conversation
+    const result = await createConversation({
+      title: "New Chat",
+    })
+
+    if (!result.success) {
+      throw new Error("Failed to create conversation")
     }
 
-    const newMessages = [...messages, userMessage]
-    setMessages(newMessages)
-    setIsLoading(true)
+    setCurrentConversationId(result.data.id)
+    // Update URL to include conversation ID
+    router.replace(`/chat?conversation=${result.data.id}`)
+    return result.data.id
+  }
 
+  // Helper to persist a message to the database
+  const persistMessage = async (
+    conversationId: string,
+    role: "user" | "assistant",
+    content: string,
+    attachments?: Array<{ url: string; filename?: string; mediaType?: string }>
+  ) => {
+    const result = await createMessage({
+      conversationId,
+      role,
+      content,
+      attachments,
+    })
+
+    if (!result.success) {
+      console.error("Failed to persist message:", result.error)
+    }
+
+    return result.success ? result.data.id : crypto.randomUUID()
+  }
+
+  // Send message to AI and stream response
+  const sendMessage = async (text: string) => {
     try {
+      // Ensure conversation exists
+      const convId = await ensureConversation()
+
+      // Create user message
+      const userMessageId = crypto.randomUUID()
+      const userMessage: ChatMessage = {
+        id: userMessageId,
+        role: "user",
+        content: text,
+      }
+
+      const newMessages = [...messages, userMessage]
+      setMessages(newMessages)
+      setIsLoading(true)
+
+      // Persist user message
+      await persistMessage(convId, "user", text)
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -114,16 +207,24 @@ export default function ChatPage() {
           ])
         }
       }
+
+      // Persist assistant response
+      if (assistantContent) {
+        await persistMessage(convId, "assistant", assistantContent)
+      }
     } catch (error) {
       console.error("Chat error:", error)
-      setMessages([
-        ...newMessages,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
-        },
-      ])
+      const errorMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant" as const,
+        content: "Sorry, I encountered an error. Please try again.",
+      }
+      setMessages([...messages, errorMessage])
+
+      // Try to persist error message
+      if (currentConversationId) {
+        await persistMessage(currentConversationId, "assistant", errorMessage.content)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -134,32 +235,39 @@ export default function ChatPage() {
 
     // Handle file upload flow
     if (message.files.length > 0) {
-      const file = message.files[0] // MVP: single file
+      try {
+        // Ensure conversation exists
+        const convId = await ensureConversation()
 
-      // Add user message with file attachment
-      const userMessageId = crypto.randomUUID()
-      const userMessageContent = message.text || `Analyze ${file.filename}`
+        const file = message.files[0] // MVP: single file
 
-      // Track file attachment for this message
-      setFileAttachments((prev) => ({
-        ...prev,
-        [userMessageId]: message.files.map((f) => ({
+        // Add user message with file attachment
+        const userMessageId = crypto.randomUUID()
+        const userMessageContent = message.text || `Analyze ${file.filename}`
+        const fileAttachment = message.files.map((f) => ({
           url: f.url,
           filename: f.filename,
           mediaType: f.mediaType,
-        })),
-      }))
+        }))
 
-      // Add user message and uploading indicator to chat
-      const uploadingMsgId = crypto.randomUUID()
-      setMessages([
-        ...messages,
-        { id: userMessageId, role: "user", content: userMessageContent },
-        { id: uploadingMsgId, role: "assistant", content: "Uploading document..." },
-      ])
-      setIsLoading(true)
+        // Track file attachment for this message
+        setFileAttachments((prev) => ({
+          ...prev,
+          [userMessageId]: fileAttachment,
+        }))
 
-      try {
+        // Add user message and uploading indicator to chat
+        const uploadingMsgId = crypto.randomUUID()
+        setMessages([
+          ...messages,
+          { id: userMessageId, role: "user", content: userMessageContent, attachments: fileAttachment },
+          { id: uploadingMsgId, role: "assistant", content: "Uploading document..." },
+        ])
+        setIsLoading(true)
+
+        // Persist user message with attachments
+        await persistMessage(convId, "user", userMessageContent, fileAttachment)
+
         // Fetch the blob from the URL and create FormData
         const response = await fetch(file.url)
         if (!response.ok) {
@@ -179,11 +287,13 @@ export default function ChatPage() {
         // Upload document
         const uploadResult = await uploadDocument(formData)
         if (!uploadResult.success) {
+          const errorMsg = `**Upload failed:** ${uploadResult.error.message}`
           setMessages([
             ...messages,
-            { id: userMessageId, role: "user", content: userMessageContent },
-            { id: crypto.randomUUID(), role: "assistant", content: `**Upload failed:** ${uploadResult.error.message}` },
+            { id: userMessageId, role: "user", content: userMessageContent, attachments: fileAttachment },
+            { id: crypto.randomUUID(), role: "assistant", content: errorMsg },
           ])
+          await persistMessage(convId, "assistant", errorMsg)
           setIsLoading(false)
           return
         }
@@ -193,21 +303,25 @@ export default function ChatPage() {
           userPrompt: message.text || undefined,
         })
         if (!analysisResult.success) {
+          const errorMsg = `**Analysis failed:** ${analysisResult.error.message}`
           setMessages([
             ...messages,
-            { id: userMessageId, role: "user", content: userMessageContent },
-            { id: crypto.randomUUID(), role: "assistant", content: `**Analysis failed:** ${analysisResult.error.message}` },
+            { id: userMessageId, role: "user", content: userMessageContent, attachments: fileAttachment },
+            { id: crypto.randomUUID(), role: "assistant", content: errorMsg },
           ])
+          await persistMessage(convId, "assistant", errorMsg)
           setIsLoading(false)
           return
         }
 
         // Add assistant message
+        const successMsg = `I'm analyzing **"${uploadResult.data.title}"**. This usually takes about 30 seconds...`
         setMessages([
           ...messages,
-          { id: userMessageId, role: "user", content: userMessageContent },
-          { id: crypto.randomUUID(), role: "assistant", content: `I'm analyzing **"${uploadResult.data.title}"**. This usually takes about 30 seconds...` },
+          { id: userMessageId, role: "user", content: userMessageContent, attachments: fileAttachment },
+          { id: crypto.randomUUID(), role: "assistant", content: successMsg },
         ])
+        await persistMessage(convId, "assistant", successMsg)
         setIsLoading(false)
 
         // Auto-open artifact panel
@@ -219,11 +333,14 @@ export default function ChatPage() {
 
         return
       } catch (err) {
+        const errorMsg = `**Error:** ${err instanceof Error ? err.message : "Unknown error"}`
         setMessages([
           ...messages,
-          { id: userMessageId, role: "user", content: userMessageContent },
-          { id: crypto.randomUUID(), role: "assistant", content: `**Error:** ${err instanceof Error ? err.message : "Unknown error"}` },
+          { id: crypto.randomUUID(), role: "assistant", content: errorMsg },
         ])
+        if (currentConversationId) {
+          await persistMessage(currentConversationId, "assistant", errorMsg)
+        }
         setIsLoading(false)
         return
       }
