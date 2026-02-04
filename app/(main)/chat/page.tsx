@@ -168,11 +168,24 @@ export default function ChatPage() {
         // Upload document
         const uploadResult = await uploadDocument(formData)
         if (!uploadResult.success) {
-          setMessages([
+          console.error("[Upload Error]", uploadResult.error)
+
+          // Get user-friendly error message
+          let errorMessage = "Failed to upload document. Please try again."
+          if (uploadResult.error.code === "VALIDATION_ERROR") {
+            errorMessage = uploadResult.error.message // Already user-friendly
+          } else if (uploadResult.error.code === "DUPLICATE") {
+            errorMessage = uploadResult.error.message // Already user-friendly
+          } else if (uploadResult.error.code === "INTERNAL_ERROR") {
+            errorMessage = "Upload failed. Please check your connection and try again."
+          }
+
+          const newMessages = [
             ...messages,
             { id: userMessageId, role: "user", content: userMessageContent },
-            { id: crypto.randomUUID(), role: "assistant", content: `Failed to upload: ${uploadResult.error.message}` },
-          ])
+            { id: crypto.randomUUID(), role: "assistant", content: errorMessage },
+          ]
+          setMessages(newMessages)
           return
         }
 
@@ -181,20 +194,31 @@ export default function ChatPage() {
           userPrompt: message.text || undefined,
         })
         if (!analysisResult.success) {
-          setMessages([
+          console.error("[Analysis Error]", analysisResult.error)
+
+          let errorMessage = "Failed to start analysis. Please try again."
+          if (analysisResult.error.code === "UNAUTHORIZED") {
+            errorMessage = "Your session has expired. Please refresh the page and log in again."
+          } else if (analysisResult.error.code === "FORBIDDEN") {
+            errorMessage = "You don't have permission to analyze this document."
+          }
+
+          const newMessages = [
             ...messages,
             { id: userMessageId, role: "user", content: userMessageContent },
-            { id: crypto.randomUUID(), role: "assistant", content: `Failed to start analysis: ${analysisResult.error.message}` },
-          ])
+            { id: crypto.randomUUID(), role: "assistant", content: errorMessage },
+          ]
+          setMessages(newMessages)
           return
         }
 
         // Add assistant message
-        setMessages([
+        const newMessages = [
           ...messages,
           { id: userMessageId, role: "user", content: userMessageContent },
           { id: crypto.randomUUID(), role: "assistant", content: `I'm analyzing "${uploadResult.data.title}". This usually takes about 30 seconds...` },
-        ])
+        ]
+        setMessages(newMessages)
 
         // Auto-open artifact panel
         openArtifact({
@@ -205,11 +229,24 @@ export default function ChatPage() {
 
         return
       } catch (err) {
-        setMessages([
+        console.error("[Upload Exception]", err)
+
+        let errorMessage = "An unexpected error occurred. Please try again."
+        if (err instanceof Error) {
+          // Provide user-friendly messages for common errors
+          if (err.message.includes("fetch")) {
+            errorMessage = "Failed to load the file. Please try uploading again."
+          } else if (err.message.includes("network") || err.message.includes("Failed to fetch")) {
+            errorMessage = "Network error. Please check your connection and try again."
+          }
+        }
+
+        const newMessages = [
           ...messages,
           { id: userMessageId, role: "user", content: userMessageContent },
-          { id: crypto.randomUUID(), role: "assistant", content: `An error occurred: ${err instanceof Error ? err.message : "Unknown error"}` },
-        ])
+          { id: crypto.randomUUID(), role: "assistant", content: errorMessage },
+        ]
+        setMessages(newMessages)
         return
       }
     }

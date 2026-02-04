@@ -193,7 +193,25 @@ export async function uploadDocument(
     }
 
     // Upload file to Vercel Blob
-    const blob = await uploadFile(file, { folder: "documents" })
+    let blob
+    try {
+      blob = await uploadFile(file, { folder: "documents" })
+    } catch (uploadError) {
+      console.error("[uploadDocument] Blob upload failed:", uploadError)
+
+      // Check for common blob upload issues
+      if (uploadError instanceof Error) {
+        if (uploadError.message.includes("token") || uploadError.message.includes("BLOB_READ_WRITE_TOKEN")) {
+          return err("INTERNAL_ERROR", "File storage is not configured. Please contact support.")
+        }
+        if (uploadError.message.includes("network") || uploadError.message.includes("fetch")) {
+          return err("INTERNAL_ERROR", "Failed to upload file due to network error. Please try again.")
+        }
+      }
+
+      return err("INTERNAL_ERROR", "Failed to upload file to storage. Please try again.")
+    }
+
     const fileUrl = blob.url
 
     // Create document record
@@ -215,8 +233,8 @@ export async function uploadDocument(
 
     return ok(newDocument)
   } catch (error) {
-    console.error("[uploadDocument]", error)
-    return err("INTERNAL_ERROR", "Failed to upload document")
+    console.error("[uploadDocument] Unexpected error:", error)
+    return err("INTERNAL_ERROR", "Failed to upload document. Please try again.")
   }
 }
 
