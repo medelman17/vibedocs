@@ -1,5 +1,9 @@
 # Comparison & Generation Pipelines Implementation Plan
 
+> **Status:** ❌ NOT STARTED (audited 2026-02-04)
+>
+> Comparison and generation Inngest functions not yet implemented.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Implement NDA comparison (clause alignment, side-by-side diff) and NDA generation (Bonterms/CommonAccord templates) pipelines as Inngest functions with full database persistence, progress events, and caching.

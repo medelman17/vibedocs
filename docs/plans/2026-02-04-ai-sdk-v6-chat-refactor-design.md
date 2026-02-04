@@ -1,5 +1,9 @@
 # AI SDK v6 Chat Refactor Design
 
+> **Status:** ✅ COMPLETE (audited 2026-02-04)
+>
+> Implemented using AI SDK v6 and ai-elements components.
+
 ## Overview
 
 Refactor the chat page to use AI SDK v6 idiomatically, replacing custom streaming implementation with the `useChat` hook and proper server-side patterns.

@@ -1,5 +1,8 @@
 # Auth Hardening Implementation Plan
 
+> **Status:** ✅ COMPLETE (audited 2026-02-04)
+> Rate limiting, audit logging implemented. See lib/rate-limit.ts, lib/audit.ts.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Close all security gaps identified in the auth audit to make the authentication system production-ready.

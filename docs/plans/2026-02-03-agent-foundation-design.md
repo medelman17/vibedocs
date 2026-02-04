@@ -1,5 +1,9 @@
 # Agent Foundation Design
 
+> **Status:** COMPLETE (audited 2026-02-04)
+>
+> Full 4-agent pipeline implemented. See agents/, inngest/functions/analyze-nda.ts.
+
 **Date**: 2026-02-03
 **Status**: Approved
 **Supersedes**: `2026-02-01-inngest-agents-foundation.md` (path updates, API changes)

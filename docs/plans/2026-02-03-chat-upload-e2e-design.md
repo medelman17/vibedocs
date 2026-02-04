@@ -1,5 +1,9 @@
 # Chat Upload End-to-End Design
 
+> **Status:** ✅ COMPLETE (audited 2026-02-04)
+>
+> Implemented using AI SDK v6 and ai-elements components.
+
 ## Overview
 
 Wire the chat UI to the backend so users can upload NDAs, trigger analysis, see progress, and view results - all within the chat interface.

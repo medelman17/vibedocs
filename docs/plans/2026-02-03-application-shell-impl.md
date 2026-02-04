@@ -1,5 +1,9 @@
 # Application Shell Implementation Plan
 
+> **Status:** ⚠️ PARTIAL (audited 2026-02-04)
+>
+> Foundation implemented. Custom components replaced with ai-elements library (pragmatic decision).
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Build the chat-first application shell with resizable artifact panel, history drawer, and command palette.

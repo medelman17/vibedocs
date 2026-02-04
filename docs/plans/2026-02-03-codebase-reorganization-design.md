@@ -1,5 +1,8 @@
 # Codebase Reorganization Design
 
+> **Status:** ✅ COMPLETE (audited 2026-02-04)
+> Already in target state (no src/ directory).
+
 **Date:** 2026-02-03
 **Status:** Approved
 **Author:** Claude (with user input)

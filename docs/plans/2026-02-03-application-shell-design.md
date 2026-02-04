@@ -1,7 +1,10 @@
 # Application Shell Design
 
+> **Status:** ⚠️ PARTIAL (audited 2026-02-04)
+>
+> Foundation implemented. Custom components replaced with ai-elements library (pragmatic decision).
+
 **Date:** 2026-02-03
-**Status:** Approved
 **Author:** Claude + Mike
 
 ---

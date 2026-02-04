@@ -1,5 +1,9 @@
 # Bootstrap Pipeline Implementation Plan
 
+> **Status:** ⚠️ PARTIAL (audited 2026-02-04)
+>
+> Core functionality implemented. Missing: bootstrap progress database schema.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Create the durable Inngest pipeline that ingests legal reference corpora (CUAD, ContractNLI, Bonterms, CommonAccord, Kleister) into the shared reference database with vector embeddings.

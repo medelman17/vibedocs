@@ -1,5 +1,9 @@
 # Subagent Context System Design
 
+> **Status:** DEFERRED (audited 2026-02-04)
+>
+> Explicitly marked as Phase 2 work. Auxiliary developer tooling, not core functionality.
+
 **Date**: 2026-02-03
 **Status**: Draft
 **Goal**: Enable cheap/fast LLM subagents to work autonomously by providing minimal, targeted context packages

@@ -1,5 +1,8 @@
 # SOC 2 Type I Readiness Plan
 
+> **Status:** ⚠️ PARTIAL (audited 2026-02-04)
+> Audit infrastructure present. Missing: 10 policy documents, evidence collection.
+
 **Date:** 2026-02-01
 **Status:** Design Complete
 **Scope:** Security + Confidentiality Trust Services Criteria

@@ -1,7 +1,10 @@
 # Sub-Plan 2B: Dataset Parsers
 
+> **Status:** ✅ COMPLETE (audited 2026-02-04)
+>
+> All tasks implemented. See inngest/ and agents/ directories.
+
 **Parent Plan:** `2026-02-01-inngest-bootstrap.md` (Plan 2: Bootstrap Pipeline)
-**Status:** Ready for Implementation
 **Dependencies:** None (can run parallel with 2A)
 
 ## Overview

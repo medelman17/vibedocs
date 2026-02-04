@@ -1,5 +1,8 @@
 # SEO & OG Image Design
 
+> **Status:** ✅ COMPLETE (audited 2026-02-04)
+> robots.ts and sitemap.ts implemented.
+
 **Date:** 2026-02-01
 **Status:** Approved
 

@@ -1,5 +1,8 @@
 # Server Actions API Design
 
+> **Status:** ✅ COMPLETE (audited 2026-02-04)
+> 67+ server actions with consistent error handling pattern.
+
 > Internal API surface for the Next.js UI using Server Actions.
 > Created: 2026-02-01
 > Updated: 2026-02-01 (audit pass)
