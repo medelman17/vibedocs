@@ -127,8 +127,8 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 | Feature | Reason |
 |---------|--------|
-| NDA comparison | Separate milestone — different pipeline architecture |
-| NDA generation | Separate milestone — requires template manipulation |
+| NDA comparison | Separate milestone - different pipeline architecture |
+| NDA generation | Separate milestone - requires template manipulation |
 | Real-time collaborative editing | Not needed for analysis workflow |
 | PDF export of analysis | Deferred to later milestone |
 | Custom risk playbooks | Post-MVP differentiation feature |
@@ -150,49 +150,49 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | EXT-04 | Phase 3 | Pending |
 | EXT-05 | Phase 3 | Pending |
 | EXT-06 | Phase 3 | Pending |
-| OCR-01 | Phase 3 | Pending |
-| OCR-02 | Phase 3 | Pending |
-| OCR-03 | Phase 3 | Pending |
-| OCR-04 | Phase 3 | Pending |
-| CHK-01 | Phase 4 | Pending |
-| CHK-02 | Phase 4 | Pending |
-| CHK-03 | Phase 4 | Pending |
-| CHK-04 | Phase 4 | Pending |
-| CHK-05 | Phase 4 | Pending |
-| CHK-06 | Phase 4 | Pending |
-| CHK-07 | Phase 4 | Pending |
-| CLS-01 | Phase 5 | Pending |
-| CLS-02 | Phase 5 | Pending |
-| CLS-03 | Phase 5 | Pending |
-| CLS-04 | Phase 5 | Pending |
-| CLS-05 | Phase 5 | Pending |
-| CLS-06 | Phase 5 | Pending |
-| RSK-01 | Phase 6 | Pending |
-| RSK-02 | Phase 6 | Pending |
-| RSK-03 | Phase 6 | Pending |
-| RSK-04 | Phase 6 | Pending |
-| RSK-05 | Phase 6 | Pending |
-| RSK-06 | Phase 6 | Pending |
-| GAP-01 | Phase 7 | Pending |
-| GAP-02 | Phase 7 | Pending |
-| GAP-03 | Phase 7 | Pending |
-| GAP-04 | Phase 7 | Pending |
-| GAP-05 | Phase 7 | Pending |
-| PIP-01 | Phase 8 | Pending |
-| PIP-02 | Phase 8 | Pending |
-| PIP-03 | Phase 8 | Pending |
-| PIP-04 | Phase 8 | Pending |
-| PIP-05 | Phase 8 | Pending |
-| PIP-06 | Phase 8 | Pending |
-| STR-01 | Phase 9 | Pending |
-| STR-02 | Phase 9 | Pending |
-| STR-03 | Phase 9 | Pending |
-| STR-04 | Phase 9 | Pending |
-| RND-01 | Phase 10 | Pending |
-| RND-02 | Phase 10 | Pending |
-| RND-03 | Phase 10 | Pending |
-| RND-04 | Phase 10 | Pending |
-| RND-05 | Phase 10 | Pending |
+| OCR-01 | Phase 4 | Pending |
+| OCR-02 | Phase 4 | Pending |
+| OCR-03 | Phase 4 | Pending |
+| OCR-04 | Phase 4 | Pending |
+| CHK-01 | Phase 5 | Pending |
+| CHK-02 | Phase 5 | Pending |
+| CHK-03 | Phase 5 | Pending |
+| CHK-04 | Phase 5 | Pending |
+| CHK-05 | Phase 5 | Pending |
+| CHK-06 | Phase 5 | Pending |
+| CHK-07 | Phase 5 | Pending |
+| CLS-01 | Phase 6 | Pending |
+| CLS-02 | Phase 6 | Pending |
+| CLS-03 | Phase 6 | Pending |
+| CLS-04 | Phase 6 | Pending |
+| CLS-05 | Phase 6 | Pending |
+| CLS-06 | Phase 6 | Pending |
+| RSK-01 | Phase 7 | Pending |
+| RSK-02 | Phase 7 | Pending |
+| RSK-03 | Phase 7 | Pending |
+| RSK-04 | Phase 7 | Pending |
+| RSK-05 | Phase 7 | Pending |
+| RSK-06 | Phase 7 | Pending |
+| GAP-01 | Phase 8 | Pending |
+| GAP-02 | Phase 8 | Pending |
+| GAP-03 | Phase 8 | Pending |
+| GAP-04 | Phase 8 | Pending |
+| GAP-05 | Phase 8 | Pending |
+| PIP-01 | Phase 9 | Pending |
+| PIP-02 | Phase 9 | Pending |
+| PIP-03 | Phase 9 | Pending |
+| PIP-04 | Phase 9 | Pending |
+| PIP-05 | Phase 9 | Pending |
+| PIP-06 | Phase 9 | Pending |
+| STR-01 | Phase 10 | Pending |
+| STR-02 | Phase 10 | Pending |
+| STR-03 | Phase 10 | Pending |
+| STR-04 | Phase 10 | Pending |
+| RND-01 | Phase 11 | Pending |
+| RND-02 | Phase 11 | Pending |
+| RND-03 | Phase 11 | Pending |
+| RND-04 | Phase 11 | Pending |
+| RND-05 | Phase 11 | Pending |
 | OUT-01 | Phase 11 | Pending |
 | OUT-02 | Phase 11 | Pending |
 | OUT-03 | Phase 11 | Pending |
@@ -203,8 +203,8 @@ Deferred to future milestone. Tracked but not in current roadmap.
 **Coverage:**
 - v1 requirements: 61 total
 - Mapped to phases: 61
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after initial definition*
+*Last updated: 2026-02-04 after roadmap creation*
