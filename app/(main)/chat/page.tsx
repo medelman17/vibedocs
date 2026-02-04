@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { FileTextIcon } from "lucide-react"
+import { FileTextIcon, PlusIcon, SparklesIcon } from "lucide-react"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { AppBody } from "@/components/shell"
 import {
@@ -15,7 +15,15 @@ import {
   Suggestion,
   PromptInput,
   PromptInputTextarea,
-  PromptInputButton,
+  PromptInputFooter,
+  PromptInputTools,
+  PromptInputSubmit,
+  PromptInputActionMenu,
+  PromptInputActionMenuTrigger,
+  PromptInputActionMenuContent,
+  PromptInputActionMenuItem,
+  PromptInputActionAddAttachments,
+  type PromptInputMessage,
 } from "@/components/chat"
 import {
   Artifact,
@@ -34,34 +42,48 @@ interface ChatMessage {
   id: string
   role: "user" | "assistant"
   content: string
+  files?: Array<{ url: string; filename?: string; mediaType?: string }>
 }
 
 export default function ChatPage() {
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
-  const [input, setInput] = React.useState("")
+  const [status, setStatus] = React.useState<"ready" | "submitted" | "streaming">("ready")
   const { artifact, openArtifact, closeArtifact, toggleArtifactExpanded } = useShellStore()
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim()) return
+  const handleSubmit = async (message: PromptInputMessage) => {
+    if (!message.text.trim() && message.files.length === 0) return
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: input,
+      content: message.text,
+      files: message.files.map((f) => ({
+        url: f.url,
+        filename: f.filename,
+        mediaType: f.mediaType,
+      })),
     }
     setMessages((prev) => [...prev, userMessage])
-    setInput("")
+    setStatus("submitted")
 
     // Simulate assistant response
-    setTimeout(() => {
-      const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: `I received your message: "${userMessage.content}". This is a demo response. Try the suggestion chips to see artifacts!`,
-      }
-      setMessages((prev) => [...prev, assistantMessage])
-    }, 500)
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    setStatus("streaming")
+
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
+    const fileInfo =
+      message.files.length > 0
+        ? ` I see you attached ${message.files.length} file(s): ${message.files.map((f) => f.filename).join(", ")}.`
+        : ""
+
+    const assistantMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: `I received your message: "${message.text}".${fileInfo} This is a demo response. Try the suggestion chips to see artifacts!`,
+    }
+    setMessages((prev) => [...prev, assistantMessage])
+    setStatus("ready")
   }
 
   const handleSuggestion = (suggestion: string) => {
@@ -78,17 +100,14 @@ export default function ChatPage() {
         title: "Demo Document",
       })
     }
-    setInput(suggestion)
-    // Submit after state update
-    setTimeout(() => {
-      const userMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content: suggestion,
-      }
-      setMessages((prev) => [...prev, userMessage])
-      setInput("")
-    }, 0)
+
+    // Create user message from suggestion
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: suggestion,
+    }
+    setMessages((prev) => [...prev, userMessage])
   }
 
   const renderArtifactContent = () => {
@@ -123,7 +142,22 @@ export default function ChatPage() {
               <ConversationContent>
                 {messages.map((message) => (
                   <Message key={message.id} from={message.role}>
-                    <MessageContent>{message.content}</MessageContent>
+                    <MessageContent>
+                      {message.files && message.files.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-2">
+                          {message.files.map((file, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs"
+                            >
+                              <FileTextIcon className="size-3" />
+                              {file.filename || "Attachment"}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {message.content}
+                    </MessageContent>
                   </Message>
                 ))}
               </ConversationContent>
@@ -141,18 +175,33 @@ export default function ChatPage() {
               </Suggestions>
             )}
 
-            <form onSubmit={handleSubmit}>
-              <PromptInput>
-                <PromptInputTextarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about NDAs or upload a document..."
+            <PromptInput
+              onSubmit={handleSubmit}
+              accept="application/pdf,.doc,.docx,.txt"
+              multiple
+            >
+              <PromptInputTextarea placeholder="Ask about NDAs or upload a document..." />
+              <PromptInputFooter>
+                <PromptInputTools>
+                  <PromptInputActionMenu>
+                    <PromptInputActionMenuTrigger>
+                      <PlusIcon className="size-4" />
+                    </PromptInputActionMenuTrigger>
+                    <PromptInputActionMenuContent>
+                      <PromptInputActionAddAttachments label="Upload documents" />
+                      <PromptInputActionMenuItem disabled>
+                        <SparklesIcon className="mr-2 size-4" />
+                        Generate from template
+                      </PromptInputActionMenuItem>
+                    </PromptInputActionMenuContent>
+                  </PromptInputActionMenu>
+                </PromptInputTools>
+                <PromptInputSubmit
+                  status={status === "ready" ? undefined : status}
+                  disabled={status !== "ready"}
                 />
-                <PromptInputButton type="submit" disabled={!input.trim()}>
-                  Send
-                </PromptInputButton>
-              </PromptInput>
-            </form>
+              </PromptInputFooter>
+            </PromptInput>
           </div>
         </div>
       }
