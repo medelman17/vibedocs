@@ -3,10 +3,10 @@ import { runClassifierAgent, type ClassifierInput } from './classifier'
 import { SAMPLE_GOVERNING_LAW_CLAUSE } from './testing/fixtures'
 import { BudgetTracker } from '@/lib/ai/budget'
 
-// Mock AI SDK generateObject
+// Mock AI SDK generateText with Output.object pattern
 vi.mock('ai', () => ({
-  generateObject: vi.fn().mockResolvedValue({
-    object: {
+  generateText: vi.fn().mockResolvedValue({
+    output: {
       category: 'Governing Law',
       secondaryCategories: [],
       confidence: 0.95,
@@ -14,6 +14,12 @@ vi.mock('ai', () => ({
     },
     usage: { inputTokens: 500, outputTokens: 100 },
   }),
+  Output: {
+    object: vi.fn().mockReturnValue({}),
+  },
+  NoObjectGeneratedError: {
+    isInstance: vi.fn().mockReturnValue(false),
+  },
 }))
 
 // Mock vector search with inline data to avoid circular import
@@ -39,7 +45,7 @@ vi.mock('./tools/vector-search', () => ({
 // Mock AI config
 vi.mock('@/lib/ai/config', () => ({
   getAgentModel: vi.fn().mockReturnValue({
-    // Mock model - not actually used since we mock generateObject
+    // Mock model - not actually used since we mock generateText
   }),
 }))
 
@@ -114,16 +120,16 @@ describe('Classifier Agent', () => {
 
   it('skips low-confidence Unknown classifications', async () => {
     // Override mock to return low-confidence Unknown
-    const { generateObject } = await import('ai')
-    vi.mocked(generateObject).mockResolvedValueOnce({
-      object: {
+    const { generateText } = await import('ai')
+    vi.mocked(generateText).mockResolvedValueOnce({
+      output: {
         category: 'Unknown',
         secondaryCategories: [],
         confidence: 0.3,
         reasoning: 'Unable to classify',
       },
       usage: { inputTokens: 500, outputTokens: 100 },
-    } as unknown as Awaited<ReturnType<typeof generateObject>>)
+    } as unknown as Awaited<ReturnType<typeof generateText>>)
 
     const input: ClassifierInput = {
       parsedDocument: {

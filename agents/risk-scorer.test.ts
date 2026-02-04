@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runRiskScorerAgent, type RiskScorerInput } from './risk-scorer'
 import { BudgetTracker } from '@/lib/ai/budget'
 
-// Mock AI SDK generateObject with inline data (vi.mock is hoisted)
+// Mock AI SDK generateText with Output.object pattern
 vi.mock('ai', () => ({
-  generateObject: vi.fn().mockResolvedValue({
-    object: {
+  generateText: vi.fn().mockResolvedValue({
+    output: {
       riskLevel: 'standard',
       confidence: 0.9,
       explanation: 'Delaware law is commonly used in commercial agreements.',
@@ -17,6 +17,12 @@ vi.mock('ai', () => ({
     },
     usage: { inputTokens: 800, outputTokens: 200 },
   }),
+  Output: {
+    object: vi.fn().mockReturnValue({}),
+  },
+  NoObjectGeneratedError: {
+    isInstance: vi.fn().mockReturnValue(false),
+  },
 }))
 
 // Mock vector search
@@ -72,9 +78,9 @@ describe('Risk Scorer Agent', () => {
 
   it('calculates overall risk score correctly', async () => {
     // Override mock to return aggressive risk
-    const { generateObject } = await import('ai')
-    vi.mocked(generateObject).mockResolvedValue({
-      object: {
+    const { generateText } = await import('ai')
+    vi.mocked(generateText).mockResolvedValue({
+      output: {
         riskLevel: 'aggressive',
         confidence: 0.85,
         explanation: 'Five-year worldwide non-compete significantly exceeds market standard.',
@@ -85,7 +91,7 @@ describe('Risk Scorer Agent', () => {
         },
       },
       usage: { inputTokens: 800, outputTokens: 200 },
-    } as unknown as Awaited<ReturnType<typeof generateObject>>)
+    } as unknown as Awaited<ReturnType<typeof generateText>>)
 
     const input: RiskScorerInput = {
       clauses: [

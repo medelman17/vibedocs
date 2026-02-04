@@ -5,14 +5,14 @@ import { BudgetTracker } from '@/lib/ai/budget'
 // Track call count for different mock responses
 let mockCallCount = 0
 
-// Mock AI SDK generateObject with sequential responses
+// Mock AI SDK generateText with Output.object pattern (sequential responses)
 vi.mock('ai', () => ({
-  generateObject: vi.fn().mockImplementation(() => {
+  generateText: vi.fn().mockImplementation(() => {
     mockCallCount++
     // First call is always gap analysis, subsequent are hypothesis tests
     if (mockCallCount === 1) {
       return Promise.resolve({
-        object: {
+        output: {
           presentCategories: ['Governing Law', 'Parties'],
           missingCategories: [
             {
@@ -27,7 +27,7 @@ vi.mock('ai', () => ({
       })
     } else {
       return Promise.resolve({
-        object: {
+        output: {
           hypothesisId: `nli-${mockCallCount}`,
           category: 'Public Information Exception',
           status: 'not_mentioned',
@@ -37,6 +37,12 @@ vi.mock('ai', () => ({
       })
     }
   }),
+  Output: {
+    object: vi.fn().mockReturnValue({}),
+  },
+  NoObjectGeneratedError: {
+    isInstance: vi.fn().mockReturnValue(false),
+  },
 }))
 
 // Mock AI config
