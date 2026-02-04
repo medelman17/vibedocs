@@ -69,3 +69,6 @@ export {
   type SlashCommand,
   type Mention,
 } from "./slash-commands"
+
+// Attachment preview
+export { AttachmentPreview } from "./attachment-preview"
