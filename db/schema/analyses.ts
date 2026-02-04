@@ -298,6 +298,26 @@ export const analyses = pgTable(
     inngestRunId: text("inngest_run_id"),
 
     /**
+     * Current progress stage for UI display.
+     * Updated by Inngest function as pipeline progresses.
+     *
+     * Valid values: 'parsing' | 'classifying' | 'scoring' | 'analyzing_gaps' | 'complete' | 'failed'
+     */
+    progressStage: text("progress_stage"),
+
+    /**
+     * Progress percentage (0-100) for UI progress bar.
+     * @default 0
+     */
+    progressPercent: integer("progress_percent").default(0),
+
+    /**
+     * Additional analysis metadata including user prompts.
+     * JSONB structure may include: { userPrompt?: string, ... }
+     */
+    metadata: jsonb("metadata").default({}),
+
+    /**
      * Timestamp when analysis completed successfully.
      *
      * Only set when `status` transitions to `'completed'`.
