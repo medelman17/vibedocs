@@ -105,6 +105,43 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 
 **Token Budget:** ~212K tokens per document (~$1.10 at Sonnet pricing)
 
+### AI SDK 6 Streaming Patterns
+
+**CRITICAL: Response Methods for `streamText()`**
+
+When using AI SDK 6's `streamText()`, the response method depends on whether tools are present:
+
+- **With tools**: Use `toDataStreamResponse()` - required for tool calls and results
+- **Without tools**: Use `toTextStreamResponse()` - simpler text-only streaming
+
+```typescript
+// ✅ CORRECT - With tools
+const result = await streamText({
+  model: anthropic("claude-sonnet-4-5-20250929"),
+  tools: { search_references: vectorSearchTool },
+  maxSteps: 5,
+  // ...
+})
+return result.toDataStreamResponse()  // Required for tool support
+
+// ✅ CORRECT - Text only
+const result = await streamText({
+  model: anthropic("claude-sonnet-4-5-20250929"),
+  // No tools defined
+  // ...
+})
+return result.toTextStreamResponse()  // Simple text streaming
+
+// ❌ INCORRECT - Type error
+const result = await streamText({
+  tools: { ... },  // Tools present
+  // ...
+})
+return result.toTextStreamResponse()  // Error: cannot serialize tool calls
+```
+
+See `app/api/chat/route.ts` for reference implementation.
+
 ### Stack
 - Next.js 16 (App Router, RSC), React 19, TypeScript (strict)
 - Tailwind CSS v4 (`@theme inline`, oklch colors)
