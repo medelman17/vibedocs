@@ -81,8 +81,15 @@ export default function ChatPage() {
           throw new Error(`Failed to fetch file: ${response.statusText}`)
         }
         const blob = await response.blob()
+
+        // Create a File with the correct MIME type (blob from fetch loses it)
+        const fileObj = new File(
+          [blob],
+          file.filename || "document",
+          { type: file.mediaType || blob.type }
+        )
         const formData = new FormData()
-        formData.append("file", blob, file.filename || "document")
+        formData.append("file", fileObj)
 
         // Upload document
         const uploadResult = await uploadDocument(formData)
@@ -262,7 +269,7 @@ export default function ChatPage() {
 
             <PromptInput
               onSubmit={handleSubmit}
-              accept="application/pdf,.doc,.docx,.txt"
+              accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.docx"
               multiple
             >
               <PromptInputTextarea placeholder="Ask about NDAs or upload a document..." />
