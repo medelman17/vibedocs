@@ -501,13 +501,16 @@ export default function ChatPage() {
           <div className="shrink-0 border-t bg-background p-4">
             {messages.length === 0 && (
               <Suggestions className="mb-3">
-                <Suggestion suggestion="Analyze NDA" onClick={handleSuggestion} />
                 <Suggestion
-                  suggestion="Compare documents"
+                  suggestion="What's a typical confidentiality clause?"
                   onClick={handleSuggestion}
                 />
                 <Suggestion
-                  suggestion="Generate NDA"
+                  suggestion="Show me examples of IP assignment language"
+                  onClick={handleSuggestion}
+                />
+                <Suggestion
+                  suggestion="What termination clauses are standard in NDAs?"
                   onClick={handleSuggestion}
                 />
               </Suggestions>
