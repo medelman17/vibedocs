@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 2 - Budget Protection (COMPLETE)
+**Current focus:** Phase 3 - Document Extraction (IN PROGRESS)
 
 ## Current Position
 
-Phase: 2 of 11 (Budget Protection)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-04 - Completed 02-04-PLAN.md (Admin Usage API)
+Phase: 3 of 11 (Document Extraction)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-04 - Completed 03-01-PLAN.md (Extraction Infrastructure)
 
-Progress: [██████░░░░] ~23% (7 plans of ~30+ total)
+Progress: [███████░░░] ~26% (8 plans of ~30+ total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 4.0 min
-- Total execution time: 28 min
+- Total plans completed: 8
+- Average duration: 3.8 min
+- Total execution time: 30.5 min
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [██████░░░░] ~23% (7 plans of ~30+ total)
 |-------|-------|-------|----------|
 | 01 | 3 | 8.5 min | 2.8 min |
 | 02 | 4 | 19.5 min | 4.9 min |
+| 03 | 1 | 2.5 min | 2.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (7 min), 02-02 (3.5 min), 02-03 (5 min), 02-04 (4 min)
-- Trend: Steady (02-04 lightweight API endpoint)
+- Last 5 plans: 02-02 (3.5 min), 02-03 (5 min), 02-04 (4 min), 03-01 (2.5 min)
+- Trend: Fast (03-01 straightforward type/class additions)
 
 *Updated after each plan completion*
 
@@ -60,6 +61,10 @@ Recent decisions affecting current work:
 - [02-02]: Graceful fallback when PDF page count fails - let downstream budget check catch
 - [02-03]: Token budget validation runs outside step.run (consistent with other gates)
 - [02-03]: workingDocument pattern passes truncated version to downstream agents
+- [03-01]: PDFParse class API used (getText, getInfo) matching existing pattern
+- [03-01]: PasswordException/InvalidPDFException as primary error detection, message fallback for safety
+- [03-01]: OCR threshold at 100 chars per CONTEXT.md decision
+- [03-01]: Confidence score based on text-to-file-size ratio
 
 ### Pending Todos
 
@@ -72,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04T22:19:41Z
-Stopped at: Completed 02-04-PLAN.md (Admin Usage API) - Phase 2 complete
+Last session: 2026-02-04T23:36:29Z
+Stopped at: Completed 03-01-PLAN.md (Extraction Infrastructure)
 Resume file: None
