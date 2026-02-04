@@ -71,7 +71,7 @@ describe("(auth)/actions", () => {
       const result = await signOutAction()
 
       expect(result.success).toBe(true)
-      expect(signOut).toHaveBeenCalledWith({ redirectTo: "/login" })
+      expect(signOut).toHaveBeenCalledWith({ redirectTo: "/" })
     })
 
     it("returns error when signOut fails", async () => {

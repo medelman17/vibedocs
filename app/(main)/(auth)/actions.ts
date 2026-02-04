@@ -81,7 +81,7 @@ const membershipIdSchema = z.object({
  */
 export async function signOutAction(): Promise<ApiResponse<void>> {
   try {
-    await signOut({ redirectTo: "/login" });
+    await signOut({ redirectTo: "/" });
     return ok(undefined);
   } catch {
     return err("INTERNAL_ERROR", "Failed to sign out. Please try again.");
