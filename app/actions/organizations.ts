@@ -20,17 +20,11 @@ import {
   sessions,
   users,
 } from "@/db/schema"
-import { eq, and, isNull, isNotNull, inArray, gt } from "drizzle-orm"
-import {
-  verifySession,
-  requireRole,
-  type TenantId,
-  type UserId,
-} from "@/lib/dal"
+import { eq, and, isNull, isNotNull, gt, count } from "drizzle-orm"
+import { verifySession, requireRole } from "@/lib/dal"
 import { auth } from "@/lib/auth"
 import {
   actionSuccess,
-  actionError,
   withActionErrorHandling,
   type ActionResult,
 } from "@/lib/api-utils"
@@ -179,6 +173,8 @@ export async function deleteOrganization(): Promise<ActionResult<void>> {
 
     revalidatePath("/settings/organizations")
     redirect("/onboarding")
+    // redirect() throws so this is unreachable, but satisfies TypeScript
+    return actionSuccess(undefined)
   })()
 }
 
@@ -227,7 +223,7 @@ export async function getUserOrganizations(): Promise<
     const orgsWithCounts = await Promise.all(
       memberships.map(async (org) => {
         const [result] = await db
-          .select({ count: db.$count(organizationMembers.id) })
+          .select({ count: count(organizationMembers.id) })
           .from(organizationMembers)
           .where(
             and(
@@ -399,7 +395,7 @@ export async function removeMember(memberId: string): Promise<ActionResult<void>
     // Prevent removing yourself if you're the only owner
     if (member.userId === ctx.userId && member.role === "owner") {
       const ownerCount = await ctx.db
-        .select({ count: db.$count(organizationMembers.id) })
+        .select({ count: count(organizationMembers.id) })
         .from(organizationMembers)
         .where(
           and(

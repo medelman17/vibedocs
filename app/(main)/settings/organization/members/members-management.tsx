@@ -4,10 +4,9 @@
  * @fileoverview Members management component
  */
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
-import { MoreHorizontal, Mail, UserPlus, Crown, Shield, User, X } from "lucide-react"
+import { MoreHorizontal, UserPlus, Crown, Shield, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -109,7 +108,6 @@ export function MembersManagement({
   currentUserRole,
   currentUserId,
 }: MembersManagementProps) {
-  const router = useRouter()
   const [members, setMembers] = useState<Member[]>([])
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
@@ -122,11 +120,7 @@ export function MembersManagement({
   const [invitationToCancel, setInvitationToCancel] = useState<Invitation | null>(null)
   const [canceling, setCanceling] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true)
     const [membersResult, invitationsResult] = await Promise.all([
       getOrganizationMembers(),
@@ -140,7 +134,12 @@ export function MembersManagement({
       setInvitations(invitationsResult.data)
     }
     setLoading(false)
-  }
+  }, [canManage])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Data fetching on mount is a valid pattern
+    loadData()
+  }, [loadData])
 
   async function handleInvite() {
     setInviting(true)

@@ -24,10 +24,23 @@ vi.mock("bcryptjs", async () => {
 const client = new PGlite()
 export const testDb = drizzle(client, { schema })
 
-// Mock the db module
+// Mock the db module - both direct import and barrel export
 vi.mock("@/db/client", () => ({
   db: testDb,
 }))
+
+// Also mock the barrel export @/db to use testDb
+// This is needed because some files import from @/db instead of @/db/client
+// Note: We import schema directly to avoid async factory issues with testDb reference
+vi.mock("@/db", async () => {
+  const schemaModule = await import("@/db/schema")
+  const queriesModule = await import("@/db/queries")
+  return {
+    db: testDb,
+    ...schemaModule,
+    queries: queriesModule,
+  }
+})
 
 // Track transaction state
 let inTransaction = false

@@ -4,7 +4,7 @@
  * @fileoverview Organizations list component
  */
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Building2, Mail, Check, X } from "lucide-react"
@@ -49,11 +49,7 @@ export function OrganizationsList() {
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true)
     const [orgsResult, invitesResult] = await Promise.all([
       getUserOrganizations(),
@@ -67,7 +63,12 @@ export function OrganizationsList() {
       setInvitations(invitesResult.data)
     }
     setLoading(false)
-  }
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Data fetching on mount is a valid pattern
+    loadData()
+  }, [loadData])
 
   async function handleAccept(token: string) {
     setProcessing(token)

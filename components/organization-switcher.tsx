@@ -65,7 +65,7 @@ export function OrganizationSwitcher({
     loadOrganizations()
   }, [])
 
-  const currentOrg = organizations.find((org) => org.id === currentOrganizationId)
+  const _currentOrg = organizations.find((org) => org.id === currentOrganizationId)
 
   async function handleSwitch(organizationId: string) {
     if (organizationId === currentOrganizationId) {
