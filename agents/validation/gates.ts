@@ -11,6 +11,12 @@
  */
 
 import { formatValidationError, type ValidationResult } from "./messages"
+import {
+  OcrRequiredError,
+  EncryptedDocumentError,
+  CorruptDocumentError,
+} from "@/lib/errors"
+import type { ExtractionResult } from "@/lib/document-extraction"
 
 // ============================================================================
 // Parser Validation
@@ -140,5 +146,113 @@ export function validateTokenBudget(
       message: `Document exceeded ${estimate.tokenCount.toLocaleString()} tokens (limit: ${(200_000).toLocaleString()}). Analysis will cover the first ${truncation.truncatedTokens.toLocaleString()} tokens.`,
       removedSections: truncation.removedSections,
     },
+  }
+}
+
+// ============================================================================
+// Extraction Validation
+// ============================================================================
+
+/**
+ * Result of extraction validation.
+ */
+export interface ExtractionValidation {
+  /** Whether extraction passed validation */
+  valid: boolean
+  /** Error details if validation failed */
+  error?: {
+    code:
+      | "EXTRACTION_FAILED"
+      | "OCR_REQUIRED"
+      | "ENCRYPTED"
+      | "CORRUPT"
+      | "NON_ENGLISH"
+    message: string
+    userFacing: string
+  }
+  /** Warnings that don't block processing */
+  warnings: string[]
+}
+
+/**
+ * Validates extraction result before proceeding to chunking.
+ *
+ * Checks for:
+ * - OCR requirement (routes to Phase 4)
+ * - Encryption (user action required)
+ * - Corruption (user action required)
+ * - Quality issues (warnings only)
+ *
+ * @param result - Extraction result from extractDocument
+ * @returns Validation result with error details
+ */
+export function validateExtractionResult(
+  result: ExtractionResult
+): ExtractionValidation {
+  const warnings: string[] = result.quality.warnings.map((w) => w.message)
+
+  // OCR requirement is a soft failure - document can be routed to OCR phase
+  if (result.quality.requiresOcr) {
+    return {
+      valid: false,
+      error: {
+        code: "OCR_REQUIRED",
+        message: "Document requires OCR processing",
+        userFacing: "Document requires OCR processing (may take longer)",
+      },
+      warnings,
+    }
+  }
+
+  // Low confidence is a warning, not a failure
+  if (result.quality.confidence < 0.3) {
+    warnings.push(
+      `Low extraction confidence: ${(result.quality.confidence * 100).toFixed(0)}%`
+    )
+  }
+
+  return { valid: true, warnings }
+}
+
+/**
+ * Maps extraction errors to pipeline-appropriate errors.
+ *
+ * Returns { retriable: false } for user-fixable errors (encrypted, corrupt)
+ * and { retriable: false, routeToOcr: true } for OCR-required documents.
+ */
+export function mapExtractionError(error: unknown): {
+  retriable: boolean
+  routeToOcr?: boolean
+  userMessage: string
+} {
+  if (error instanceof EncryptedDocumentError) {
+    return {
+      retriable: false,
+      userMessage:
+        "Document is password-protected. Please upload an unprotected version.",
+    }
+  }
+
+  if (error instanceof CorruptDocumentError) {
+    return {
+      retriable: false,
+      userMessage:
+        "Could not process this file. Try re-uploading or use a different format.",
+    }
+  }
+
+  if (error instanceof OcrRequiredError) {
+    return {
+      retriable: false,
+      routeToOcr: true,
+      userMessage: "Document requires OCR processing (may take longer)",
+    }
+  }
+
+  // Unknown error - don't retry, show generic message
+  return {
+    retriable: false,
+    userMessage:
+      "Failed to extract text from document. Please try a different file.",
   }
 }

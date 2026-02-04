@@ -14,7 +14,10 @@ export {
   validateParserOutput,
   validateClassifierOutput,
   validateTokenBudget,
+  validateExtractionResult,
+  mapExtractionError,
   type TokenBudgetValidation,
+  type ExtractionValidation,
 } from "./gates"
 export {
   VALIDATION_MESSAGES,
