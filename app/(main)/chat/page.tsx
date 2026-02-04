@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useChat } from "@ai-sdk/react"
 import { UIMessage, DefaultChatTransport } from "ai"
-import { FileTextIcon, PlusIcon, SparklesIcon, Loader2, BrainIcon } from "lucide-react"
+import { FileTextIcon, PlusIcon, SparklesIcon, BrainIcon } from "lucide-react"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { AppBody } from "@/components/shell"
 import {
@@ -45,6 +45,7 @@ import {
   AnalysisView,
 } from "@/components/artifact"
 import { Shimmer } from "@/components/ai-elements/shimmer"
+import { Tool, ToolHeader, ToolContent, ToolOutput } from "@/components/ai-elements/tool"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { ExpandIcon, MoreHorizontalIcon } from "lucide-react"
 import { uploadDocument } from "@/app/(main)/(dashboard)/documents/actions"
@@ -372,58 +373,46 @@ export default function ChatPage() {
         )
       }
 
-      // Tool parts
+      // Tool parts - use ai-elements Tool component
       if (part.type.startsWith("tool-")) {
         const toolPart = part as {
           type: string
           toolCallId: string
-          state: string
+          state: "input-streaming" | "input-available" | "output-available" | "output-error" | "output-denied" | "approval-requested" | "approval-responded"
           input?: unknown
           output?: unknown
+          errorText?: string
         }
 
         // Skip silent tools (showArtifact)
         if (part.type === "tool-showArtifact") return null
 
-        // Search tool
+        // Search tool - use Tool component
         if (part.type === "tool-search_references") {
-          // Active search - show spinner
-          if (
-            toolPart.state === "input-streaming" ||
-            toolPart.state === "input-available"
-          ) {
-            return (
-              <div
-                key={index}
-                className="my-2 flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground"
-              >
-                <Loader2 className="size-4 animate-spin" />
-                <span>Searching reference corpus...</span>
-              </div>
-            )
-          }
+          const results = toolPart.output as Array<{ id: string; content: string; source: string }> | null
 
-          // Completed search - show results count
-          if (toolPart.state === "output-available") {
-            const results = toolPart.output as Array<{ id: string; content: string; source: string }> | null
-            const count = results?.length || 0
-            if (count > 0) {
-              return (
-                <div
-                  key={index}
-                  className="my-2 rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground"
-                >
-                  <span className="font-medium">Found {count} relevant clauses</span>
-                  {results && results.length > 0 && (
-                    <span className="ml-1">
-                      from {[...new Set(results.map(r => r.source))].slice(0, 2).join(", ")}
-                      {[...new Set(results.map(r => r.source))].length > 2 && " and more"}
-                    </span>
-                  )}
-                </div>
-              )
-            }
-          }
+          return (
+            <Tool key={index} defaultOpen={false}>
+              <ToolHeader
+                type={part.type as `tool-${string}`}
+                state={toolPart.state}
+                title="Search Legal Corpus"
+              />
+              <ToolContent>
+                <ToolOutput
+                  output={results ? {
+                    found: results.length,
+                    sources: [...new Set(results.map(r => r.source))],
+                    samples: results.slice(0, 2).map(r => ({
+                      source: r.source,
+                      excerpt: r.content.slice(0, 100) + "..."
+                    }))
+                  } : undefined}
+                  errorText={toolPart.errorText}
+                />
+              </ToolContent>
+            </Tool>
+          )
         }
 
         return null
