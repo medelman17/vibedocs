@@ -1,4 +1,55 @@
-export { ChatPane, ChatMessages, ChatInputArea } from "./chat-pane"
-export { Message, type MessageProps } from "./message"
-export { ChatInput } from "./chat-input"
-export { SuggestionChips, type Suggestion } from "./suggestion-chips"
+// Re-export ai-elements conversation components
+export {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+  type ConversationProps,
+  type ConversationContentProps,
+  type ConversationEmptyStateProps,
+  type ConversationScrollButtonProps,
+} from "@/components/ai-elements/conversation"
+
+// Re-export ai-elements message components
+export {
+  Message,
+  MessageContent,
+  MessageActions,
+  MessageAction,
+  MessageResponse,
+  MessageToolbar,
+  type MessageProps,
+  type MessageContentProps,
+  type MessageActionsProps,
+  type MessageActionProps,
+  type MessageResponseProps,
+  type MessageToolbarProps,
+} from "@/components/ai-elements/message"
+
+// Re-export ai-elements suggestion components
+export {
+  Suggestions,
+  Suggestion,
+  type SuggestionsProps,
+  type SuggestionProps,
+} from "@/components/ai-elements/suggestion"
+
+// Re-export ai-elements prompt input components
+export {
+  PromptInput,
+  PromptInputProvider,
+  PromptInputBody,
+  PromptInputTextarea,
+  PromptInputHeader,
+  PromptInputFooter,
+  PromptInputTools,
+  PromptInputButton,
+  PromptInputActionMenu,
+  PromptInputActionAddAttachments,
+  usePromptInputAttachments,
+  usePromptInputReferencedSources,
+  type PromptInputProps,
+  type PromptInputBodyProps,
+  type PromptInputTextareaProps,
+  type PromptInputMessage,
+} from "@/components/ai-elements/prompt-input"

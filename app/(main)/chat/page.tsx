@@ -5,62 +5,90 @@ import { FileTextIcon } from "lucide-react"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { AppBody } from "@/components/shell"
 import {
-  ChatPane,
-  ChatMessages,
-  ChatInputArea,
-  ChatInput,
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
   Message,
-  SuggestionChips,
+  MessageContent,
+  Suggestions,
+  Suggestion,
+  PromptInput,
+  PromptInputTextarea,
+  PromptInputButton,
 } from "@/components/chat"
-import { ArtifactPane, DocumentViewer, AnalysisView } from "@/components/artifact"
+import {
+  Artifact,
+  ArtifactHeader,
+  ArtifactTitle,
+  ArtifactActions,
+  ArtifactAction,
+  ArtifactClose,
+  ArtifactContent,
+  DocumentViewer,
+  AnalysisView,
+} from "@/components/artifact"
+import { ExpandIcon, MoreHorizontalIcon } from "lucide-react"
 
 interface ChatMessage {
   id: string
   role: "user" | "assistant"
   content: string
-  timestamp: Date
 }
 
 export default function ChatPage() {
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
-  const { artifact, openArtifact } = useShellStore()
+  const [input, setInput] = React.useState("")
+  const { artifact, openArtifact, closeArtifact, toggleArtifactExpanded } = useShellStore()
 
-  const handleSend = (content: string) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim()) return
+
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content,
-      timestamp: new Date(),
+      content: input,
     }
     setMessages((prev) => [...prev, userMessage])
+    setInput("")
 
     // Simulate assistant response
     setTimeout(() => {
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: `I received your message: "${content}". This is a demo response. Try clicking the suggestion chips to see artifacts open!`,
-        timestamp: new Date(),
+        content: `I received your message: "${userMessage.content}". This is a demo response. Try the suggestion chips to see artifacts!`,
       }
       setMessages((prev) => [...prev, assistantMessage])
     }, 500)
   }
 
-  const handleSuggestion = (suggestion: { id: string; label: string; action: string }) => {
-    if (suggestion.id === "analyze") {
+  const handleSuggestion = (suggestion: string) => {
+    if (suggestion === "Analyze NDA") {
       openArtifact({
         type: "analysis",
         id: "demo-analysis",
         title: "Demo NDA Analysis",
       })
-    } else if (suggestion.id === "compare") {
+    } else if (suggestion === "Compare documents") {
       openArtifact({
         type: "document",
         id: "demo-doc",
         title: "Demo Document",
       })
     }
-    handleSend(suggestion.action)
+    setInput(suggestion)
+    // Submit after state update
+    setTimeout(() => {
+      const userMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: suggestion,
+      }
+      setMessages((prev) => [...prev, userMessage])
+      setInput("")
+    }, 0)
   }
 
   const renderArtifactContent = () => {
@@ -79,47 +107,72 @@ export default function ChatPage() {
   return (
     <AppBody
       chat={
-        <ChatPane>
-          <ChatMessages>
+        <div className="flex h-full flex-col">
+          <Conversation className="flex-1">
             {messages.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center text-center">
-                <div className="mb-4 rounded-full bg-violet-100 p-4">
-                  <FileTextIcon className="size-8 text-violet-500" />
-                </div>
-                <h2 className="mb-2 text-xl font-semibold text-neutral-900">
-                  Welcome to VibeDocs
-                </h2>
-                <p className="max-w-sm text-sm text-neutral-500">
-                  Upload an NDA to analyze, compare documents, or generate a new
-                  NDA from templates.
-                </p>
-              </div>
+              <ConversationEmptyState
+                icon={
+                  <div className="rounded-full bg-violet-100 p-4">
+                    <FileTextIcon className="size-8 text-violet-500" />
+                  </div>
+                }
+                title="Welcome to VibeDocs"
+                description="Upload an NDA to analyze, compare documents, or generate a new NDA from templates."
+              />
             ) : (
-              messages.map((message) => (
-                <Message key={message.id} {...message} />
-              ))
+              <ConversationContent>
+                {messages.map((message) => (
+                  <Message key={message.id} from={message.role}>
+                    <MessageContent>{message.content}</MessageContent>
+                  </Message>
+                ))}
+              </ConversationContent>
             )}
-          </ChatMessages>
+            <ConversationScrollButton />
+          </Conversation>
 
-          <ChatInputArea>
-            <SuggestionChips
-              visible={messages.length === 0}
-              onSelect={handleSuggestion}
-            />
-            <ChatInput
-              onSend={handleSend}
-              placeholder="Ask about NDAs or upload a document..."
-            />
-          </ChatInputArea>
-        </ChatPane>
+          {/* Input area */}
+          <div className="border-t bg-background p-4">
+            {messages.length === 0 && (
+              <Suggestions className="mb-3">
+                <Suggestion suggestion="Analyze NDA" onClick={handleSuggestion} />
+                <Suggestion suggestion="Compare documents" onClick={handleSuggestion} />
+                <Suggestion suggestion="Generate NDA" onClick={handleSuggestion} />
+              </Suggestions>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <PromptInput>
+                <PromptInputTextarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask about NDAs or upload a document..."
+                />
+                <PromptInputButton type="submit" disabled={!input.trim()}>
+                  Send
+                </PromptInputButton>
+              </PromptInput>
+            </form>
+          </div>
+        </div>
       }
       artifact={
-        artifact.open && (
-          <ArtifactPane
-            icon={<FileTextIcon className="size-4" />}
-          >
-            {renderArtifactContent()}
-          </ArtifactPane>
+        artifact.open && artifact.content && (
+          <Artifact className="h-full">
+            <ArtifactHeader>
+              <ArtifactTitle>{artifact.content.title}</ArtifactTitle>
+              <ArtifactActions>
+                <ArtifactAction
+                  tooltip="Expand"
+                  icon={ExpandIcon}
+                  onClick={toggleArtifactExpanded}
+                />
+                <ArtifactAction tooltip="More" icon={MoreHorizontalIcon} />
+                <ArtifactClose onClick={closeArtifact} />
+              </ArtifactActions>
+            </ArtifactHeader>
+            <ArtifactContent>{renderArtifactContent()}</ArtifactContent>
+          </Artifact>
         )
       }
     />
