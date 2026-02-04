@@ -13,7 +13,7 @@ This roadmap delivers the complete NDA analysis pipeline: document extraction th
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation Hardening** - Migrate to AI SDK 6 patterns, add validation gates, ensure idempotency
-- [ ] **Phase 2: Budget Protection** - Pre-flight estimation, hard limits, document size caps
+- [x] **Phase 2: Budget Protection** - Pre-flight estimation, hard limits, document size caps
 - [ ] **Phase 3: Document Extraction** - Extract text from PDF/DOCX, handle failures, support Word Add-in text input
 - [ ] **Phase 4: OCR Processing** - Detect and process scanned PDFs, handle quality issues
 - [ ] **Phase 5: Legal Chunking** - Split into legal-aware chunks, embed with Voyage AI, store in tenant DB
@@ -54,10 +54,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Create budget infrastructure (limits, estimation, truncation, schema)
-- [ ] 02-02-PLAN.md — Integrate upload validation and token budget gate
-- [ ] 02-03-PLAN.md — Pipeline integration with truncation and cost tracking
-- [ ] 02-04-PLAN.md — Admin usage API endpoint
+- [x] 02-01-PLAN.md — Create budget infrastructure (limits, estimation, truncation, schema)
+- [x] 02-02-PLAN.md — Integrate upload validation and token budget gate
+- [x] 02-03-PLAN.md — Pipeline integration with truncation and cost tracking
+- [x] 02-04-PLAN.md — Admin usage API endpoint
 
 ### Phase 3: Document Extraction
 **Goal**: Raw text reliably extracted from PDF and DOCX documents with structure preserved
@@ -199,7 +199,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation Hardening | 3/3 | Complete | 2026-02-04 |
-| 2. Budget Protection | 0/4 | Not started | - |
+| 2. Budget Protection | 4/4 | Complete | 2026-02-04 |
 | 3. Document Extraction | 0/TBD | Not started | - |
 | 4. OCR Processing | 0/TBD | Not started | - |
 | 5. Legal Chunking | 0/TBD | Not started | - |
@@ -212,4 +212,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 (Phase 2 planned)*
+*Last updated: 2026-02-04 (Phase 2 complete)*
