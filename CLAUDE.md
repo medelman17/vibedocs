@@ -216,6 +216,42 @@ See `app/api/chat/route.ts` and `app/(main)/chat/page.tsx` for reference.
   - `z.record()` requires key type: use `z.record(z.string(), z.unknown())` not `z.record(z.unknown())`
   - `ZodIssue.path` is `PropertyKey[]` (includes symbol) - `fromZodError` accepts this
 
+### Barrel Export Patterns (CRITICAL)
+
+**Problem:** Barrel exports (`index.ts` files that re-export modules) can cause production crashes if they re-export modules with heavy dependencies or browser-only APIs. This happens because Next.js production builds pre-bundle the entire module graph, causing unintended module evaluation even when the exported items aren't used.
+
+**Rules:**
+1. **NEVER re-export modules with heavy dependencies from barrels:**
+   - Document processing (PDF/DOCX parsing, image processing)
+   - Browser-only APIs (`DOMMatrix`, `canvas`, Web APIs)
+   - Large ML models or complex processing pipelines
+   - Agent functions or workflow definitions
+
+2. **Safe barrel exports:**
+   - Type definitions and Zod schemas
+   - Utility functions with minimal dependencies
+   - Database clients and schema definitions
+   - Configuration constants
+
+3. **Use explicit imports for heavy modules:**
+   ```typescript
+   // ❌ BAD - barrel pulls in everything including heavy deps
+   import { inngest, functions } from "@/inngest"
+
+   // ✅ GOOD - explicit path for heavy deps
+   import { inngest } from "@/inngest"
+   import { functions } from "@/inngest/functions"
+   ```
+
+**Current Barrel Status:**
+- `@/db` - ✅ Safe (client, schema, queries only)
+- `@/inngest` - ✅ Safe (utils and client only; functions NOT exported)
+- `@/agents` - ✅ Safe (types, prompts, tools with light deps only)
+- `@/agents/tools` - ✅ Safe (vector search with DB client only)
+- `@/agents/prompts` - ✅ Safe (string constants and schemas only)
+
+**Reference:** Issue #43 - Production crash from `pdf-parse` → `pdfjs-dist` → `DOMMatrix` evaluated via barrel export
+
 ### Error Handling
 - Use custom errors from `lib/errors.ts`: `NotFoundError`, `ValidationError`, `ForbiddenError`, etc.
 - API routes: Wrap with `withErrorHandling()` from `lib/api-utils.ts`

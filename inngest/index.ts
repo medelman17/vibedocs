@@ -1,10 +1,11 @@
 /**
  * @fileoverview Inngest Module - Main Entry Point
  *
- * This is the main barrel export for the `@/inngest` module. All Inngest
- * utilities, types, and functions should be imported from here in production code.
+ * This is the main barrel export for the `@/inngest` module. Utilities and types
+ * should be imported from here. Functions are NOT exported to avoid pulling in
+ * heavy dependencies (pdf-parse, browser APIs).
  *
- * @example
+ * @example Safe imports from this barrel:
  * ```typescript
  * import {
  *   inngest,
@@ -12,8 +13,16 @@
  *   CONCURRENCY,
  *   withTenantContext,
  *   ValidationError,
- *   functions,
  * } from "@/inngest"
+ * ```
+ *
+ * @example Functions must be imported directly:
+ * ```typescript
+ * // ❌ DO NOT import functions from barrel
+ * import { functions } from "@/inngest"
+ *
+ * // ✅ Import from functions submodule (serve handler only)
+ * import { functions } from "@/inngest/functions"
  * ```
  *
  * Note: Test helpers are intentionally NOT exported from this barrel.
@@ -87,4 +96,12 @@ export {
 // Function Registry
 // =============================================================================
 
-export { functions } from "./functions"
+// IMPORTANT: Do NOT export functions from this barrel!
+// The functions array pulls in the entire analysis pipeline, which includes
+// pdf-parse (via document-processing.ts), which uses browser-only APIs like
+// DOMMatrix and causes production crashes.
+//
+// Import functions directly in the serve handler only:
+// import { functions } from "@/inngest/functions"
+//
+// See: https://github.com/medelman17/vibedocs/issues/43
