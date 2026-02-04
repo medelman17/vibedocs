@@ -1,4 +1,4 @@
-import pdf from 'pdf-parse'
+import { PDFParse } from 'pdf-parse'
 import mammoth from 'mammoth'
 import { encode } from 'gpt-tokenizer'
 
@@ -40,8 +40,9 @@ export async function extractText(
 ): Promise<ExtractionResult> {
   switch (mimeType) {
     case 'application/pdf': {
-      const data = await pdf(buffer)
-      return { text: data.text, pageCount: data.numpages }
+      const pdfParser = new PDFParse({ data: buffer })
+      const textResult = await pdfParser.getText()
+      return { text: textResult.text, pageCount: textResult.pages.length }
     }
     case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
       const result = await mammoth.extractRawText({ buffer })

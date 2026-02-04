@@ -159,7 +159,11 @@ export const POST = withErrorHandling(async (request: Request) => {
       source: "word-addin" as const,
       content: {
         rawText: content,
-        paragraphs: paragraphs ?? [],
+        paragraphs: (paragraphs ?? []).map((p) => ({
+          text: p.text,
+          style: p.style ?? 'Normal',
+          isHeading: p.isHeading ?? false,
+        })),
       },
       metadata: {
         title,

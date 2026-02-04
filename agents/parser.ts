@@ -11,7 +11,6 @@
  * @module agents/parser
  */
 
-import { get as getBlob } from '@vercel/blob'
 import {
   extractText,
   chunkDocument,
@@ -89,12 +88,15 @@ export async function runParserAgent(input: ParserInput): Promise<ParserOutput> 
       throw new Error(`Document ${documentId} not found or has no file URL`)
     }
 
-    // Download from Vercel Blob
-    const blob = await getBlob(doc.fileUrl)
-    const blobData = await blob.blob()
-    const arrayBuffer = await blobData.arrayBuffer()
+    // Download from Vercel Blob URL directly
+    const response = await fetch(doc.fileUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to download document: ${response.statusText}`)
+    }
+    const arrayBuffer = await response.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
-    const extracted = await extractText(buffer, blob.contentType ?? 'application/pdf')
+    const contentType = response.headers.get('content-type') ?? 'application/pdf'
+    const extracted = await extractText(buffer, contentType)
 
     rawText = extracted.text
     title = doc.title ?? 'Untitled'

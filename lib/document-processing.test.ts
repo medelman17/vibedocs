@@ -5,10 +5,14 @@ import { extractText, chunkDocument } from './document-processing'
 // For unit tests, we'll mock pdf-parse and mammoth.
 
 vi.mock('pdf-parse', () => ({
-  default: vi.fn().mockResolvedValue({
-    text: 'CONFIDENTIALITY AGREEMENT\n\nThis Agreement is entered into...',
-    numpages: 2,
-  }),
+  PDFParse: class MockPDFParse {
+    getText() {
+      return Promise.resolve({
+        text: 'CONFIDENTIALITY AGREEMENT\n\nThis Agreement is entered into...',
+        pages: [{}, {}], // 2 pages
+      })
+    }
+  },
 }))
 
 vi.mock('mammoth', () => ({

@@ -23,7 +23,7 @@ vi.mock('ai', () => ({
           ],
           weakClauses: [],
         },
-        usage: { promptTokens: 1000, completionTokens: 300 },
+        usage: { inputTokens: 1000, outputTokens: 300 },
       })
     } else {
       return Promise.resolve({
@@ -33,7 +33,7 @@ vi.mock('ai', () => ({
           status: 'not_mentioned',
           explanation: 'No relevant clause found.',
         },
-        usage: { promptTokens: 500, completionTokens: 100 },
+        usage: { inputTokens: 500, outputTokens: 100 },
       })
     }
   }),

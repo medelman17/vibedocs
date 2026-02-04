@@ -31,16 +31,13 @@ vi.mock('@/lib/embeddings', () => ({
   }),
 }))
 
-// Mock Vercel Blob
-vi.mock('@vercel/blob', () => ({
-  get: vi.fn().mockResolvedValue({
-    blob: () =>
-      Promise.resolve(
-        new Blob(['mock pdf content'], { type: 'application/pdf' })
-      ),
-    contentType: 'application/pdf',
-  }),
-}))
+// Mock global fetch for blob downloads
+const mockFetch = vi.fn().mockResolvedValue({
+  ok: true,
+  headers: new Headers({ 'content-type': 'application/pdf' }),
+  arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+})
+vi.stubGlobal('fetch', mockFetch)
 
 // Mock database
 vi.mock('@/db/client', () => ({

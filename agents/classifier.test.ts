@@ -12,7 +12,7 @@ vi.mock('ai', () => ({
       confidence: 0.95,
       reasoning: 'Explicit jurisdiction designation.',
     },
-    usage: { promptTokens: 500, completionTokens: 100 },
+    usage: { inputTokens: 500, outputTokens: 100 },
   }),
 }))
 
@@ -122,7 +122,7 @@ describe('Classifier Agent', () => {
         confidence: 0.3,
         reasoning: 'Unable to classify',
       },
-      usage: { promptTokens: 500, completionTokens: 100 },
+      usage: { inputTokens: 500, outputTokens: 100 },
     } as ReturnType<typeof generateObject>)
 
     const input: ClassifierInput = {

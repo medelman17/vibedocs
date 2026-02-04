@@ -94,8 +94,8 @@ export async function runRiskScorerAgent(
       schema: riskAssessmentSchema,
     })
 
-    totalInputTokens += usage?.promptTokens ?? 0
-    totalOutputTokens += usage?.completionTokens ?? 0
+    totalInputTokens += usage?.inputTokens ?? 0
+    totalOutputTokens += usage?.outputTokens ?? 0
 
     assessments.push({
       clauseId: clause.chunkId,

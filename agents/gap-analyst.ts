@@ -142,8 +142,8 @@ export async function runGapAnalystAgent(
     schema: gapAnalysisSchema,
   })
 
-  totalInputTokens += gapUsage?.promptTokens ?? 0
-  totalOutputTokens += gapUsage?.completionTokens ?? 0
+  totalInputTokens += gapUsage?.inputTokens ?? 0
+  totalOutputTokens += gapUsage?.outputTokens ?? 0
 
   // Test ContractNLI hypotheses (limit to first 5 for budget)
   const hypothesisCoverage: GapAnalystOutput['hypothesisCoverage'] = []
@@ -157,8 +157,8 @@ export async function runGapAnalystAgent(
       schema: hypothesisSchema,
     })
 
-    totalInputTokens += usage?.promptTokens ?? 0
-    totalOutputTokens += usage?.completionTokens ?? 0
+    totalInputTokens += usage?.inputTokens ?? 0
+    totalOutputTokens += usage?.outputTokens ?? 0
 
     hypothesisCoverage.push({
       hypothesisId: hypothesis.id,

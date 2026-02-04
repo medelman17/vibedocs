@@ -15,7 +15,7 @@ vi.mock('ai', () => ({
         statistic: 'Delaware is used in 34% of commercial NDAs.',
       },
     },
-    usage: { promptTokens: 800, completionTokens: 200 },
+    usage: { inputTokens: 800, outputTokens: 200 },
   }),
 }))
 
@@ -84,7 +84,7 @@ describe('Risk Scorer Agent', () => {
           statistic: 'Average non-compete duration is 2.1 years.',
         },
       },
-      usage: { promptTokens: 800, completionTokens: 200 },
+      usage: { inputTokens: 800, outputTokens: 200 },
     } as ReturnType<typeof generateObject>)
 
     const input: RiskScorerInput = {

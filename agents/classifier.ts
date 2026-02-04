@@ -91,8 +91,8 @@ export async function runClassifierAgent(
     })
 
     // Track token usage
-    totalInputTokens += usage?.promptTokens ?? 0
-    totalOutputTokens += usage?.completionTokens ?? 0
+    totalInputTokens += usage?.inputTokens ?? 0
+    totalOutputTokens += usage?.outputTokens ?? 0
 
     // Skip low-confidence "Unknown" classifications
     if (object.category === 'Unknown' && object.confidence < 0.5) {

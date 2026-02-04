@@ -14,9 +14,11 @@ import { demoProcess, demoMultiStep } from "./demo"
 import { ingestCoordinator } from "./bootstrap/ingest-coordinator"
 import { ingestSource } from "./bootstrap/ingest-source"
 
+// Analysis pipeline
+import { analyzeNda } from "./analyze-nda"
+
 // Production functions - will be populated as functions are created
 // import { processDocument } from "./process-document"
-// import { analyzeNda } from "./analyze-nda"
 // import { compareNdas } from "./compare-ndas"
 // import { generateNda } from "./generate-nda"
 // import { generateEmbeddings } from "./embeddings"
@@ -34,9 +36,11 @@ export const functions = [
   ingestCoordinator,
   ingestSource,
 
-  // Production functions
+  // Analysis pipeline
+  analyzeNda,
+
+  // Production functions - TBD
   // processDocument,
-  // analyzeNda,
   // compareNdas,
   // generateNda,
   // generateEmbeddings,
