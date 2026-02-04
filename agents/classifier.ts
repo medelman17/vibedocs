@@ -10,8 +10,9 @@
  * @module agents/classifier
  */
 
-import { generateObject } from 'ai'
+import { generateText, Output, NoObjectGeneratedError } from 'ai'
 import { getAgentModel } from '@/lib/ai/config'
+import { AnalysisFailedError } from '@/lib/errors'
 import { classificationSchema, type CuadCategory } from './types'
 import { findSimilarClauses } from './tools/vector-search'
 import { createClassifierPrompt, CLASSIFIER_SYSTEM_PROMPT } from './prompts'
@@ -83,12 +84,30 @@ export async function runClassifierAgent(
     const prompt = createClassifierPrompt(chunk.content, references)
 
     // Generate classification
-    const { object, usage } = await generateObject({
-      model: getAgentModel('classifier'),
-      system: CLASSIFIER_SYSTEM_PROMPT,
-      prompt,
-      schema: classificationSchema,
-    })
+    let result
+    try {
+      result = await generateText({
+        model: getAgentModel('classifier'),
+        system: CLASSIFIER_SYSTEM_PROMPT,
+        prompt,
+        output: Output.object({ schema: classificationSchema }),
+      })
+    } catch (error) {
+      if (NoObjectGeneratedError.isInstance(error)) {
+        console.error('[Classifier] Object generation failed', {
+          cause: error.cause,
+          text: error.text?.slice(0, 500),
+          usage: error.usage,
+        })
+        throw new AnalysisFailedError(
+          'Classification failed to produce valid output',
+          [{ field: 'chunk', message: `Model output: ${error.text?.slice(0, 100) ?? 'empty'}` }]
+        )
+      }
+      throw error
+    }
+
+    const { output, usage } = result
 
     // Track token usage
     totalInputTokens += usage?.inputTokens ?? 0
@@ -100,17 +119,17 @@ export async function runClassifierAgent(
     // fit the CUAD taxonomy. Including these would clutter the analysis
     // without adding meaningful risk assessment value. High-confidence unknowns
     // (>= 0.5) are kept to flag potentially important uncategorized clauses.
-    if (object.category === 'Unknown' && object.confidence < 0.5) {
+    if (output.category === 'Unknown' && output.confidence < 0.5) {
       continue
     }
 
     clauses.push({
       chunkId: chunk.id,
       clauseText: chunk.content,
-      category: object.category,
-      secondaryCategories: object.secondaryCategories,
-      confidence: object.confidence,
-      reasoning: object.reasoning,
+      category: output.category,
+      secondaryCategories: output.secondaryCategories,
+      confidence: output.confidence,
+      reasoning: output.reasoning,
       startPosition: chunk.startPosition,
       endPosition: chunk.endPosition,
     })
