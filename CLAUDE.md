@@ -105,6 +105,26 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 
 **Token Budget:** ~212K tokens per document (~$1.10 at Sonnet pricing)
 
+### AI SDK 6 Streaming Patterns
+
+**Tool Loops with `streamText()`**
+
+Use `stopWhen: stepCountIs(n)` to control how many tool call rounds are allowed:
+
+```typescript
+import { streamText, stepCountIs } from "ai"
+
+const result = streamText({
+  model: gateway("anthropic/claude-sonnet-4"),
+  tools: { search_references: vectorSearchTool },
+  stopWhen: stepCountIs(5), // Allow up to 5 tool calls per turn
+  // ...
+})
+return result.toTextStreamResponse()
+```
+
+See `app/api/chat/route.ts` for reference implementation.
+
 ### Stack
 - Next.js 16 (App Router, RSC), React 19, TypeScript (strict)
 - Tailwind CSS v4 (`@theme inline`, oklch colors)
