@@ -257,8 +257,8 @@ export default function ChatPage() {
             <ConversationScrollButton />
           </Conversation>
 
-          {/* Input area */}
-          <div className="border-t bg-background p-4">
+          {/* Input area - shrink-0 keeps it visible when artifact panel opens */}
+          <div className="shrink-0 border-t bg-background p-4">
             {messages.length === 0 && (
               <Suggestions className="mb-3">
                 <Suggestion suggestion="Analyze NDA" onClick={handleSuggestion} />

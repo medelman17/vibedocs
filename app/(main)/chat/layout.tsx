@@ -44,18 +44,21 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     <SidebarProvider>
       <AppSidebar
         onOpenCommandPalette={togglePalette}
+        onNewChat={() => {
+          // Hard reload to clear all local state (messages, artifact, etc.)
+          window.location.href = "/chat"
+        }}
         // TODO: Wire up actual data and handlers
         // items={conversations}
         // organizations={userOrgs}
         // currentOrg={activeOrg}
         // user={currentUser}
         // onSelectItem={handleSelectItem}
-        // onNewChat={handleNewChat}
         // onSwitchOrg={handleSwitchOrg}
         // onOpenSettings={handleOpenSettings}
         // onSignOut={handleSignOut}
       />
-      <SidebarInset>
+      <SidebarInset className="overflow-hidden">
         {/* Header with sidebar trigger */}
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
