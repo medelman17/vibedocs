@@ -39,11 +39,12 @@ export const config = {
     /*
      * Match all request paths except for the ones starting with:
      * - api/auth (Auth.js routes)
+     * - api/inngest (Inngest webhook)
      * - _next/static (static files)
      * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
+     * - favicon.ico, icon, apple-icon (metadata images)
+     * - public folder assets (files with extensions)
      */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\..*$).*)",
+    "/((?!api/auth|api/inngest|_next/static|_next/image|favicon.ico|icon|apple-icon|.*\\..*$).*)",
   ],
 }

@@ -1,6 +1,10 @@
 import * as Sentry from "@sentry/nextjs";
 
-Sentry.init({
+// Skip Sentry in development for faster HMR
+if (process.env.NODE_ENV === "development") {
+  // No-op in development
+} else {
+  Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Enable structured logging
@@ -38,3 +42,4 @@ Sentry.init({
   // Set to false in production to reduce noise
   debug: false,
 });
+}
