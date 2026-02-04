@@ -105,25 +105,42 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 
 **Token Budget:** ~212K tokens per document (~$1.10 at Sonnet pricing)
 
-### AI SDK 6 Streaming Patterns
+### AI SDK 6 Patterns
 
-**Tool Loops with `streamText()`**
-
-Use `stopWhen: stepCountIs(n)` to control how many tool call rounds are allowed:
-
+**Client-side `useChat` hook:**
 ```typescript
-import { streamText, stepCountIs } from "ai"
+import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
+
+const { messages, sendMessage, status } = useChat({
+  transport: new DefaultChatTransport({ api: "/api/chat", body: { conversationId } }),
+  onToolCall: async ({ toolCall }) => { /* handle client-side tools */ },
+})
+// Send: sendMessage({ text: "..." }) - NOT append()
+```
+
+**Server-side `streamText()`:**
+```typescript
+import { streamText, stepCountIs, tool } from "ai"
 
 const result = streamText({
   model: gateway("anthropic/claude-sonnet-4"),
-  tools: { search_references: vectorSearchTool },
-  stopWhen: stepCountIs(5), // Allow up to 5 tool calls per turn
-  // ...
+  tools: {
+    myTool: tool({ description: "...", inputSchema: z.object({...}) }), // No execute = client-side
+  },
+  stopWhen: stepCountIs(5), // Replaces maxSteps
+  // maxOutputTokens replaces maxTokens
 })
-return result.toTextStreamResponse()
+return result.toUIMessageStreamResponse({
+  originalMessages: messages,
+  generateMessageId: () => nanoid(),
+  onFinish: async ({ responseMessage }) => { /* persist */ },
+})
 ```
 
-See `app/api/chat/route.ts` for reference implementation.
+**Tool parts in messages:** `part.type` is `tool-${toolName}`, access state via `toolPart.state`
+
+See `app/api/chat/route.ts` and `app/(main)/chat/page.tsx` for reference.
 
 ### Stack
 - Next.js 16 (App Router, RSC), React 19, TypeScript (strict)
@@ -196,12 +213,15 @@ See `app/api/chat/route.ts` for reference implementation.
   - Use `.issues` not `.errors` for error arrays: `parsed.error.issues[0]`
   - `ValidationError.fromZodError()` expects `{ issues: [...] }` not `{ errors: [...] }`
   - Zod 4 renamed `ZodError.errors` → `ZodError.issues` for clarity
+  - `z.record()` requires key type: use `z.record(z.string(), z.unknown())` not `z.record(z.unknown())`
+  - `ZodIssue.path` is `PropertyKey[]` (includes symbol) - `fromZodError` accepts this
 
 ### Error Handling
 - Use custom errors from `lib/errors.ts`: `NotFoundError`, `ValidationError`, `ForbiddenError`, etc.
 - API routes: Wrap with `withErrorHandling()` from `lib/api-utils.ts`
 - Server actions: Use `withActionErrorHandling()` or return `ActionResult<T>` type
 - Convert Zod errors: `ValidationError.fromZodError(zodError)`
+- **`err()` vs `wrapError()`**: Use `wrapError(error)` for pre-constructed `AppError` objects; use `err(code, message, details?)` for inline error creation
 
 ### Testing (Vitest + PGlite)
 - Tests use in-memory PGlite (WASM Postgres) - no Docker needed
