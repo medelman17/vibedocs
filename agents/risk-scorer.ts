@@ -10,8 +10,9 @@
  * @module agents/risk-scorer
  */
 
-import { generateObject } from 'ai'
+import { generateText, Output, NoObjectGeneratedError } from 'ai'
 import { getAgentModel } from '@/lib/ai/config'
+import { AnalysisFailedError } from '@/lib/errors'
 import { riskAssessmentSchema, type RiskLevel } from './types'
 import { findSimilarClauses } from './tools/vector-search'
 import { createRiskScorerPrompt, RISK_SCORER_SYSTEM_PROMPT } from './prompts'
@@ -87,12 +88,30 @@ export async function runRiskScorerAgent(
     )
 
     // Generate risk assessment
-    const { object, usage } = await generateObject({
-      model: getAgentModel('riskScorer'),
-      system: RISK_SCORER_SYSTEM_PROMPT,
-      prompt,
-      schema: riskAssessmentSchema,
-    })
+    let result
+    try {
+      result = await generateText({
+        model: getAgentModel('riskScorer'),
+        system: RISK_SCORER_SYSTEM_PROMPT,
+        prompt,
+        output: Output.object({ schema: riskAssessmentSchema }),
+      })
+    } catch (error) {
+      if (NoObjectGeneratedError.isInstance(error)) {
+        console.error('[RiskScorer] Object generation failed', {
+          clauseId: clause.chunkId,
+          cause: error.cause,
+          text: error.text?.slice(0, 500),
+        })
+        throw new AnalysisFailedError(
+          'Risk scoring failed to produce valid output',
+          [{ field: 'clause', message: clause.chunkId }]
+        )
+      }
+      throw error
+    }
+
+    const { output, usage } = result
 
     totalInputTokens += usage?.inputTokens ?? 0
     totalOutputTokens += usage?.outputTokens ?? 0
@@ -100,10 +119,10 @@ export async function runRiskScorerAgent(
     assessments.push({
       clauseId: clause.chunkId,
       clause,
-      riskLevel: object.riskLevel,
-      confidence: object.confidence,
-      explanation: object.explanation,
-      evidence: object.evidence,
+      riskLevel: output.riskLevel,
+      confidence: output.confidence,
+      explanation: output.explanation,
+      evidence: output.evidence,
       startPosition: clause.startPosition,
       endPosition: clause.endPosition,
     })
