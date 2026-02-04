@@ -9,6 +9,7 @@
 
 import { tool } from 'ai'
 import { z } from 'zod'
+import { createHash } from 'crypto'
 import { db } from '@/db/client'
 import { referenceEmbeddings, referenceDocuments } from '@/db/schema/reference'
 import { cosineDistance, lt, eq, and, sql } from 'drizzle-orm'
@@ -49,8 +50,9 @@ async function executeVectorSearch({
   category,
   limit,
 }: VectorSearchInput): Promise<VectorSearchResult[]> {
-  // Check cache
-  const cacheKey = `${query.slice(0, 100)}:${category ?? 'all'}:${limit}`
+  // Check cache (use hash to avoid collisions from truncation)
+  const queryHash = createHash('sha256').update(query).digest('hex').slice(0, 16)
+  const cacheKey = `${queryHash}:${category ?? 'all'}:${limit}`
   const cached = searchCache.get(cacheKey)
   if (cached) return cached
 

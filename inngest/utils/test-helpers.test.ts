@@ -37,9 +37,12 @@ describe("test-helpers", () => {
     it("should generate timestamp", () => {
       const before = Date.now()
       const event = createMockEvent("nda/analysis.progress", {
+        documentId: "123e4567-e89b-12d3-a456-426614174000",
         analysisId: "123e4567-e89b-12d3-a456-426614174000",
-        step: "parsing",
-        percent: 50,
+        tenantId: "123e4567-e89b-12d3-a456-426614174000",
+        stage: "parsing",
+        progress: 50,
+        message: "Processing...",
       })
       const after = Date.now()
 
@@ -49,14 +52,20 @@ describe("test-helpers", () => {
 
     it("should generate unique event ID", () => {
       const event1 = createMockEvent("nda/analysis.progress", {
+        documentId: "123e4567-e89b-12d3-a456-426614174000",
         analysisId: "123e4567-e89b-12d3-a456-426614174000",
-        step: "parsing",
-        percent: 0,
+        tenantId: "123e4567-e89b-12d3-a456-426614174000",
+        stage: "parsing",
+        progress: 0,
+        message: "Processing...",
       })
       const event2 = createMockEvent("nda/analysis.progress", {
+        documentId: "123e4567-e89b-12d3-a456-426614174000",
         analysisId: "123e4567-e89b-12d3-a456-426614174000",
-        step: "parsing",
-        percent: 0,
+        tenantId: "123e4567-e89b-12d3-a456-426614174000",
+        stage: "parsing",
+        progress: 0,
+        message: "Processing...",
       })
 
       expect(event1.id).not.toBe(event2.id)
@@ -77,14 +86,17 @@ describe("test-helpers", () => {
       const analysisRequested = createMockEvent("nda/analysis.requested", {
         tenantId: crypto.randomUUID(),
         documentId: crypto.randomUUID(),
-        analysisId: crypto.randomUUID(),
+        source: "web",
       })
       expect(analysisRequested.name).toBe("nda/analysis.requested")
 
       const progress = createMockEvent("nda/analysis.progress", {
+        documentId: crypto.randomUUID(),
         analysisId: crypto.randomUUID(),
-        step: "classification",
-        percent: 75,
+        tenantId: crypto.randomUUID(),
+        stage: "classifying",
+        progress: 75,
+        message: "Classifying clauses...",
       })
       expect(progress.name).toBe("nda/analysis.progress")
 
@@ -170,25 +182,31 @@ describe("test-helpers", () => {
       await step.sendEvent("emit-progress-1", {
         name: "nda/analysis.progress",
         data: {
+          documentId: "123e4567-e89b-12d3-a456-426614174000",
           analysisId: "123e4567-e89b-12d3-a456-426614174000",
-          step: "parsing",
-          percent: 25,
+          tenantId: "123e4567-e89b-12d3-a456-426614174000",
+          stage: "parsing",
+          progress: 25,
+          message: "Parsing...",
         },
       })
 
       await step.sendEvent("emit-progress-2", {
         name: "nda/analysis.progress",
         data: {
+          documentId: "123e4567-e89b-12d3-a456-426614174000",
           analysisId: "123e4567-e89b-12d3-a456-426614174000",
-          step: "classification",
-          percent: 50,
+          tenantId: "123e4567-e89b-12d3-a456-426614174000",
+          stage: "classifying",
+          progress: 50,
+          message: "Classifying...",
         },
       })
 
       expect(getSentEvents()).toHaveLength(2)
       expect(getSentEvents()[0].name).toBe("nda/analysis.progress")
-      expect((getSentEvents()[0].data as { percent: number }).percent).toBe(25)
-      expect((getSentEvents()[1].data as { percent: number }).percent).toBe(50)
+      expect((getSentEvents()[0].data as { progress: number }).progress).toBe(25)
+      expect((getSentEvents()[1].data as { progress: number }).progress).toBe(50)
     })
 
     it("should handle array of events", async () => {
@@ -198,24 +216,30 @@ describe("test-helpers", () => {
         {
           name: "nda/analysis.progress",
           data: {
+            documentId: "123e4567-e89b-12d3-a456-426614174000",
             analysisId: "123e4567-e89b-12d3-a456-426614174000",
-            step: "parsing",
-            percent: 10,
+            tenantId: "123e4567-e89b-12d3-a456-426614174000",
+            stage: "parsing",
+            progress: 10,
+            message: "Parsing...",
           },
         },
         {
           name: "nda/analysis.progress",
           data: {
+            documentId: "123e4567-e89b-12d3-a456-426614174000",
             analysisId: "123e4567-e89b-12d3-a456-426614174000",
-            step: "classification",
-            percent: 20,
+            tenantId: "123e4567-e89b-12d3-a456-426614174000",
+            stage: "classifying",
+            progress: 20,
+            message: "Classifying...",
           },
         },
       ])
 
       expect(getSentEvents()).toHaveLength(2)
-      expect((getSentEvents()[0].data as { percent: number }).percent).toBe(10)
-      expect((getSentEvents()[1].data as { percent: number }).percent).toBe(20)
+      expect((getSentEvents()[0].data as { progress: number }).progress).toBe(10)
+      expect((getSentEvents()[1].data as { progress: number }).progress).toBe(20)
     })
 
     it("should reset all tracked calls", async () => {
@@ -225,7 +249,14 @@ describe("test-helpers", () => {
       await step.sleep("1m")
       await step.sendEvent("emit-progress", {
         name: "nda/analysis.progress",
-        data: { analysisId: crypto.randomUUID(), step: "test", percent: 0 },
+        data: {
+          documentId: crypto.randomUUID(),
+          analysisId: crypto.randomUUID(),
+          tenantId: crypto.randomUUID(),
+          stage: "parsing",
+          progress: 0,
+          message: "Processing...",
+        },
       })
 
       expect(getStepResults()).toHaveLength(1)
@@ -387,7 +418,7 @@ describe("test-helpers", () => {
 
         expect(data.tenantId).toMatch(/^[0-9a-f-]{36}$/i)
         expect(data.documentId).toMatch(/^[0-9a-f-]{36}$/i)
-        expect(data.analysisId).toMatch(/^[0-9a-f-]{36}$/i)
+        expect(data.source).toBe("web")
       })
 
       it("should allow overrides including optional version", () => {
@@ -403,20 +434,23 @@ describe("test-helpers", () => {
       it("should generate valid payload with defaults", () => {
         const data = testEventData.analysisProgress()
 
+        expect(data.documentId).toMatch(/^[0-9a-f-]{36}$/i)
         expect(data.analysisId).toMatch(/^[0-9a-f-]{36}$/i)
-        expect(data.step).toBe("parsing")
-        expect(data.percent).toBe(0)
+        expect(data.tenantId).toMatch(/^[0-9a-f-]{36}$/i)
+        expect(data.stage).toBe("parsing")
+        expect(data.progress).toBe(0)
+        expect(data.message).toBe("Processing...")
       })
 
       it("should allow overrides", () => {
         const data = testEventData.analysisProgress({
-          step: "risk-scoring",
-          percent: 75,
+          stage: "scoring",
+          progress: 75,
           message: "Scoring clause 3 of 5",
         })
 
-        expect(data.step).toBe("risk-scoring")
-        expect(data.percent).toBe(75)
+        expect(data.stage).toBe("scoring")
+        expect(data.progress).toBe(75)
         expect(data.message).toBe("Scoring clause 3 of 5")
       })
     })

@@ -94,17 +94,17 @@ describe("Inngest Client", () => {
     describe("nda/analysis.progress event", () => {
       it("should create typed event with createMockEvent", () => {
         const data = testEventData.analysisProgress({
-          step: "classification",
-          percent: 50,
+          stage: "classifying",
+          progress: 50,
         })
         const event = createMockEvent("nda/analysis.progress", data)
 
         expect(event.name).toBe("nda/analysis.progress")
-        expect(event.data.step).toBe("classification")
-        expect(event.data.percent).toBe(50)
+        expect(event.data.stage).toBe("classifying")
+        expect(event.data.progress).toBe(50)
       })
 
-      it("should allow optional message field", () => {
+      it("should allow custom message field", () => {
         const data = testEventData.analysisProgress({
           message: "Processing clause 5 of 10",
         })
