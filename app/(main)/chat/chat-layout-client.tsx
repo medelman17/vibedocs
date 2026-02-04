@@ -47,7 +47,11 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
   })
 
   const handleSignOut = async () => {
-    await signOutAction()
+    const result = await signOutAction()
+    if (!result.success) {
+      // Log error but don't block - user can retry
+      console.error("Sign out failed:", result.error.message)
+    }
   }
 
   return (

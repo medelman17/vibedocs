@@ -60,6 +60,32 @@ describe("(auth)/actions", () => {
   beforeEach(() => {
     mockSessionContext = null
     resetFactoryCounter()
+    vi.clearAllMocks()
+  })
+
+  describe("signOutAction", () => {
+    it("calls signOut with redirect to login", async () => {
+      const { signOut } = await import("@/lib/auth")
+      const { signOutAction } = await import("./actions")
+
+      const result = await signOutAction()
+
+      expect(result.success).toBe(true)
+      expect(signOut).toHaveBeenCalledWith({ redirectTo: "/login" })
+    })
+
+    it("returns error when signOut fails", async () => {
+      const { signOut } = await import("@/lib/auth")
+      vi.mocked(signOut).mockRejectedValueOnce(new Error("Network error"))
+
+      const { signOutAction } = await import("./actions")
+      const result = await signOutAction()
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.code).toBe("INTERNAL_ERROR")
+      }
+    })
   })
 
   describe("switchOrganization", () => {

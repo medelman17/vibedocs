@@ -69,14 +69,23 @@ const membershipIdSchema = z.object({
  *
  * Terminates the user's session and redirects to the login page.
  *
+ * @returns Success response, or error if sign out fails
+ *
  * @example
  * ```typescript
- * await signOutAction();
- * // User is redirected to /login
+ * const result = await signOutAction();
+ * if (result.success) {
+ *   // User is redirected to /login
+ * }
  * ```
  */
-export async function signOutAction(): Promise<void> {
-  await signOut({ redirectTo: "/login" });
+export async function signOutAction(): Promise<ApiResponse<void>> {
+  try {
+    await signOut({ redirectTo: "/login" });
+    return ok(undefined);
+  } catch {
+    return err("INTERNAL_ERROR", "Failed to sign out. Please try again.");
+  }
 }
 
 /**
