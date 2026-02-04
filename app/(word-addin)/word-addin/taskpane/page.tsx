@@ -1,6 +1,6 @@
 "use client"
 
-import { useSyncExternalStore, useCallback } from "react"
+import { useSyncExternalStore, useEffect } from "react"
 import { TaskPaneShell } from "./components/TaskPaneShell"
 import { AuthGate } from "./components/AuthGate"
 import { AnalyzeButton } from "./components/AnalyzeButton"
@@ -25,11 +25,15 @@ interface OfficeState {
   host: string | null
 }
 
-let officeState: OfficeState = {
+// Initial state must match server render to avoid hydration mismatch
+const INITIAL_STATE: OfficeState = {
   isReady: false,
   error: null,
   host: null,
 }
+
+let officeState: OfficeState = INITIAL_STATE
+let initialized = false
 
 const listeners = new Set<() => void>()
 
@@ -47,8 +51,15 @@ function getOfficeSnapshot() {
   return officeState
 }
 
-// Initialize Office.js once (module-level side effect)
-if (typeof window !== "undefined") {
+function getServerSnapshot() {
+  // Always return initial state for SSR to ensure hydration matches
+  return INITIAL_STATE
+}
+
+function initializeOffice() {
+  if (initialized) return
+  initialized = true
+
   const devMode = initDevMode()
 
   if (devMode) {
@@ -87,8 +98,12 @@ export default function TaskPanePage() {
     (state) => state.status === "completed" && state.results !== null
   )
 
-  // Use useSyncExternalStore to subscribe to Office state without effects
-  const getServerSnapshot = useCallback(() => officeState, [])
+  // Initialize Office.js after hydration to avoid mismatch
+  useEffect(() => {
+    initializeOffice()
+  }, [])
+
+  // Use useSyncExternalStore to subscribe to Office state
   const currentOfficeState = useSyncExternalStore(
     subscribeToOffice,
     getOfficeSnapshot,
