@@ -20,10 +20,15 @@ vi.mock("@/inngest", () => ({
   },
 }))
 
-// Mock database
+// Mock database with query support for deduplication
 vi.mock("@/db", () => ({
   db: {
     insert: vi.fn(),
+    query: {
+      documents: {
+        findFirst: vi.fn(),
+      },
+    },
   },
 }))
 
@@ -49,6 +54,7 @@ describe("POST /api/word-addin/analyze", () => {
   let mockVerifyAddInAuth: Mock
   let mockInngestSend: Mock
   let mockDbInsert: Mock
+  let mockDbQueryFindFirst: Mock
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -62,6 +68,10 @@ describe("POST /api/word-addin/analyze", () => {
 
     const { db } = await import("@/db")
     mockDbInsert = db.insert as Mock
+    mockDbQueryFindFirst = db.query.documents.findFirst as Mock
+
+    // Default: no existing document (no deduplication match)
+    mockDbQueryFindFirst.mockResolvedValue(null)
   })
 
   describe("authentication", () => {
@@ -133,9 +143,7 @@ describe("POST /api/word-addin/analyze", () => {
       expect(body.success).toBe(false)
       expect(body.error.code).toBe("VALIDATION_ERROR")
       expect(body.error.details).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ field: "content" }),
-        ])
+        expect.arrayContaining([expect.objectContaining({ field: "content" })])
       )
     })
 
@@ -198,7 +206,8 @@ describe("POST /api/word-addin/analyze", () => {
       })
 
       // Mock db.insert().values().returning() chain
-      const mockReturning = vi.fn()
+      const mockReturning = vi
+        .fn()
         .mockResolvedValueOnce([mockDocument])
         .mockResolvedValueOnce([mockAnalysis])
       const mockValues = vi.fn().mockReturnValue({ returning: mockReturning })
@@ -246,6 +255,7 @@ describe("POST /api/word-addin/analyze", () => {
           metadata: {
             title: "This is a sample NDA document content....",
             author: undefined,
+            wordVersion: undefined,
           },
         },
       })
@@ -279,6 +289,139 @@ describe("POST /api/word-addin/analyze", () => {
       expect(response.status).toBe(200)
       const body = await response.json()
       expect(body.success).toBe(true)
+    })
+  })
+
+  describe("deduplication", () => {
+    beforeEach(() => {
+      mockVerifyAddInAuth.mockResolvedValue({
+        userId: "user-123",
+        user: { id: "user-123", email: "test@example.com", name: "Test User" },
+        tenant: { tenantId: "tenant-123", role: "owner" },
+      })
+    })
+
+    it("returns existing analysis for duplicate document with completed analysis", async () => {
+      mockDbQueryFindFirst.mockResolvedValue({
+        id: "existing-doc-123",
+        analyses: [
+          {
+            id: "existing-analysis-456",
+            status: "completed",
+            createdAt: new Date("2026-01-01"),
+          },
+        ],
+      })
+
+      const request = createMockRequest({
+        content: "This is a sample NDA document content.",
+      })
+      const response = await POST(request, { params: Promise.resolve({}) })
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body.success).toBe(true)
+      expect(body.data).toEqual({
+        analysisId: "existing-analysis-456",
+        documentId: "existing-doc-123",
+        status: "existing",
+        message: "Document was previously analyzed. Returning existing results.",
+      })
+
+      // Should not have called insert or inngest
+      expect(mockDbInsert).not.toHaveBeenCalled()
+    })
+
+    it("returns in_progress for duplicate document with pending analysis", async () => {
+      mockDbQueryFindFirst.mockResolvedValue({
+        id: "existing-doc-123",
+        analyses: [
+          {
+            id: "pending-analysis-456",
+            status: "pending",
+            createdAt: new Date("2026-01-01"),
+          },
+        ],
+      })
+
+      const request = createMockRequest({
+        content: "This is a sample NDA document content.",
+      })
+      const response = await POST(request, { params: Promise.resolve({}) })
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body.success).toBe(true)
+      expect(body.data).toEqual({
+        analysisId: "pending-analysis-456",
+        documentId: "existing-doc-123",
+        status: "in_progress",
+        message: "Document analysis is already in progress.",
+      })
+
+      // Should not have called insert or inngest
+      expect(mockDbInsert).not.toHaveBeenCalled()
+    })
+
+    it("returns in_progress for duplicate document with processing analysis", async () => {
+      mockDbQueryFindFirst.mockResolvedValue({
+        id: "existing-doc-123",
+        analyses: [
+          {
+            id: "processing-analysis-456",
+            status: "processing",
+            createdAt: new Date("2026-01-01"),
+          },
+        ],
+      })
+
+      const request = createMockRequest({
+        content: "This is a sample NDA document content.",
+      })
+      const response = await POST(request, { params: Promise.resolve({}) })
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body.success).toBe(true)
+      expect(body.data.status).toBe("in_progress")
+    })
+
+    it("creates new analysis for duplicate document with failed analysis", async () => {
+      mockDbQueryFindFirst.mockResolvedValue({
+        id: "existing-doc-123",
+        analyses: [
+          {
+            id: "failed-analysis-456",
+            status: "failed",
+            createdAt: new Date("2026-01-01"),
+          },
+        ],
+      })
+
+      // Mock db.insert for new document creation
+      const mockDocument = { id: "new-doc-123" }
+      const mockAnalysis = { id: "new-analysis-456" }
+      const mockReturning = vi
+        .fn()
+        .mockResolvedValueOnce([mockDocument])
+        .mockResolvedValueOnce([mockAnalysis])
+      mockDbInsert.mockReturnValue({
+        values: vi.fn().mockReturnValue({ returning: mockReturning }),
+      })
+      mockInngestSend.mockResolvedValue({ ids: ["evt-123"] })
+
+      const request = createMockRequest({
+        content: "This is a sample NDA document content.",
+      })
+      const response = await POST(request, { params: Promise.resolve({}) })
+
+      expect(response.status).toBe(200)
+      const body = await response.json()
+      expect(body.data.status).toBe("queued")
+
+      // Should have called insert for new document and analysis
+      expect(mockDbInsert).toHaveBeenCalledTimes(2)
+      expect(mockInngestSend).toHaveBeenCalled()
     })
   })
 
@@ -317,7 +460,8 @@ describe("POST /api/word-addin/analyze", () => {
     it("returns 500 when Inngest send fails", async () => {
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
 
-      const mockReturning = vi.fn()
+      const mockReturning = vi
+        .fn()
         .mockResolvedValueOnce([{ id: "doc-123" }])
         .mockResolvedValueOnce([{ id: "analysis-456" }])
       mockDbInsert.mockReturnValue({
