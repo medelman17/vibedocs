@@ -20,9 +20,16 @@ import {
   validateParserOutput,
   validateClassifierOutput,
   validateTokenBudget,
+  mapExtractionError,
 } from '@/agents/validation'
+import {
+  EncryptedDocumentError,
+  CorruptDocumentError,
+  OcrRequiredError,
+} from '@/lib/errors'
 import { BudgetTracker } from '@/lib/ai/budget'
 import { analyses } from '@/db/schema/analyses'
+import type { ParserOutput } from '@/agents/parser'
 import { eq } from 'drizzle-orm'
 import type { AnalysisProgressPayload } from '../types'
 
@@ -111,10 +118,46 @@ export const analyzeNda = inngest.createFunction(
         })
       }
 
-      // Step 2: Parser Agent
-      const parserResult = await step.run('parser-agent', () =>
-        runParserAgent({ documentId, tenantId, source, content, metadata })
-      )
+      // Step 2: Parser Agent with extraction error handling
+      let parserResult: ParserOutput
+      try {
+        parserResult = await step.run('parser-agent', () =>
+          runParserAgent({ documentId, tenantId, source, content, metadata })
+        )
+      } catch (error) {
+        // Map extraction errors to appropriate pipeline errors
+        if (
+          error instanceof EncryptedDocumentError ||
+          error instanceof CorruptDocumentError ||
+          error instanceof OcrRequiredError
+        ) {
+          const mapped = mapExtractionError(error)
+
+          // Persist failure state
+          await step.run('persist-extraction-failure', async () => {
+            await ctx.db
+              .update(analyses)
+              .set({
+                status: mapped.routeToOcr ? 'pending_ocr' : 'failed',
+                progressStage: 'failed',
+                metadata: {
+                  failedAt: 'extraction',
+                  errorCode:
+                    error instanceof OcrRequiredError
+                      ? 'OCR_REQUIRED'
+                      : error instanceof EncryptedDocumentError
+                        ? 'ENCRYPTED'
+                        : 'CORRUPT',
+                  errorMessage: mapped.userMessage,
+                },
+              })
+              .where(eq(analyses.id, analysisId))
+          })
+
+          throw new NonRetriableError(mapped.userMessage)
+        }
+        throw error
+      }
 
       // Parser validation gate - runs AFTER step completes, OUTSIDE step.run()
       // Validation is fast and deterministic, so no durability needed
