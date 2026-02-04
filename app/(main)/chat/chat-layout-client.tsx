@@ -8,8 +8,18 @@ import { CommandPalette } from "@/components/navigation"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Separator } from "@/components/ui/separator"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { signOutAction } from "@/app/(main)/(auth)/actions"
-import { getConversations } from "./actions"
+import { getConversations, deleteConversation } from "./actions"
 
 interface ChatLayoutClientProps {
   children: React.ReactNode
@@ -29,6 +39,8 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
   } = useShellStore()
 
   const [historyItems, setHistoryItems] = React.useState<HistoryItem[]>([])
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+  const [itemToDelete, setItemToDelete] = React.useState<HistoryItem | null>(null)
 
   // Load conversation history
   const loadHistory = React.useCallback(async () => {
@@ -96,11 +108,41 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
     }
   }
 
+  const handleDeleteItem = (item: HistoryItem) => {
+    setItemToDelete(item)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return
+
+    if (itemToDelete.type === "conversation") {
+      const result = await deleteConversation(itemToDelete.id)
+      if (result.success) {
+        // Refresh history to remove deleted item
+        await loadHistory()
+
+        // If we're viewing the deleted conversation, redirect to chat home
+        const searchParams = new URLSearchParams(window.location.search)
+        const currentConversationId = searchParams.get("conversation")
+        if (currentConversationId === itemToDelete.id) {
+          router.push("/chat")
+        }
+      } else {
+        console.error("Delete failed:", result.error.message)
+      }
+    }
+
+    setDeleteDialogOpen(false)
+    setItemToDelete(null)
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar
         items={historyItems}
         onSelectItem={handleSelectItem}
+        onDeleteItem={handleDeleteItem}
         onOpenCommandPalette={togglePalette}
         onNewChat={() => {
           // Hard reload to clear all local state (messages, artifact, etc.)
@@ -130,6 +172,25 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
 
       {/* Command palette overlay */}
       <CommandPalette />
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete &quot;{itemToDelete?.title}&quot; and all its messages.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarProvider>
   )
 }

@@ -13,6 +13,8 @@ import {
   ChevronDownIcon,
   BuildingIcon,
   FileText,
+  Trash2Icon,
+  MoreHorizontalIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -64,6 +66,7 @@ interface AppSidebarProps {
   currentOrg?: Organization
   user?: User
   onSelectItem?: (item: HistoryItem) => void
+  onDeleteItem?: (item: HistoryItem) => void
   onNewChat?: () => void
   onOpenCommandPalette?: () => void
   onSwitchOrg?: (org: Organization) => void
@@ -77,6 +80,7 @@ export function AppSidebar({
   currentOrg,
   user,
   onSelectItem,
+  onDeleteItem,
   onNewChat,
   onOpenCommandPalette,
   onSwitchOrg,
@@ -185,13 +189,38 @@ export function AppSidebar({
                   const Icon = getIcon(item.type)
                   return (
                     <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        onClick={() => onSelectItem?.(item)}
-                        tooltip={item.title}
-                      >
-                        <Icon className="size-4" />
-                        <span>{item.title}</span>
-                      </SidebarMenuButton>
+                      <div className="group/item relative flex w-full items-center">
+                        <SidebarMenuButton
+                          onClick={() => onSelectItem?.(item)}
+                          tooltip={item.title}
+                          className="flex-1"
+                        >
+                          <Icon className="size-4" />
+                          <span>{item.title}</span>
+                        </SidebarMenuButton>
+                        {item.type === "conversation" && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                className="absolute right-1 opacity-0 group-hover/item:opacity-100 focus:opacity-100 transition-opacity p-1 hover:bg-accent rounded-sm"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontalIcon className="size-3.5" />
+                                <span className="sr-only">More options</span>
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => onDeleteItem?.(item)}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2Icon className="mr-2 size-4" />
+                                Delete conversation
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
                     </SidebarMenuItem>
                   )
                 })}

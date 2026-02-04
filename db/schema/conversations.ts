@@ -148,6 +148,7 @@ export const messages = pgTable(
   {
     ...primaryId,
     ...timestamps,
+    ...softDelete,
 
     /**
      * Parent conversation ID.
