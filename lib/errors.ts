@@ -87,7 +87,7 @@ export class ValidationError extends AppError {
     super("VALIDATION_ERROR", message, 400, details)
   }
 
-  static fromZodError(error: { issues: Array<{ path: (string | number)[]; message: string }> }): ValidationError {
+  static fromZodError(error: { issues: Array<{ path: PropertyKey[]; message: string }> }): ValidationError {
     const details = error.issues.map((e) => ({
       field: e.path.join("."),
       message: e.message,

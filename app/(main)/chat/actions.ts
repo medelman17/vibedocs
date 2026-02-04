@@ -13,7 +13,7 @@ import { z } from "zod"
 import { desc, eq, and, isNull, sql } from "drizzle-orm"
 import { withTenant } from "@/lib/dal"
 import { conversations, messages } from "@/db/schema"
-import { ok, err, wrapError, type ApiResponse } from "@/lib/api-response"
+import { ok, wrapError, type ApiResponse } from "@/lib/api-response"
 import {
   NotFoundError,
   ValidationError,
@@ -52,7 +52,7 @@ const createMessageSchema = z.object({
       })
     )
     .optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 })
 
 /**
@@ -82,7 +82,7 @@ export async function createConversation(
   try {
     const parsed = createConversationSchema.safeParse(data)
     if (!parsed.success) {
-      return err(ValidationError.fromZodError(parsed.error))
+      return wrapError(ValidationError.fromZodError(parsed.error))
     }
 
     const { db, tenantId, userId } = await withTenant()
@@ -129,7 +129,7 @@ export async function getConversations(
   try {
     const parsed = getConversationsSchema.safeParse(params || {})
     if (!parsed.success) {
-      return err(ValidationError.fromZodError(parsed.error))
+      return wrapError(ValidationError.fromZodError(parsed.error))
     }
 
     const { db, tenantId, userId } = await withTenant()
@@ -213,7 +213,7 @@ export async function getConversation(
       )
 
     if (!conversation) {
-      return err(new NotFoundError("Conversation not found"))
+      return wrapError(new NotFoundError("Conversation not found"))
     }
 
     return ok(conversation)
@@ -240,7 +240,7 @@ export async function updateConversationTitle(
   try {
     const parsed = updateConversationTitleSchema.safeParse(data)
     if (!parsed.success) {
-      return err(ValidationError.fromZodError(parsed.error))
+      return wrapError(ValidationError.fromZodError(parsed.error))
     }
 
     const { db, tenantId, userId } = await withTenant()
@@ -258,11 +258,11 @@ export async function updateConversationTitle(
       )
 
     if (!existing) {
-      return err(new NotFoundError("Conversation not found"))
+      return wrapError(new NotFoundError("Conversation not found"))
     }
 
     if (existing.userId !== userId) {
-      return err(new ForbiddenError("Not authorized to update this conversation"))
+      return wrapError(new ForbiddenError("Not authorized to update this conversation"))
     }
 
     // Update title
@@ -306,11 +306,11 @@ export async function deleteConversation(
       )
 
     if (!existing) {
-      return err(new NotFoundError("Conversation not found"))
+      return wrapError(new NotFoundError("Conversation not found"))
     }
 
     if (existing.userId !== userId) {
-      return err(new ForbiddenError("Not authorized to delete this conversation"))
+      return wrapError(new ForbiddenError("Not authorized to delete this conversation"))
     }
 
     // Soft delete
@@ -346,7 +346,7 @@ export async function createMessage(
   try {
     const parsed = createMessageSchema.safeParse(data)
     if (!parsed.success) {
-      return err(ValidationError.fromZodError(parsed.error))
+      return wrapError(ValidationError.fromZodError(parsed.error))
     }
 
     const { db, tenantId, userId } = await withTenant()
@@ -364,11 +364,11 @@ export async function createMessage(
       )
 
     if (!conversation) {
-      return err(new NotFoundError("Conversation not found"))
+      return wrapError(new NotFoundError("Conversation not found"))
     }
 
     if (conversation.userId !== userId) {
-      return err(new ForbiddenError("Not authorized to add messages to this conversation"))
+      return wrapError(new ForbiddenError("Not authorized to add messages to this conversation"))
     }
 
     // Insert message
@@ -434,11 +434,11 @@ export async function getMessages(
       )
 
     if (!conversation) {
-      return err(new NotFoundError("Conversation not found"))
+      return wrapError(new NotFoundError("Conversation not found"))
     }
 
     if (conversation.userId !== userId) {
-      return err(new ForbiddenError("Not authorized to view messages in this conversation"))
+      return wrapError(new ForbiddenError("Not authorized to view messages in this conversation"))
     }
 
     // Fetch messages
