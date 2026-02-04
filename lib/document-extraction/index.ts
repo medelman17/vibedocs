@@ -30,3 +30,6 @@ export { validateExtractionQuality, detectLanguage } from './validators'
 
 // Structure detection
 export { detectStructure, parseObviousStructure } from './structure-detector'
+
+// Unified extraction
+export { extractDocument, type ExtractDocumentOptions } from './extract-document'
