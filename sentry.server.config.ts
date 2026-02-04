@@ -1,44 +1,19 @@
+// This file configures the initialization of Sentry on the server.
+// The config you add here will be used whenever the server handles a request.
+// https://docs.sentry.io/platforms/javascript/guides/nextjs/
+
 import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  dsn: "https://d34a3fc6357b33ec7bb91bf91bf742fb@o4510824670167040.ingest.us.sentry.io/4510824671608832",
 
-  // Enable structured logging
+  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
+  tracesSampleRate: 1,
+
+  // Enable logs to be sent to Sentry
   enableLogs: true,
 
-  // Send prompts/outputs to Sentry (useful for debugging AI issues)
+  // Enable sending user PII (Personally Identifiable Information)
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
   sendDefaultPii: true,
-
-  integrations: [
-    // Console integration - captures console.log, console.warn, console.error
-    Sentry.consoleLoggingIntegration({
-      levels: ["log", "warn", "error"],
-    }),
-    // Vercel AI SDK integration - tracks LLM calls, tokens, latency
-    Sentry.vercelAIIntegration({
-      recordInputs: true,
-      recordOutputs: true,
-    }),
-  ],
-
-  // Dynamic sampling - capture more of important transactions
-  tracesSampler: ({ name, parentSampled }) => {
-    // Always skip health checks and internal routes
-    if (name.includes("healthcheck") || name.includes("_next")) {
-      return 0;
-    }
-    // Always capture critical paths
-    if (name.includes("analyze") || name.includes("inngest")) {
-      return 1.0;
-    }
-    // Inherit parent sampling decision for distributed traces
-    if (typeof parentSampled === "boolean") {
-      return parentSampled;
-    }
-    // Production: 10%, Development: 100%
-    return process.env.NODE_ENV === "production" ? 0.1 : 1.0;
-  },
-
-  // Set to false in production to reduce noise
-  debug: false,
 });
