@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod"
+import { eq, and } from "drizzle-orm"
 import { db } from "@/db"
 import { documents, analyses } from "@/db/schema"
 import { verifyAddInAuth } from "@/lib/word-addin-auth"
@@ -23,6 +24,7 @@ const paragraphSchema = z.object({
   text: z.string(),
   style: z.string().optional(),
   isHeading: z.boolean().optional(),
+  outlineLevel: z.number().optional(),
 })
 
 /**
@@ -38,6 +40,16 @@ const analyzeRequestSchema = z.object({
     .object({
       title: z.string().optional(),
       source: z.literal("word-addin").default("word-addin"),
+    })
+    .optional(),
+  /** Document properties from Word */
+  properties: z
+    .object({
+      author: z.string().optional(),
+      creationDate: z.string().optional(), // ISO string
+      lastModifiedBy: z.string().optional(),
+      lastModified: z.string().optional(), // ISO string
+      wordVersion: z.string().optional(),
     })
     .optional(),
 })
@@ -57,10 +69,11 @@ function computeContentHash(content: string): string {
  * @description
  * This endpoint:
  * 1. Validates Bearer token authentication
- * 2. Creates a document record with the raw text content
- * 3. Creates an analysis record with status "pending"
- * 4. Triggers the Inngest analysis pipeline
- * 5. Returns the analysis ID for status polling
+ * 2. Checks for existing analysis with same content hash (deduplication)
+ * 3. Creates a document record with the raw text content
+ * 4. Creates an analysis record with status "pending"
+ * 5. Triggers the Inngest analysis pipeline
+ * 6. Returns the analysis ID for status polling
  *
  * @example
  * ```typescript
@@ -74,6 +87,7 @@ function computeContentHash(content: string): string {
  *     content: documentText,
  *     paragraphs: structuredParagraphs,
  *     metadata: { title: "Contract Review" },
+ *     properties: { author: "Legal Dept", wordVersion: "16.0" },
  *   }),
  * })
  * ```
@@ -94,7 +108,7 @@ export const POST = withErrorHandling(async (request: Request) => {
     throw new ValidationError("Invalid request body", details)
   }
 
-  const { content, paragraphs, metadata } = parsed.data
+  const { content, paragraphs, metadata, properties } = parsed.data
   const tenantId = authContext.tenant.tenantId
 
   // Tenant context is required for document creation
@@ -106,6 +120,41 @@ export const POST = withErrorHandling(async (request: Request) => {
 
   // Compute content hash for duplicate detection
   const contentHash = computeContentHash(content)
+
+  // Check for existing analysis with same content
+  const existingDoc = await db.query.documents.findFirst({
+    where: and(eq(documents.tenantId, tenantId), eq(documents.contentHash, contentHash)),
+    with: {
+      analyses: {
+        orderBy: (analyses, { desc }) => [desc(analyses.createdAt)],
+        limit: 1,
+      },
+    },
+  })
+
+  // If document exists with completed analysis, return existing results
+  if (existingDoc?.analyses?.[0]?.status === "completed") {
+    return success({
+      analysisId: existingDoc.analyses[0].id,
+      documentId: existingDoc.id,
+      status: "existing",
+      message: "Document was previously analyzed. Returning existing results.",
+    })
+  }
+
+  // If document exists but analysis is pending/failed, check if we should re-analyze
+  if (existingDoc?.analyses?.[0]) {
+    const lastAnalysis = existingDoc.analyses[0]
+    if (lastAnalysis.status === "pending" || lastAnalysis.status === "processing") {
+      return success({
+        analysisId: lastAnalysis.id,
+        documentId: existingDoc.id,
+        status: "in_progress",
+        message: "Document analysis is already in progress.",
+      })
+    }
+    // Failed analysis - fall through to create new one
+  }
 
   // Generate title from first heading or first line
   const title =
@@ -132,6 +181,7 @@ export const POST = withErrorHandling(async (request: Request) => {
         source: "word-addin",
         paragraphCount: paragraphs?.length ?? 0,
         paragraphs: paragraphs ?? [],
+        wordProperties: properties ?? {},
       },
     })
     .returning()
@@ -161,13 +211,15 @@ export const POST = withErrorHandling(async (request: Request) => {
         rawText: content,
         paragraphs: (paragraphs ?? []).map((p) => ({
           text: p.text,
-          style: p.style ?? 'Normal',
+          style: p.style ?? "Normal",
           isHeading: p.isHeading ?? false,
+          outlineLevel: p.outlineLevel ?? 0,
         })),
       },
       metadata: {
         title,
-        author: undefined,
+        author: properties?.author,
+        wordVersion: properties?.wordVersion,
       },
     },
   })
