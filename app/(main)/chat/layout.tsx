@@ -6,6 +6,7 @@ import { CommandPalette } from "@/components/navigation"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Separator } from "@/components/ui/separator"
+import { signOut } from "next-auth/react"
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const {
@@ -48,6 +49,9 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
           // Hard reload to clear all local state (messages, artifact, etc.)
           window.location.href = "/chat"
         }}
+        onSignOut={async () => {
+          await signOut({ callbackUrl: "/" })
+        }}
         // TODO: Wire up actual data and handlers
         // items={conversations}
         // organizations={userOrgs}
@@ -56,7 +60,6 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
         // onSelectItem={handleSelectItem}
         // onSwitchOrg={handleSwitchOrg}
         // onOpenSettings={handleOpenSettings}
-        // onSignOut={handleSignOut}
       />
       <SidebarInset className="overflow-hidden">
         {/* Header with sidebar trigger */}
