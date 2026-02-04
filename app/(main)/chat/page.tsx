@@ -15,6 +15,7 @@ import {
   Suggestions,
   Suggestion,
   PromptInput,
+  PromptInputProvider,
   PromptInputTextarea,
   PromptInputFooter,
   PromptInputTools,
@@ -24,8 +25,11 @@ import {
   PromptInputActionMenuContent,
   PromptInputActionMenuItem,
   PromptInputActionAddAttachments,
+  SlashCommands,
+  type SlashCommand,
   type PromptInputMessage,
 } from "@/components/chat"
+import { useRouter } from "next/navigation"
 import {
   Artifact,
   ArtifactHeader,
@@ -49,8 +53,11 @@ interface ChatMessage {
 }
 
 export default function ChatPage() {
+  const router = useRouter()
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
+  const [inputValue, setInputValue] = React.useState("")
+  const inputWrapperRef = React.useRef<HTMLDivElement>(null)
   const { artifact, openArtifact, closeArtifact, toggleArtifactExpanded } = useShellStore()
 
   // Track file uploads separately
@@ -230,6 +237,39 @@ export default function ChatPage() {
     await sendMessage(suggestion)
   }
 
+  const handleSlashCommand = async (command: SlashCommand) => {
+    // Clear the input
+    setInputValue("")
+
+    // Execute the command
+    switch (command.id) {
+      case "analyze":
+        // Trigger file upload
+        const fileInput = document.querySelector<HTMLInputElement>(
+          'input[type="file"][aria-label="Upload files"]'
+        )
+        fileInput?.click()
+        break
+      case "compare":
+        router.push("/documents?action=compare")
+        break
+      case "generate":
+        router.push("/generate")
+        break
+      case "help":
+        // Send help message
+        await sendMessage("What can VibeDocs help me with?")
+        break
+    }
+  }
+
+  const handleSlashClose = () => {
+    // Clear the slash if user presses escape
+    if (inputValue.trim() === "/") {
+      setInputValue("")
+    }
+  }
+
   const renderArtifactContent = () => {
     if (!artifact.content) return null
 
@@ -301,33 +341,47 @@ export default function ChatPage() {
               </Suggestions>
             )}
 
-            <PromptInput
-              onSubmit={handleSubmit}
-              accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.docx"
-              multiple
-            >
-              <PromptInputTextarea placeholder="Ask about NDAs or upload a document..." />
-              <PromptInputFooter>
-                <PromptInputTools>
-                  <PromptInputActionMenu>
-                    <PromptInputActionMenuTrigger>
-                      <PlusIcon className="size-4" />
-                    </PromptInputActionMenuTrigger>
-                    <PromptInputActionMenuContent>
-                      <PromptInputActionAddAttachments label="Upload documents" />
-                      <PromptInputActionMenuItem disabled>
-                        <SparklesIcon className="mr-2 size-4" />
-                        Generate from template
-                      </PromptInputActionMenuItem>
-                    </PromptInputActionMenuContent>
-                  </PromptInputActionMenu>
-                </PromptInputTools>
-                <PromptInputSubmit
-                  status={isLoading ? "streaming" : undefined}
-                  disabled={isLoading}
-                />
-              </PromptInputFooter>
-            </PromptInput>
+            <div className="relative" ref={inputWrapperRef}>
+              <SlashCommands
+                inputValue={inputValue}
+                onSelect={handleSlashCommand}
+                onClose={handleSlashClose}
+                anchorRef={inputWrapperRef}
+              />
+              <PromptInputProvider initialInput={inputValue}>
+                <PromptInput
+                  onSubmit={handleSubmit}
+                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.docx"
+                  multiple
+                >
+                  <PromptInputTextarea
+                    placeholder="Ask about NDAs or upload a document... (try /help)"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                  />
+                  <PromptInputFooter>
+                    <PromptInputTools>
+                      <PromptInputActionMenu>
+                        <PromptInputActionMenuTrigger>
+                          <PlusIcon className="size-4" />
+                        </PromptInputActionMenuTrigger>
+                        <PromptInputActionMenuContent>
+                          <PromptInputActionAddAttachments label="Upload documents" />
+                          <PromptInputActionMenuItem disabled>
+                            <SparklesIcon className="mr-2 size-4" />
+                            Generate from template
+                          </PromptInputActionMenuItem>
+                        </PromptInputActionMenuContent>
+                      </PromptInputActionMenu>
+                    </PromptInputTools>
+                    <PromptInputSubmit
+                      status={isLoading ? "streaming" : undefined}
+                      disabled={isLoading}
+                    />
+                  </PromptInputFooter>
+                </PromptInput>
+              </PromptInputProvider>
+            </div>
           </div>
         </div>
       }

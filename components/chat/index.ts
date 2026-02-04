@@ -57,3 +57,11 @@ export {
   type PromptInputTextareaProps,
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input"
+
+// Slash commands
+export {
+  SlashCommands,
+  useSlashCommands,
+  defaultCommands,
+  type SlashCommand,
+} from "./slash-commands"
