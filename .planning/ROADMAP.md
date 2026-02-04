@@ -69,10 +69,14 @@ Plans:
   3. Document headings and section structure appear in extracted output
   4. Corrupt or encrypted files show clear error message (not silent failure)
   5. Word Add-in can submit raw text directly (bypasses extraction)
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md — Create extraction infrastructure (error types, quality metrics, extractors)
+- [ ] 03-02-PLAN.md — LLM-assisted structure detection with position tracking
+- [ ] 03-03-PLAN.md — Unified extractDocument with validation flow
+- [ ] 03-04-PLAN.md — Pipeline integration with error handling
+- [ ] 03-05-PLAN.md — Word Add-in enhancements with deduplication
 
 ### Phase 4: OCR Processing
 **Goal**: Scanned/image-based PDFs are detected and processed with user awareness of quality limitations
@@ -200,7 +204,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 |-------|----------------|--------|-----------|
 | 1. Foundation Hardening | 3/3 | Complete | 2026-02-04 |
 | 2. Budget Protection | 4/4 | Complete | 2026-02-04 |
-| 3. Document Extraction | 0/TBD | Not started | - |
+| 3. Document Extraction | 0/5 | Not started | - |
 | 4. OCR Processing | 0/TBD | Not started | - |
 | 5. Legal Chunking | 0/TBD | Not started | - |
 | 6. CUAD Classification | 0/TBD | Not started | - |
