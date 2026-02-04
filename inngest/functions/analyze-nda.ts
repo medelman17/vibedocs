@@ -276,6 +276,8 @@ export const analyzeNda = inngest.createFunction(
 
       // Step 6: Persist final results
       await step.run('persist-final', async () => {
+        const usage = budgetTracker.getUsage()
+
         await ctx.db
           .update(analyses)
           .set({
@@ -283,7 +285,10 @@ export const analyzeNda = inngest.createFunction(
             overallRiskScore: riskResult.overallRiskScore,
             overallRiskLevel: riskResult.overallRiskLevel,
             gapAnalysis: gapResult.gapAnalysis,
-            tokenUsage: budgetTracker.getUsage(),
+            tokenUsage: usage,
+            // Budget tracking fields
+            actualTokens: usage.total.total,
+            estimatedCost: usage.total.estimatedCost,
             processingTimeMs: Date.now() - startTime,
             completedAt: new Date(),
           })
