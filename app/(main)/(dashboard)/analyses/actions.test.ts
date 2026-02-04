@@ -45,6 +45,14 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }))
 
+// Mock inngest
+const mockInngestSend = vi.fn().mockResolvedValue({ ids: ["run_123"] })
+vi.mock("@/inngest", () => ({
+  inngest: {
+    send: mockInngestSend,
+  },
+}))
+
 // Helper to set up tenant context
 function setupTenantContext(params: {
   user: { id: string; name: string | null; email: string }
@@ -68,6 +76,7 @@ describe("analyses/actions", () => {
   beforeEach(() => {
     mockTenantContext = null
     resetFactoryCounter()
+    mockInngestSend.mockClear()
   })
 
   describe("triggerAnalysis", () => {
@@ -158,6 +167,53 @@ describe("analyses/actions", () => {
       await expect(
         triggerAnalysis("a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d")
       ).rejects.toThrow("REDIRECT:/onboarding")
+    })
+
+    it("sends Inngest event with userPrompt", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "member")
+      const doc = await createTestDocument(org.id, { status: "ready" })
+      setupTenantContext({ user, org, membership: { role: "member" } })
+
+      const { triggerAnalysis } = await import("./actions")
+      const result = await triggerAnalysis(doc.id, { userPrompt: "Focus on IP" })
+
+      expect(result.success).toBe(true)
+      expect(mockInngestSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "nda/analysis.requested",
+          data: expect.objectContaining({
+            documentId: doc.id,
+            tenantId: org.id,
+            userPrompt: "Focus on IP",
+            source: "web-upload",
+          }),
+        })
+      )
+    })
+
+    it("sends Inngest event without userPrompt when not provided", async () => {
+      const user = await createTestUser()
+      const org = await createTestOrg()
+      await createTestMembership(org.id, user.id, "member")
+      const doc = await createTestDocument(org.id, { status: "ready" })
+      setupTenantContext({ user, org, membership: { role: "member" } })
+
+      const { triggerAnalysis } = await import("./actions")
+      const result = await triggerAnalysis(doc.id)
+
+      expect(result.success).toBe(true)
+      expect(mockInngestSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "nda/analysis.requested",
+          data: expect.objectContaining({
+            documentId: doc.id,
+            tenantId: org.id,
+            source: "web-upload",
+          }),
+        })
+      )
     })
   })
 
