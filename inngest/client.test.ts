@@ -208,11 +208,14 @@ describe("Inngest Client", () => {
       expect(barrel.wrapWithErrorHandling).toBeDefined()
     })
 
-    it("should export functions registry", async () => {
+    it("should NOT export functions from barrel (avoids heavy deps)", async () => {
+      // Functions are NOT exported to avoid pulling in pdf-parse → pdfjs-dist
+      // which requires browser-only APIs (DOMMatrix, ImageData, Path2D)
+      // Import functions directly from "@/inngest/functions" in serve handler
+      // See: https://github.com/medelman17/vibedocs/issues/43
       const barrel = await import("./index")
 
-      expect(barrel.functions).toBeDefined()
-      expect(Array.isArray(barrel.functions)).toBe(true)
+      expect((barrel as Record<string, unknown>).functions).toBeUndefined()
     })
 
     it("should NOT export test helpers from barrel", async () => {
