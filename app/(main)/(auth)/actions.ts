@@ -9,6 +9,7 @@
  *
  * ## Actions
  *
+ * - `signOutAction` - Sign out the current user
  * - `switchOrganization` - Switch the active organization context
  * - `getUserOrganizations` - Get all organizations the user belongs to
  * - `acceptInvitation` - Accept a pending organization invitation
@@ -25,6 +26,7 @@ import { ok, err, type ApiResponse } from "@/lib/api-response";
 import { db } from "@/db/client";
 import { organizationMembers, organizations } from "@/db/schema";
 import { eq, and, isNotNull, isNull } from "drizzle-orm";
+import { signOut } from "@/lib/auth";
 
 // ============================================================================
 // Types
@@ -61,6 +63,30 @@ const membershipIdSchema = z.object({
 // ============================================================================
 // Actions
 // ============================================================================
+
+/**
+ * Sign out the current user.
+ *
+ * Terminates the user's session and redirects to the login page.
+ *
+ * @returns Success response, or error if sign out fails
+ *
+ * @example
+ * ```typescript
+ * const result = await signOutAction();
+ * if (result.success) {
+ *   // User is redirected to /login
+ * }
+ * ```
+ */
+export async function signOutAction(): Promise<ApiResponse<void>> {
+  try {
+    await signOut({ redirectTo: "/login" });
+    return ok(undefined);
+  } catch {
+    return err("INTERNAL_ERROR", "Failed to sign out. Please try again.");
+  }
+}
 
 /**
  * Switch the active organization for the current user's session.
