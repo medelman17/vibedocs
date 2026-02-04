@@ -29,7 +29,7 @@ import { NotFoundError, ValidationError, InternalError } from '@/lib/errors'
 export interface ParserInput {
   documentId: string
   tenantId: string
-  source: 'web' | 'word-addin'
+  source: 'web' | 'web-upload' | 'word-addin'
   content?: {
     rawText: string
     paragraphs: Array<{
@@ -79,7 +79,7 @@ export async function runParserAgent(input: ParserInput): Promise<ParserOutput> 
   let rawText: string
   let title: string
 
-  if (source === 'web') {
+  if (source === 'web' || source === 'web-upload') {
     // Fetch document from database to get blob URL
     const doc = await db.query.documents.findFirst({
       where: eq(documents.id, documentId),

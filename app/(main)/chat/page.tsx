@@ -38,6 +38,8 @@ import {
 } from "@/components/artifact"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { ExpandIcon, MoreHorizontalIcon } from "lucide-react"
+import { uploadDocument } from "@/app/(main)/(dashboard)/documents/actions"
+import { triggerAnalysis } from "@/app/(main)/(dashboard)/analyses/actions"
 
 interface ChatMessage {
   id: string
@@ -54,34 +56,116 @@ export default function ChatPage() {
   const handleSubmit = async (message: PromptInputMessage) => {
     if (!message.text.trim() && message.files.length === 0) return
 
+    // Handle file upload flow
+    if (message.files.length > 0) {
+      const file = message.files[0] // MVP: single file
+      setStatus("submitted")
+
+      // Add user message immediately
+      const userMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: message.text || `Analyze ${file.filename}`,
+        files: message.files.map((f) => ({
+          url: f.url,
+          filename: f.filename,
+          mediaType: f.mediaType,
+        })),
+      }
+      setMessages((prev) => [...prev, userMessage])
+
+      try {
+        // Fetch the blob from the URL and create FormData
+        const response = await fetch(file.url)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file: ${response.statusText}`)
+        }
+        const blob = await response.blob()
+        const formData = new FormData()
+        formData.append("file", blob, file.filename || "document")
+
+        // Upload document
+        const uploadResult = await uploadDocument(formData)
+        if (!uploadResult.success) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: `Failed to upload: ${uploadResult.error.message}`,
+            },
+          ])
+          setStatus("ready")
+          return
+        }
+
+        // Trigger analysis
+        const analysisResult = await triggerAnalysis(uploadResult.data.id, {
+          userPrompt: message.text || undefined,
+        })
+        if (!analysisResult.success) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: `Failed to start analysis: ${analysisResult.error.message}`,
+            },
+          ])
+          setStatus("ready")
+          return
+        }
+
+        // Add assistant message
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: `I'm analyzing "${uploadResult.data.title}". This usually takes about 30 seconds...`,
+          },
+        ])
+
+        // Auto-open artifact panel
+        openArtifact({
+          type: "analysis",
+          id: analysisResult.data.id,
+          title: uploadResult.data.title,
+        })
+
+        setStatus("ready")
+        return
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: `An error occurred: ${err instanceof Error ? err.message : "Unknown error"}`,
+          },
+        ])
+        setStatus("ready")
+        return
+      }
+    }
+
+    // Regular text message handling (existing mock behavior)
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
       content: message.text,
-      files: message.files.map((f) => ({
-        url: f.url,
-        filename: f.filename,
-        mediaType: f.mediaType,
-      })),
     }
     setMessages((prev) => [...prev, userMessage])
     setStatus("submitted")
 
-    // Simulate assistant response
     await new Promise((resolve) => setTimeout(resolve, 500))
     setStatus("streaming")
-
     await new Promise((resolve) => setTimeout(resolve, 300))
-
-    const fileInfo =
-      message.files.length > 0
-        ? ` I see you attached ${message.files.length} file(s): ${message.files.map((f) => f.filename).join(", ")}.`
-        : ""
 
     const assistantMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "assistant",
-      content: `I received your message: "${message.text}".${fileInfo} This is a demo response. Try the suggestion chips to see artifacts!`,
+      content: `I received your message: "${message.text}". Upload an NDA to analyze it!`,
     }
     setMessages((prev) => [...prev, assistantMessage])
     setStatus("ready")

@@ -19,6 +19,7 @@ import { ok, err, type ApiResponse } from "@/lib/api-response";
 import { analyses, clauseExtractions, documents } from "@/db/schema";
 import { eq, and, desc, gte, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { inngest } from "@/inngest";
 
 // ============================================================================
 // Types
@@ -129,7 +130,8 @@ const paginationSchema = z.object({
  * ```
  */
 export async function triggerAnalysis(
-  documentId: string
+  documentId: string,
+  options?: { userPrompt?: string }
 ): Promise<ApiResponse<Analysis>> {
   // Validate input
   const parsed = triggerAnalysisSchema.safeParse({ documentId });
@@ -181,13 +183,22 @@ export async function triggerAnalysis(
       documentId,
       status: "pending",
       version: nextVersion,
-      // Placeholder for Inngest integration
-      inngestRunId: `run_placeholder_${Date.now()}`,
+      metadata: options?.userPrompt ? { userPrompt: options.userPrompt } : {},
+      inngestRunId: `pending_${Date.now()}`, // Will be updated by Inngest
     })
     .returning();
 
-  // TODO: Send `analysis/requested` event to Inngest
-  // await inngest.send({ name: "analysis/requested", data: { analysisId: analysis.id } });
+  // Send analysis request event to Inngest
+  await inngest.send({
+    name: "nda/analysis.requested",
+    data: {
+      tenantId,
+      documentId,
+      analysisId: analysis.id,
+      source: "web-upload" as const,
+      userPrompt: options?.userPrompt,
+    },
+  });
 
   revalidatePath("/dashboard");
   revalidatePath("/analyses");
@@ -252,7 +263,8 @@ export async function getAnalysisStatus(
     ),
     columns: {
       status: true,
-      processingTimeMs: true,
+      progressStage: true,
+      progressPercent: true,
     },
   });
 
@@ -260,22 +272,28 @@ export async function getAnalysisStatus(
     return err("NOT_FOUND", "Analysis not found");
   }
 
-  // Determine progress based on status
-  // In production, this would come from Inngest step tracking
-  let progress: AnalysisStatusResponse["progress"];
+  // Map progress stage to human-readable message
+  const stageMessages: Record<string, string> = {
+    parsing: "Parsing document...",
+    classifying: "Classifying clauses...",
+    scoring: "Assessing risk levels...",
+    analyzing_gaps: "Analyzing gaps...",
+    complete: "Analysis complete",
+    failed: "Analysis failed",
+  };
 
-  if (analysis.status === "processing") {
-    // Placeholder progress - would be populated from Inngest metadata
-    progress = {
-      step: "Processing document",
-      percent: 50,
-    };
-  } else if (analysis.status === "completed") {
-    progress = {
-      step: "Complete",
-      percent: 100,
-    };
-  }
+  const progress: AnalysisStatusResponse["progress"] = {
+    step: analysis.progressStage
+      ? stageMessages[analysis.progressStage] || analysis.progressStage
+      : analysis.status === "pending"
+        ? "Queued for analysis..."
+        : analysis.status === "completed"
+          ? "Complete"
+          : "Processing...",
+    percent: analysis.status === "completed"
+      ? 100
+      : analysis.progressPercent ?? 0,
+  };
 
   return ok({
     status: analysis.status as AnalysisStatus,

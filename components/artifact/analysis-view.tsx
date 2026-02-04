@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import {
-  BarChartIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   Loader2Icon,
@@ -10,6 +9,7 @@ import {
   AlertTriangleIcon,
   AlertCircleIcon,
   HelpCircleIcon,
+  XCircleIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -20,81 +20,26 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import { Progress } from "@/components/ui/progress"
+import { useAnalysisProgress } from "@/hooks/use-analysis-progress"
+import {
+  getAnalysis,
+  getAnalysisClauses,
+  type Analysis,
+  type ClauseExtraction,
+} from "@/app/(main)/(dashboard)/analyses/actions"
 
 type RiskLevel = "standard" | "cautious" | "aggressive" | "unknown"
-
-interface ClauseAnalysis {
-  id: string
-  category: string
-  riskLevel: RiskLevel
-  summary: string
-  evidence: string
-  recommendation?: string
-}
 
 interface AnalysisViewProps {
   analysisId: string
   className?: string
 }
 
-// Mock analysis data for demo
-const MOCK_ANALYSES: Record<string, { title: string; clauses: ClauseAnalysis[] }> = {
-  "demo-analysis": {
-    title: "Sample NDA Analysis",
-    clauses: [
-      {
-        id: "1",
-        category: "Confidentiality Term",
-        riskLevel: "standard",
-        summary: "3-year confidentiality term is within market norms.",
-        evidence:
-          '"This Agreement shall remain in effect for a period of three (3) years from the Effective Date."',
-        recommendation: "No changes recommended.",
-      },
-      {
-        id: "2",
-        category: "Return of Information",
-        riskLevel: "cautious",
-        summary: "Broad return/destruction requirement without exceptions.",
-        evidence:
-          '"Upon termination or upon request, all Confidential Information shall be returned or destroyed."',
-        recommendation:
-          "Consider adding exception for legally required retention and archival copies.",
-      },
-      {
-        id: "3",
-        category: "Definition Scope",
-        riskLevel: "aggressive",
-        summary: "Definition of Confidential Information is overly broad.",
-        evidence:
-          '"Confidential Information" means any information, technical data, or know-how...',
-        recommendation:
-          "Narrow the definition to specific categories or add explicit exclusions for public information.",
-      },
-      {
-        id: "4",
-        category: "Governing Law",
-        riskLevel: "standard",
-        summary: "Delaware law is a standard choice for business agreements.",
-        evidence:
-          '"This Agreement shall be governed by the laws of the State of Delaware."',
-      },
-      {
-        id: "5",
-        category: "Non-Compete Clause",
-        riskLevel: "unknown",
-        summary: "No non-compete clause detected in this agreement.",
-        evidence: "No relevant text found.",
-      },
-    ],
-  },
-}
-
 const riskConfig: Record<
   RiskLevel,
   {
     label: string
-    color: string
     bgColor: string
     textColor: string
     borderColor: string
@@ -104,7 +49,6 @@ const riskConfig: Record<
 > = {
   standard: {
     label: "Standard",
-    color: "", // kept for backwards compat
     bgColor: "oklch(0.90 0.08 175)",
     textColor: "oklch(0.45 0.14 175)",
     borderColor: "oklch(0.85 0.10 175)",
@@ -113,7 +57,6 @@ const riskConfig: Record<
   },
   cautious: {
     label: "Cautious",
-    color: "", // kept for backwards compat
     bgColor: "oklch(0.90 0.08 65)",
     textColor: "oklch(0.50 0.14 65)",
     borderColor: "oklch(0.85 0.10 65)",
@@ -122,7 +65,6 @@ const riskConfig: Record<
   },
   aggressive: {
     label: "Aggressive",
-    color: "", // kept for backwards compat
     bgColor: "oklch(0.90 0.08 25)",
     textColor: "oklch(0.50 0.14 25)",
     borderColor: "oklch(0.85 0.10 25)",
@@ -131,7 +73,6 @@ const riskConfig: Record<
   },
   unknown: {
     label: "Unknown",
-    color: "", // kept for backwards compat
     bgColor: "oklch(0.92 0.01 280)",
     textColor: "oklch(0.45 0.01 280)",
     borderColor: "oklch(0.88 0.02 280)",
@@ -141,7 +82,7 @@ const riskConfig: Record<
 }
 
 function RiskBadge({ level }: { level: RiskLevel }) {
-  const config = riskConfig[level]
+  const config = riskConfig[level] || riskConfig.unknown
   const Icon = config.icon
   return (
     <Badge
@@ -159,18 +100,23 @@ function RiskBadge({ level }: { level: RiskLevel }) {
   )
 }
 
-function ClauseCard({ clause }: { clause: ClauseAnalysis }) {
+function ClauseCard({ clause }: { clause: ClauseExtraction }) {
   const [open, setOpen] = React.useState(false)
+  const riskLevel = (clause.riskLevel as RiskLevel) || "unknown"
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <Card className="min-w-0">
         <CardHeader className="pb-2">
           <div className="flex min-w-0 items-start justify-between gap-2">
-            <CardTitle className="min-w-0 truncate text-sm font-medium">{clause.category}</CardTitle>
-            <RiskBadge level={clause.riskLevel} />
+            <CardTitle className="min-w-0 truncate text-sm font-medium">
+              {clause.category}
+            </CardTitle>
+            <RiskBadge level={riskLevel} />
           </div>
-          <p className="text-sm text-muted-foreground">{clause.summary}</p>
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {clause.riskExplanation || clause.clauseText.slice(0, 100)}
+          </p>
         </CardHeader>
         <CardContent className="pt-0">
           <CollapsibleTrigger className="flex w-full items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
@@ -184,17 +130,17 @@ function ClauseCard({ clause }: { clause: ClauseAnalysis }) {
           <CollapsibleContent className="pt-3">
             <div className="space-y-3 text-sm">
               <div>
-                <p className="mb-1 font-medium text-muted-foreground">Evidence</p>
+                <p className="mb-1 font-medium text-muted-foreground">Clause Text</p>
                 <blockquote className="border-l-2 border-muted pl-3 italic text-muted-foreground">
-                  {clause.evidence}
+                  {clause.clauseText}
                 </blockquote>
               </div>
-              {clause.recommendation && (
+              {clause.riskExplanation && (
                 <div>
                   <p className="mb-1 font-medium text-muted-foreground">
-                    Recommendation
+                    Risk Assessment
                   </p>
-                  <p>{clause.recommendation}</p>
+                  <p>{clause.riskExplanation}</p>
                 </div>
               )}
             </div>
@@ -205,76 +151,108 @@ function ClauseCard({ clause }: { clause: ClauseAnalysis }) {
   )
 }
 
-export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
-  const [loading, setLoading] = React.useState(true)
-  const analysis = MOCK_ANALYSES[analysisId]
+function ProgressView({ stage, progress }: { stage: string; progress: number }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center p-8">
+      <Loader2Icon
+        className="size-8 animate-spin"
+        style={{ color: "oklch(0.55 0.24 293)" }}
+      />
+      <p className="mt-4 text-sm text-muted-foreground">{stage || "Processing..."}</p>
+      <Progress value={progress} className="mt-4 w-48" />
+      <p className="mt-2 text-xs text-muted-foreground">{progress}%</p>
+    </div>
+  )
+}
 
-  // Simulate loading
-  React.useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800)
-    return () => clearTimeout(timer)
-  }, [analysisId])
-
-  if (loading) {
-    return (
+function ErrorView({ message }: { message: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center p-8 text-center">
       <div
-        className={cn(
-          "flex h-full flex-col items-center justify-center",
-          className
-        )}
+        className="mb-4 rounded-full p-4"
+        style={{ background: "oklch(0.92 0.08 25)" }}
       >
-        <Loader2Icon
-          className="size-8 animate-spin"
-          style={{ color: "oklch(0.55 0.24 293)" }}
-        />
-        <p className="mt-4 text-sm text-muted-foreground">Analyzing document...</p>
+        <XCircleIcon className="size-8" style={{ color: "oklch(0.50 0.14 25)" }} />
+      </div>
+      <h3 className="mb-2 text-lg font-medium">Analysis Failed</h3>
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
+  )
+}
+
+export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
+  const { status, progress, stage, error } = useAnalysisProgress(analysisId)
+  const [analysis, setAnalysis] = React.useState<Analysis | null>(null)
+  const [clauses, setClauses] = React.useState<ClauseExtraction[]>([])
+  const [fetchError, setFetchError] = React.useState<string | null>(null)
+
+  // Fetch full data once complete
+  React.useEffect(() => {
+    if (status === "completed") {
+      Promise.all([getAnalysis(analysisId), getAnalysisClauses(analysisId)])
+        .then(([analysisResult, clausesResult]) => {
+          if (analysisResult.success) {
+            setAnalysis(analysisResult.data)
+          } else {
+            setFetchError(analysisResult.error.message)
+          }
+          if (clausesResult.success) {
+            setClauses(clausesResult.data)
+          }
+        })
+        .catch((err) => {
+          setFetchError(err.message)
+        })
+    }
+  }, [status, analysisId])
+
+  // Progress state
+  if (status === "pending" || status === "processing") {
+    return (
+      <div className={cn("h-full", className)}>
+        <ProgressView stage={stage} progress={progress} />
       </div>
     )
   }
 
+  // Error state
+  if (status === "failed" || error || fetchError) {
+    return (
+      <div className={cn("h-full", className)}>
+        <ErrorView message={error || fetchError || "Analysis failed. Please try again."} />
+      </div>
+    )
+  }
+
+  // Loading results
   if (!analysis) {
     return (
-      <div
-        className={cn(
-          "flex h-full flex-col items-center justify-center p-8",
-          "text-center",
-          className
-        )}
-      >
-        <div
-          className="mb-4 rounded-full p-4"
-          style={{ background: "oklch(0.92 0.01 280)" }}
-        >
-          <BarChartIcon className="size-8" style={{ color: "oklch(0.60 0.01 280)" }} />
-        </div>
-        <h3 className="mb-2 text-lg font-medium" style={{ color: "oklch(0.20 0.02 280)" }}>
-          Analysis Not Found
-        </h3>
-        <p className="text-sm" style={{ color: "oklch(0.45 0.01 280)" }}>
-          The requested analysis could not be loaded.
-        </p>
-        <p className="mt-2 font-mono text-xs text-neutral-400">ID: {analysisId}</p>
+      <div className={cn("h-full", className)}>
+        <ProgressView stage="Loading results..." progress={100} />
       </div>
     )
   }
 
   // Calculate risk summary
-  const riskCounts = analysis.clauses.reduce(
+  const riskCounts = clauses.reduce(
     (acc, clause) => {
-      acc[clause.riskLevel]++
+      const level = (clause.riskLevel as RiskLevel) || "unknown"
+      acc[level]++
       return acc
     },
-    { standard: 0, cautious: 0, aggressive: 0, unknown: 0 } as Record<
-      RiskLevel,
-      number
-    >
+    { standard: 0, cautious: 0, aggressive: 0, unknown: 0 } as Record<RiskLevel, number>
   )
 
   return (
     <div className={cn("flex h-full min-w-0 flex-col", className)}>
       {/* Summary bar */}
       <div className="border-b bg-muted/50 px-4 py-3">
-        <h3 className="mb-2 truncate font-medium">{analysis.title}</h3>
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="truncate font-medium">Analysis Results</h3>
+          {analysis.overallRiskLevel && (
+            <RiskBadge level={analysis.overallRiskLevel as RiskLevel} />
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
           {(["standard", "cautious", "aggressive", "unknown"] as RiskLevel[]).map(
             (level) =>
@@ -289,14 +267,23 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
               )
           )}
         </div>
+        {analysis.overallRiskScore !== null && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Overall Risk Score: {analysis.overallRiskScore.toFixed(1)}%
+          </p>
+        )}
       </div>
 
       {/* Clause list */}
       <ScrollArea className="flex-1">
         <div className="space-y-3 p-4">
-          {analysis.clauses.map((clause) => (
-            <ClauseCard key={clause.id} clause={clause} />
-          ))}
+          {clauses.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground">
+              No clauses extracted.
+            </p>
+          ) : (
+            clauses.map((clause) => <ClauseCard key={clause.id} clause={clause} />)
+          )}
         </div>
       </ScrollArea>
     </div>

@@ -51,15 +51,15 @@ import { primaryId, timestamps, tenantId } from "../_columns"
 import { documents, documentChunks } from "./documents"
 
 /**
- * Risk level classification for documents and clauses.
+ * Risk level classification for documents and clauses (PRD-aligned).
  *
- * @typedef {'low' | 'medium' | 'high' | 'critical'} RiskLevel
+ * @typedef {'standard' | 'cautious' | 'aggressive' | 'unknown'} RiskLevel
  *
  * Risk levels are determined by the Risk Scorer Agent based on:
- * - **low**: Standard, market-friendly terms with minimal concern
- * - **medium**: Terms requiring review but generally acceptable
- * - **high**: Terms that may require negotiation or senior review
- * - **critical**: Terms presenting significant legal/business risk requiring immediate attention
+ * - **standard**: Typical NDA terms, acceptable risk
+ * - **cautious**: Requires review, potentially unfavorable
+ * - **aggressive**: Significantly one-sided, legal review recommended
+ * - **unknown**: Unable to classify risk level
  */
 
 /**
@@ -296,6 +296,26 @@ export const analyses = pgTable(
      * @see {@link https://www.inngest.com/docs/functions/run-ids|Inngest Run IDs}
      */
     inngestRunId: text("inngest_run_id"),
+
+    /**
+     * Current progress stage for UI display.
+     * Updated by Inngest function as pipeline progresses.
+     *
+     * Valid values: 'parsing' | 'classifying' | 'scoring' | 'analyzing_gaps' | 'complete' | 'failed'
+     */
+    progressStage: text("progress_stage"),
+
+    /**
+     * Progress percentage (0-100) for UI progress bar.
+     * @default 0
+     */
+    progressPercent: integer("progress_percent").default(0),
+
+    /**
+     * Additional analysis metadata including user prompts.
+     * JSONB structure may include: { userPrompt?: string, ... }
+     */
+    metadata: jsonb("metadata").default({}),
 
     /**
      * Timestamp when analysis completed successfully.
