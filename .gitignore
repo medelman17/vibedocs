@@ -55,6 +55,7 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 playwright/.auth/
+.playwright-mcp/
 
 # Git worktrees
 .worktrees/

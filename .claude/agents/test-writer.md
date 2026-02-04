@@ -1,3 +1,8 @@
+---
+name: test-writer
+description: Generates tests following project conventions (Vitest + PGlite)
+---
+
 # Test Writer Agent
 
 A specialized agent for generating tests following project conventions (Vitest + PGlite).

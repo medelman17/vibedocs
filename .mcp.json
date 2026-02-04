@@ -15,6 +15,7 @@
       ]
     },
     "Sentry": {
+      "type": "sse",
       "url": "https://mcp.sentry.dev/mcp/edelprojects/sentry-vibedocs"
     }
   }
