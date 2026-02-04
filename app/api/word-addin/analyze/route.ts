@@ -156,6 +156,19 @@ export const POST = withErrorHandling(async (request: Request) => {
       userId: authContext.userId,
       documentId: document.id,
       analysisId: analysis.id,
+      source: "word-addin" as const,
+      content: {
+        rawText: content,
+        paragraphs: (paragraphs ?? []).map((p) => ({
+          text: p.text,
+          style: p.style ?? 'Normal',
+          isHeading: p.isHeading ?? false,
+        })),
+      },
+      metadata: {
+        title,
+        author: undefined,
+      },
     },
   })
 

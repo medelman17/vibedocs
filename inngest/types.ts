@@ -42,15 +42,37 @@ export const documentUploadedPayload = baseTenantPayload.extend({
 
 /**
  * Analysis request event - triggers the full agent pipeline.
- * Sent after document processing completes or manually by user.
+ * Supports both web upload and Word Add-in sources.
  */
 export const analysisRequestedPayload = baseTenantPayload.extend({
   /** Document to analyze */
   documentId: z.string().uuid(),
-  /** Analysis record ID (pre-created with status='pending') */
-  analysisId: z.string().uuid(),
+  /** Analysis record ID (pre-created with status='pending') - optional for Word Add-in */
+  analysisId: z.string().uuid().optional(),
   /** Optional: specific analysis version (for re-analysis) */
   version: z.number().int().positive().optional(),
+  /** Source of the document */
+  source: z.enum(["web", "word-addin"]).default("web"),
+  /** Word Add-in content (required when source='word-addin') */
+  content: z
+    .object({
+      rawText: z.string(),
+      paragraphs: z.array(
+        z.object({
+          text: z.string(),
+          style: z.string(),
+          isHeading: z.boolean(),
+        })
+      ),
+    })
+    .optional(),
+  /** Word Add-in metadata (optional) */
+  metadata: z
+    .object({
+      title: z.string(),
+      author: z.string().optional(),
+    })
+    .optional(),
 });
 
 /**
@@ -58,14 +80,50 @@ export const analysisRequestedPayload = baseTenantPayload.extend({
  * Used for real-time UI updates on analysis status.
  */
 export const analysisProgressPayload = z.object({
+  /** Document being analyzed */
+  documentId: z.string().uuid(),
   /** Analysis record ID */
   analysisId: z.string().uuid(),
-  /** Current step name (e.g., 'parsing', 'classification', 'risk-scoring') */
-  step: z.string(),
+  /** Tenant ID for routing */
+  tenantId: z.string().uuid(),
+  /** Pipeline stage */
+  stage: z.enum([
+    "parsing",
+    "classifying",
+    "scoring",
+    "analyzing_gaps",
+    "complete",
+    "failed",
+  ]),
   /** Progress percentage (0-100) */
-  percent: z.number().min(0).max(100),
-  /** Optional status message */
-  message: z.string().optional(),
+  progress: z.number().min(0).max(100),
+  /** Status message */
+  message: z.string(),
+  /** Additional metadata */
+  metadata: z
+    .object({
+      chunksProcessed: z.number().int().nonnegative().optional(),
+      totalChunks: z.number().int().nonnegative().optional(),
+      clausesClassified: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * Analysis completed event - emitted when pipeline finishes.
+ * Used to trigger downstream actions (notifications, Word Add-in sync).
+ */
+export const analysisCompletedPayload = z.object({
+  /** Document that was analyzed */
+  documentId: z.string().uuid(),
+  /** Analysis record ID */
+  analysisId: z.string().uuid(),
+  /** Tenant ID */
+  tenantId: z.string().uuid(),
+  /** Overall risk score (0-100) */
+  overallRiskScore: z.number().min(0).max(100),
+  /** Overall risk level */
+  overallRiskLevel: z.enum(["standard", "cautious", "aggressive", "unknown"]),
 });
 
 /**
@@ -226,6 +284,9 @@ export type InngestEvents = {
   "nda/analysis.progress": {
     data: z.infer<typeof analysisProgressPayload>;
   };
+  "nda/analysis.completed": {
+    data: z.infer<typeof analysisCompletedPayload>;
+  };
   "nda/analysis.cancelled": {
     data: z.infer<typeof analysisCancelledPayload>;
   };
@@ -266,6 +327,7 @@ export type InngestEvents = {
 export type DocumentUploadedPayload = z.infer<typeof documentUploadedPayload>;
 export type AnalysisRequestedPayload = z.infer<typeof analysisRequestedPayload>;
 export type AnalysisProgressPayload = z.infer<typeof analysisProgressPayload>;
+export type AnalysisCompletedPayload = z.infer<typeof analysisCompletedPayload>;
 export type ComparisonRequestedPayload = z.infer<
   typeof comparisonRequestedPayload
 >;
@@ -294,6 +356,7 @@ export const eventSchemas = {
   "nda/uploaded": documentUploadedPayload,
   "nda/analysis.requested": analysisRequestedPayload,
   "nda/analysis.progress": analysisProgressPayload,
+  "nda/analysis.completed": analysisCompletedPayload,
   "nda/analysis.cancelled": analysisCancelledPayload,
   "nda/document.deleted": documentDeletedPayload,
   "nda/comparison.requested": comparisonRequestedPayload,

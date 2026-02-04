@@ -334,7 +334,7 @@ export const testEventData = {
   ) => ({
     tenantId: crypto.randomUUID(),
     documentId: crypto.randomUUID(),
-    analysisId: crypto.randomUUID(),
+    source: "web" as const,
     ...overrides,
   }),
 
@@ -344,9 +344,12 @@ export const testEventData = {
   analysisProgress: (
     overrides: Partial<InngestEvents["nda/analysis.progress"]["data"]> = {}
   ) => ({
+    documentId: crypto.randomUUID(),
     analysisId: crypto.randomUUID(),
-    step: "parsing",
-    percent: 0,
+    tenantId: crypto.randomUUID(),
+    stage: "parsing" as const,
+    progress: 0,
+    message: "Processing...",
     ...overrides,
   }),
 
