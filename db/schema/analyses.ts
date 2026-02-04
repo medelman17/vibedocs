@@ -43,6 +43,7 @@ import {
   uuid,
   integer,
   real,
+  boolean,
   index,
   jsonb,
   timestamp,
@@ -275,6 +276,32 @@ export const analyses = pgTable(
      * @see TokenUsage for full schema
      */
     tokenUsage: jsonb("token_usage"),
+
+    /**
+     * Estimated input tokens before analysis (post-parse count).
+     * Uses gpt-tokenizer as proxy for Claude tokens (~10-15% variance).
+     * Set during validation phase before agents run.
+     */
+    estimatedTokens: integer("estimated_tokens"),
+
+    /**
+     * Actual tokens used (sum of all agent calls).
+     * Populated from BudgetTracker usage data after completion.
+     */
+    actualTokens: integer("actual_tokens"),
+
+    /**
+     * Estimated cost in dollars (input + output at Claude pricing).
+     * Updated as agents complete.
+     */
+    estimatedCost: real("estimated_cost"),
+
+    /**
+     * Whether the document was truncated to fit token budget.
+     * If true, metadata.truncationWarning contains details about removed sections.
+     * @default false
+     */
+    wasTruncated: boolean("was_truncated").default(false),
 
     /**
      * Total wall-clock processing time in milliseconds.
