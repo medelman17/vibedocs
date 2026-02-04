@@ -32,11 +32,14 @@ vi.mock("@/db/client", () => ({
 // Track transaction state
 let inTransaction = false
 
+// Schema version - increment when schema changes to force recreation
+const SCHEMA_VERSION = 2 // v2: added estimated_tokens, actual_tokens, estimated_cost, was_truncated to analyses
+
 // Track if schema has been created (survives across test files in same worker)
 // Using globalThis to persist across module re-evaluations
 declare global {
-   
-  var __testSchemaCreated: boolean | undefined
+
+  var __testSchemaVersion: number | undefined
 }
 
 // Batched schema creation SQL - single statement for performance
@@ -165,6 +168,10 @@ const SCHEMA_SQL = `
     summary TEXT,
     gap_analysis JSONB,
     token_usage JSONB,
+    estimated_tokens INTEGER,
+    actual_tokens INTEGER,
+    estimated_cost REAL,
+    was_truncated BOOLEAN DEFAULT false,
     processing_time_ms INTEGER,
     inngest_run_id TEXT,
     progress_stage TEXT,
@@ -297,11 +304,36 @@ const SCHEMA_SQL = `
 `
 
 // Create schema once globally (not per test or per file)
-// Use globalThis flag to skip redundant schema creation
+// Use schema version to detect when schema needs recreation
 beforeAll(async () => {
-  if (!globalThis.__testSchemaCreated) {
+  if (globalThis.__testSchemaVersion !== SCHEMA_VERSION) {
+    // Schema version changed or first run - recreate schema
+    // Drop and recreate to ensure clean state with new columns
+    await client.exec(`
+      DROP TABLE IF EXISTS messages CASCADE;
+      DROP TABLE IF EXISTS conversations CASCADE;
+      DROP TABLE IF EXISTS bootstrap_progress CASCADE;
+      DROP TABLE IF EXISTS contract_nli_hypotheses CASCADE;
+      DROP TABLE IF EXISTS cuad_categories CASCADE;
+      DROP TABLE IF EXISTS reference_embeddings CASCADE;
+      DROP TABLE IF EXISTS reference_documents CASCADE;
+      DROP TABLE IF EXISTS audit_logs CASCADE;
+      DROP TABLE IF EXISTS generated_ndas CASCADE;
+      DROP TABLE IF EXISTS comparisons CASCADE;
+      DROP TABLE IF EXISTS clause_extractions CASCADE;
+      DROP TABLE IF EXISTS analyses CASCADE;
+      DROP TABLE IF EXISTS document_chunks CASCADE;
+      DROP TABLE IF EXISTS documents CASCADE;
+      DROP TABLE IF EXISTS password_reset_tokens CASCADE;
+      DROP TABLE IF EXISTS verification_tokens CASCADE;
+      DROP TABLE IF EXISTS accounts CASCADE;
+      DROP TABLE IF EXISTS sessions CASCADE;
+      DROP TABLE IF EXISTS organization_members CASCADE;
+      DROP TABLE IF EXISTS organizations CASCADE;
+      DROP TABLE IF EXISTS users CASCADE;
+    `)
     await client.exec(SCHEMA_SQL)
-    globalThis.__testSchemaCreated = true
+    globalThis.__testSchemaVersion = SCHEMA_VERSION
   }
 })
 
