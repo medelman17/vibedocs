@@ -141,8 +141,9 @@ describe('analyzeNda Pipeline', () => {
     }
     const step = createMockStep()
 
-    const handler = analyzeNda.fn
-    const result = await handler({ event, step } as Parameters<typeof handler>[0])
+    // Access handler via the mock's fn property (bypassing private access)
+    const handler = (analyzeNda as unknown as { fn: (ctx: unknown) => Promise<{ success: boolean; analysisId: string }> }).fn
+    const result = await handler({ event, step })
 
     expect(step.run).toHaveBeenCalledWith('create-analysis', expect.any(Function))
     expect(step.run).toHaveBeenCalledWith('parser-agent', expect.any(Function))
@@ -163,12 +164,12 @@ describe('analyzeNda Pipeline', () => {
     }
     const step = createMockStep()
 
-    await analyzeNda.fn({ event, step } as Parameters<typeof analyzeNda.fn>[0])
+    const handler = (analyzeNda as unknown as { fn: (ctx: unknown) => Promise<unknown> }).fn
+    await handler({ event, step })
 
-    const sendEventCalls = step.sendEvent.mock.calls
+    const sendEventCalls = step.sendEvent.mock.calls as Array<[string, { name: string }]>
     const progressEvents = sendEventCalls.filter(
-      ([_name, payload]: [string, { name: string }]) =>
-        payload.name === 'nda/analysis.progress'
+      ([_name, payload]) => payload.name === 'nda/analysis.progress'
     )
 
     // Should have progress events for: parsing, classifying, scoring, analyzing_gaps, complete
@@ -190,12 +191,13 @@ describe('analyzeNda Pipeline', () => {
     }
     const step = createMockStep()
 
-    const result = await analyzeNda.fn({ event, step } as Parameters<typeof analyzeNda.fn>[0])
+    const handler = (analyzeNda as unknown as { fn: (ctx: unknown) => Promise<{ success: boolean }> }).fn
+    const result = await handler({ event, step })
 
     expect(result.success).toBe(true)
     // Parser should receive the content
-    const parserCalls = step.run.mock.calls.filter(
-      ([name]: [string]) => name === 'parser-agent'
+    const parserCalls = (step.run.mock.calls as Array<[string, unknown]>).filter(
+      ([name]) => name === 'parser-agent'
     )
     expect(parserCalls.length).toBe(1)
   })
@@ -210,12 +212,12 @@ describe('analyzeNda Pipeline', () => {
     }
     const step = createMockStep()
 
-    await analyzeNda.fn({ event, step } as Parameters<typeof analyzeNda.fn>[0])
+    const handler = (analyzeNda as unknown as { fn: (ctx: unknown) => Promise<unknown> }).fn
+    await handler({ event, step })
 
-    const sendEventCalls = step.sendEvent.mock.calls
+    const sendEventCalls = step.sendEvent.mock.calls as Array<[string, { name: string; data: Record<string, unknown> }]>
     const completionEvent = sendEventCalls.find(
-      ([_name, payload]: [string, { name: string }]) =>
-        payload.name === 'nda/analysis.completed'
+      ([_name, payload]) => payload.name === 'nda/analysis.completed'
     )
 
     expect(completionEvent).toBeDefined()

@@ -123,7 +123,7 @@ describe('Classifier Agent', () => {
         reasoning: 'Unable to classify',
       },
       usage: { inputTokens: 500, outputTokens: 100 },
-    } as ReturnType<typeof generateObject>)
+    } as unknown as Awaited<ReturnType<typeof generateObject>>)
 
     const input: ClassifierInput = {
       parsedDocument: {

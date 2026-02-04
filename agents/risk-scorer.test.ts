@@ -85,7 +85,7 @@ describe('Risk Scorer Agent', () => {
         },
       },
       usage: { inputTokens: 800, outputTokens: 200 },
-    } as ReturnType<typeof generateObject>)
+    } as unknown as Awaited<ReturnType<typeof generateObject>>)
 
     const input: RiskScorerInput = {
       clauses: [
