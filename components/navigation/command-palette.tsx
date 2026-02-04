@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import {
   FileTextIcon,
   BarChartIcon,
@@ -70,12 +71,56 @@ export function CommandPalette({
   onSelectItem,
   onCommand,
 }: CommandPaletteProps) {
+  const router = useRouter()
   const { palette, setPaletteOpen } = useShellStore()
+
+  // Default command handlers when no onCommand prop is provided
+  const defaultCommandHandlers: Record<string, () => void> = {
+    analyze: () => {
+      // Focus the file input to trigger upload
+      const fileInput = document.querySelector<HTMLInputElement>(
+        'input[type="file"][aria-label="Upload files"]'
+      )
+      if (fileInput) {
+        fileInput.click()
+      } else {
+        // Fallback: navigate to documents page
+        router.push("/documents")
+      }
+    },
+    compare: () => {
+      router.push("/documents?action=compare")
+    },
+    generate: () => {
+      router.push("/generate")
+    },
+    help: () => {
+      // Focus chat input and prefill with help request
+      const textarea = document.querySelector<HTMLTextAreaElement>(
+        '[data-slot="input-group"] textarea'
+      )
+      if (textarea) {
+        textarea.focus()
+        // Dispatch input event to update React state
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+          window.HTMLTextAreaElement.prototype,
+          "value"
+        )?.set
+        nativeInputValueSetter?.call(textarea, "What can VibeDocs help me with?")
+        textarea.dispatchEvent(new Event("input", { bubbles: true }))
+      }
+    },
+  }
 
   const handleSelect = (item: PaletteItem) => {
     setPaletteOpen(false)
     if (item.type === "command") {
-      onCommand?.(item.id)
+      if (onCommand) {
+        onCommand(item.id)
+      } else {
+        // Use default handler
+        defaultCommandHandlers[item.id]?.()
+      }
     } else {
       onSelectItem?.(item)
     }
