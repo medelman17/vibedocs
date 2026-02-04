@@ -114,7 +114,7 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
         // onSwitchOrg={handleSwitchOrg}
         // onOpenSettings={handleOpenSettings}
       />
-      <SidebarInset className="overflow-hidden">
+      <SidebarInset className="min-h-0 overflow-hidden">
         {/* Header with sidebar trigger */}
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
@@ -122,8 +122,8 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
           <span className="text-sm font-semibold">VibeDocs</span>
         </header>
 
-        {/* Main content */}
-        <main className="flex flex-1 flex-col overflow-hidden">
+        {/* Main content - min-h-0 allows flex child to shrink below content size */}
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {children}
         </main>
       </SidebarInset>
