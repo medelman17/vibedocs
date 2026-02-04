@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runParserAgent, type ParserInput } from './parser'
 
-// Mock document processing
+// Mock document processing (chunking only, extraction is now separate)
 vi.mock('@/lib/document-processing', () => ({
-  extractText: vi.fn().mockResolvedValue({
-    text: 'Sample NDA text with confidentiality provisions.',
-    pageCount: 1,
-  }),
   chunkDocument: vi.fn().mockReturnValue([
     {
       id: 'chunk-0',
@@ -18,6 +14,29 @@ vi.mock('@/lib/document-processing', () => ({
       endPosition: 47,
     },
   ]),
+}))
+
+// Mock new document extraction infrastructure
+vi.mock('@/lib/document-extraction', () => ({
+  extractDocument: vi.fn().mockResolvedValue({
+    text: 'Sample NDA text with confidentiality provisions.',
+    quality: {
+      charCount: 48,
+      wordCount: 7,
+      warnings: [],
+      confidence: 0.95,
+      requiresOcr: false,
+    },
+    pageCount: 1,
+    metadata: { title: 'Extracted Title' },
+  }),
+  detectStructure: vi.fn().mockResolvedValue({
+    sections: [],
+    parties: {},
+    hasExhibits: false,
+    hasSignatureBlock: false,
+    hasRedactedText: false,
+  }),
 }))
 
 // Mock embeddings client
@@ -72,6 +91,10 @@ describe('Parser Agent', () => {
     expect(result.document.chunks.length).toBeGreaterThan(0)
     expect(result.document.chunks[0].embedding).toBeDefined()
     expect(result.document.chunks[0].embedding.length).toBe(3) // Mock returns 3 elements
+    // New fields from extraction infrastructure
+    expect(result.document.structure).toBeDefined()
+    expect(result.quality).toBeDefined()
+    expect(result.quality.confidence).toBeGreaterThan(0)
   })
 
   it('parses word-addin source with structured paragraphs', async () => {
@@ -94,6 +117,9 @@ describe('Parser Agent', () => {
     expect(result.document.title).toBe('Sample NDA')
     expect(result.document.rawText).toContain('ARTICLE I')
     expect(result.document.chunks.length).toBeGreaterThan(0)
+    // Word Add-in also gets structure detection
+    expect(result.document.structure).toBeDefined()
+    expect(result.quality.confidence).toBe(1.0) // Word provides clean text
   })
 
   it('preserves position information through parsing', async () => {
