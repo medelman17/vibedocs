@@ -10,11 +10,15 @@ Core features: upload NDAs → clause extraction (CUAD 41-category taxonomy) →
 
 ## Project Status (as of Feb 2026)
 
-Core features ~95% complete. Before suggesting work, check recent PRs: `gh pr list --state merged -L 5`
+Core analysis pipeline complete. Chat UI with RAG and message persistence shipped. Before suggesting work, check recent PRs: `gh pr list --state merged -L 5`
 
-**Implemented:** Upload → Parse → Classify → Risk Score → Gap Analysis pipeline, Word Add-in, Chat UI with artifact panel
+**Implemented:**
+- Full analysis pipeline: Upload → Parse → Classify → Risk Score → Gap Analysis
+- Chat UI with AI SDK v6, message persistence, and RAG retrieval
+- Word Add-in with OAuth flow
+- Artifact panel (document viewer, analysis view)
 
-**Remaining:** PDF export (analyses + generate), analysis cancellation (Inngest API), real-time streaming (SSE), notification preferences
+**Remaining:** PDF export, analysis cancellation (Inngest API), real-time streaming (SSE), notification preferences
 
 ## Commands
 
@@ -105,6 +109,32 @@ Each agent runs inside an `inngest step.run()` for durability. AI SDK 6 `generat
 
 **Token Budget:** ~212K tokens per document (~$1.10 at Sonnet pricing)
 
+### RAG / Vector Search
+
+Chat uses retrieval-augmented generation via `agents/tools/vector-search.ts`:
+- Searches CUAD/ContractNLI embeddings for similar clauses
+- Voyage AI voyage-law-2 embeddings (1024 dims)
+- LRU cache: 5-min TTL, 500 entries
+- Similarity threshold: 0.5 cosine distance
+
+```typescript
+import { vectorSearchTool, findSimilarClauses } from "@/agents/tools/vector-search"
+
+// In streamText tools:
+tools: { vectorSearch: vectorSearchTool }
+
+// Direct usage:
+const results = await findSimilarClauses("indemnification clause text", { category: "Indemnification", limit: 5 })
+```
+
+### Chat Persistence
+
+Conversations and messages stored in `db/schema/conversations.ts`:
+- `conversations` table: title, lastMessageAt, optional documentId link
+- `messages` table: role (user/assistant), content, attachments (JSONB), metadata
+- Multi-tenant via `tenantId`, soft delete support
+- Indexes for recent conversations and document-specific queries
+
 ### AI SDK 6 Patterns
 
 **Client-side `useChat` hook:**
@@ -163,7 +193,7 @@ See `app/api/chat/route.ts` and `app/(main)/chat/page.tsx` for reference.
   - `/api/comparisons/` - NDA comparison endpoints
   - `/api/generate/` - NDA generation endpoints (includes `/[id]/export`)
 - `db/` - Drizzle schema and client
-  - `schema/` - Table definitions (auth, organizations, documents, analyses, etc.)
+  - `schema/` - Table definitions (auth, organizations, documents, analyses, conversations, etc.)
   - `queries/` - Prepared queries (documents, analyses, similarity)
   - `_columns.ts` - Reusable column helpers (timestamps, tenantId, etc.)
   - `client.ts` - Neon serverless connection
@@ -184,9 +214,10 @@ See `app/api/chat/route.ts` and `app/(main)/chat/page.tsx` for reference.
 - `inngest/` - Inngest client and pipeline functions
   - `functions/` - Inngest function definitions (bootstrap, demo)
   - `utils/` - Shared utilities (rate limiting, tenant context, test helpers)
-- `agents/` - AI SDK 6 agent definitions (🚧 placeholder structure)
+- `agents/` - AI SDK 6 agent definitions
+  - `parser.ts`, `classifier.ts`, `risk-scorer.ts`, `gap-analyst.ts` - Pipeline agents
   - `prompts/` - System prompts for each agent
-  - `tools/` - Vector search and other agent tools
+  - `tools/` - Vector search tool for RAG
   - `testing/` - Mock AI and fixtures for agent tests
   - `comparison/` - Comparison pipeline schemas and prompts
 - `components/` - shadcn/ui + AI SDK Elements
@@ -360,7 +391,7 @@ import { createMockEvent, createMockStep, testEventData } from "@/inngest/utils/
 ### Caching (LRU)
 - **Embedding cache**: 1-hour TTL, 10K entries - `lib/cache/embedding-cache.ts`
 - **Response cache**: 30-min TTL, 1K entries - `lib/cache/response-cache.ts` (🚧 placeholder)
-- **Vector search cache**: 5-min TTL, 500 entries - `agents/tools/vector-search.ts` (🚧 placeholder)
+- **Vector search cache**: 5-min TTL, 500 entries - `agents/tools/vector-search.ts`
 - Package: `lru-cache` (not Redis for MVP)
 
 ### Barrel Exports (CRITICAL)
@@ -434,6 +465,7 @@ pnpm dlx shadcn@latest add <component-name> -r @ai-elements
 Project uses `.mcp.json` for MCP server configuration:
 - `shadcn` - Component management via `npx shadcn@latest mcp`
 - `context7` - Live documentation lookup for libraries (Drizzle, Next.js, Auth.js, etc.)
+- `Sentry` - Error monitoring and issue tracking (SSE connection)
 
 ## Claude Code Automations
 
