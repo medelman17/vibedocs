@@ -1,11 +1,13 @@
 "use client"
 
+import * as React from "react"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/shell"
+import { AppSidebar, type HistoryItem } from "@/components/shell"
 import { CommandPalette } from "@/components/navigation"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Separator } from "@/components/ui/separator"
+import { getConversations } from "./actions"
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   const {
@@ -15,7 +17,43 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
     palette,
     artifact,
     setPaletteOpen,
+    openArtifact,
   } = useShellStore()
+
+  const [historyItems, setHistoryItems] = React.useState<HistoryItem[]>([])
+
+  // Fetch conversation history on mount
+  React.useEffect(() => {
+    async function loadHistory() {
+      const result = await getConversations({ limit: 20, offset: 0 })
+      if (result.success) {
+        const items: HistoryItem[] = result.data.map((conv) => ({
+          id: conv.id,
+          type: "conversation" as const,
+          title: conv.title,
+          date: new Date(conv.lastMessageAt),
+          pinned: false,
+        }))
+        setHistoryItems(items)
+      }
+    }
+    loadHistory()
+  }, [])
+
+  // Handle selecting a history item
+  const handleSelectItem = React.useCallback(
+    (item: HistoryItem) => {
+      if (item.type === "conversation") {
+        // Navigate to the conversation
+        window.location.href = `/chat?conversation=${item.id}`
+      } else if (item.type === "document") {
+        openArtifact({ type: "document", id: item.id, title: item.title })
+      } else if (item.type === "analysis") {
+        openArtifact({ type: "analysis", id: item.id, title: item.title })
+      }
+    },
+    [openArtifact]
+  )
 
   // Wire up keyboard shortcuts
   useKeyboardShortcuts({
@@ -43,17 +81,17 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   return (
     <SidebarProvider>
       <AppSidebar
+        items={historyItems}
+        onSelectItem={handleSelectItem}
         onOpenCommandPalette={togglePalette}
         onNewChat={() => {
           // Hard reload to clear all local state (messages, artifact, etc.)
           window.location.href = "/chat"
         }}
-        // TODO: Wire up actual data and handlers
-        // items={conversations}
+        // TODO: Wire up user and org data
         // organizations={userOrgs}
         // currentOrg={activeOrg}
         // user={currentUser}
-        // onSelectItem={handleSelectItem}
         // onSwitchOrg={handleSwitchOrg}
         // onOpenSettings={handleOpenSettings}
         // onSignOut={handleSignOut}

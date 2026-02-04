@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSearchParams } from "next/navigation"
 import { FileTextIcon, PlusIcon, SparklesIcon } from "lucide-react"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { AppBody } from "@/components/shell"
@@ -40,6 +41,12 @@ import { ErrorBoundary } from "@/components/error-boundary"
 import { ExpandIcon, MoreHorizontalIcon } from "lucide-react"
 import { uploadDocument } from "@/app/(main)/(dashboard)/documents/actions"
 import { triggerAnalysis } from "@/app/(main)/(dashboard)/analyses/actions"
+import {
+  createConversation,
+  createMessage,
+  getMessages,
+  type Message as DbMessage,
+} from "./actions"
 
 interface ChatMessage {
   id: string
@@ -49,9 +56,76 @@ interface ChatMessage {
 }
 
 export default function ChatPage() {
+  const searchParams = useSearchParams()
+  const conversationParam = searchParams?.get("conversation")
+
+  const [conversationId, setConversationId] = React.useState<string | null>(
+    conversationParam || null
+  )
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
   const [status, setStatus] = React.useState<"ready" | "submitted" | "streaming">("ready")
   const { artifact, openArtifact, closeArtifact, toggleArtifactExpanded } = useShellStore()
+
+  // Load messages when conversation ID changes
+  React.useEffect(() => {
+    if (!conversationId) {
+      setMessages([])
+      return
+    }
+
+    async function loadMessages() {
+      const result = await getMessages({ conversationId: conversationId! })
+      if (result.success) {
+        const loadedMessages: ChatMessage[] = result.data.map((msg) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          files: msg.files as Array<{ url: string; filename?: string; mediaType?: string }>,
+        }))
+        setMessages(loadedMessages)
+      }
+    }
+
+    loadMessages()
+  }, [conversationId])
+
+  // Helper to ensure we have a conversation
+  const ensureConversation = React.useCallback(async () => {
+    if (conversationId) return conversationId
+
+    const result = await createConversation({
+      title: "New Chat",
+    })
+
+    if (!result.success) {
+      console.error("Failed to create conversation:", result.error)
+      throw new Error("Failed to create conversation")
+    }
+
+    setConversationId(result.data.id)
+    return result.data.id
+  }, [conversationId])
+
+  // Helper to persist a message to the database
+  const persistMessage = React.useCallback(
+    async (msg: ChatMessage) => {
+      const convId = await ensureConversation()
+
+      const result = await createMessage({
+        conversationId: convId,
+        role: msg.role,
+        content: msg.content,
+        files: msg.files || [],
+      })
+
+      if (!result.success) {
+        console.error("Failed to persist message:", result.error)
+      }
+
+      return result.success ? result.data.id : msg.id
+    },
+    [ensureConversation]
+  )
 
   const handleSubmit = async (message: PromptInputMessage) => {
     if (!message.text.trim() && message.files.length === 0) return
@@ -74,6 +148,9 @@ export default function ChatPage() {
       }
       setMessages((prev) => [...prev, userMessage])
 
+      // Persist user message
+      await persistMessage(userMessage)
+
       try {
         // Fetch the blob from the URL and create FormData
         const response = await fetch(file.url)
@@ -94,14 +171,13 @@ export default function ChatPage() {
         // Upload document
         const uploadResult = await uploadDocument(formData)
         if (!uploadResult.success) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              role: "assistant",
-              content: `Failed to upload: ${uploadResult.error.message}`,
-            },
-          ])
+          const errorMessage: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: `Failed to upload: ${uploadResult.error.message}`,
+          }
+          setMessages((prev) => [...prev, errorMessage])
+          await persistMessage(errorMessage)
           setStatus("ready")
           return
         }
@@ -111,27 +187,27 @@ export default function ChatPage() {
           userPrompt: message.text || undefined,
         })
         if (!analysisResult.success) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              role: "assistant",
-              content: `Failed to start analysis: ${analysisResult.error.message}`,
-            },
-          ])
+          const errorMessage: ChatMessage = {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: `Failed to start analysis: ${analysisResult.error.message}`,
+          }
+          setMessages((prev) => [...prev, errorMessage])
+          await persistMessage(errorMessage)
           setStatus("ready")
           return
         }
 
         // Add assistant message
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: `I'm analyzing "${uploadResult.data.title}". This usually takes about 30 seconds...`,
-          },
-        ])
+        const assistantMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: `I'm analyzing "${uploadResult.data.title}". This usually takes about 30 seconds...`,
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+
+        // Persist assistant message
+        await persistMessage(assistantMessage)
 
         // Auto-open artifact panel
         openArtifact({
@@ -143,14 +219,13 @@ export default function ChatPage() {
         setStatus("ready")
         return
       } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: `An error occurred: ${err instanceof Error ? err.message : "Unknown error"}`,
-          },
-        ])
+        const errorMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: `An error occurred: ${err instanceof Error ? err.message : "Unknown error"}`,
+        }
+        setMessages((prev) => [...prev, errorMessage])
+        await persistMessage(errorMessage)
         setStatus("ready")
         return
       }
@@ -163,6 +238,7 @@ export default function ChatPage() {
       content: message.text,
     }
     setMessages((prev) => [...prev, userMessage])
+    await persistMessage(userMessage)
     setStatus("submitted")
 
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -175,10 +251,11 @@ export default function ChatPage() {
       content: `I received your message: "${message.text}". Upload an NDA to analyze it!`,
     }
     setMessages((prev) => [...prev, assistantMessage])
+    await persistMessage(assistantMessage)
     setStatus("ready")
   }
 
-  const handleSuggestion = (suggestion: string) => {
+  const handleSuggestion = async (suggestion: string) => {
     if (suggestion === "Analyze NDA") {
       openArtifact({
         type: "analysis",
@@ -200,6 +277,7 @@ export default function ChatPage() {
       content: suggestion,
     }
     setMessages((prev) => [...prev, userMessage])
+    await persistMessage(userMessage)
   }
 
   const renderArtifactContent = () => {
