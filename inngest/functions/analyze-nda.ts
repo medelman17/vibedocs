@@ -58,12 +58,23 @@ export const analyzeNda = inngest.createFunction(
         return analysis.id
       })
 
-      // Helper to emit progress events
+      // Helper to emit progress events AND persist to DB
       const emitProgress = async (
         stage: ProgressStage,
         progress: number,
         message: string
       ) => {
+        // Persist progress to DB for polling
+        await ctx.db
+          .update(analyses)
+          .set({
+            progressStage: stage,
+            progressPercent: progress,
+            updatedAt: new Date(),
+          })
+          .where(eq(analyses.id, analysisId))
+
+        // Also emit event for real-time consumers (future SSE)
         await step.sendEvent('emit-progress', {
           name: 'nda/analysis.progress',
           data: {
