@@ -42,11 +42,11 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
   // Desktop: resizable panels with artifact
   return (
     <ResizablePanelGroup
-      direction="horizontal"
-      onLayout={(layout) => {
-        // layout is [chatSize, artifactSize]
-        if (layout.length === 2) {
-          setArtifactWidth(layout[1])
+      orientation="horizontal"
+      onLayoutChanged={(layout: { [panelId: string]: number }) => {
+        const artifactWidth = layout["artifact-panel"]
+        if (artifactWidth !== undefined) {
+          setArtifactWidth(artifactWidth)
         }
       }}
     >
