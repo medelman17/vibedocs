@@ -52,7 +52,9 @@ export const analysisRequestedPayload = baseTenantPayload.extend({
   /** Optional: specific analysis version (for re-analysis) */
   version: z.number().int().positive().optional(),
   /** Source of the document */
-  source: z.enum(["web", "word-addin"]).default("web"),
+  source: z.enum(["web", "web-upload", "word-addin"]).default("web"),
+  /** User's optional prompt/instructions for the analysis */
+  userPrompt: z.string().optional(),
   /** Word Add-in content (required when source='word-addin') */
   content: z
     .object({
