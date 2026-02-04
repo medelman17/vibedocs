@@ -133,4 +133,30 @@ describe("useKeyboardShortcuts", () => {
       expect.any(Function)
     )
   })
+
+  it("handles Mac platform detection with userAgentData", () => {
+    const originalNavigator = global.navigator
+    Object.defineProperty(global, "navigator", {
+      value: {
+        userAgentData: { platform: "macOS" },
+      },
+      configurable: true,
+    })
+
+    renderHook(() => useKeyboardShortcuts(mockHandlers))
+
+    const event = new KeyboardEvent("keydown", {
+      key: "k",
+      metaKey: true,
+      bubbles: true,
+    })
+    document.dispatchEvent(event)
+
+    expect(mockHandlers.onTogglePalette).toHaveBeenCalledTimes(1)
+
+    Object.defineProperty(global, "navigator", {
+      value: originalNavigator,
+      configurable: true,
+    })
+  })
 })

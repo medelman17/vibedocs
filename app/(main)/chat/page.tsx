@@ -36,6 +36,7 @@ import {
   DocumentViewer,
   AnalysisView,
 } from "@/components/artifact"
+import { ErrorBoundary } from "@/components/error-boundary"
 import { ExpandIcon, MoreHorizontalIcon } from "lucide-react"
 
 interface ChatMessage {
@@ -220,7 +221,9 @@ export default function ChatPage() {
                 <ArtifactClose onClick={closeArtifact} />
               </ArtifactActions>
             </ArtifactHeader>
-            <ArtifactContent>{renderArtifactContent()}</ArtifactContent>
+            <ArtifactContent>
+              <ErrorBoundary>{renderArtifactContent()}</ErrorBoundary>
+            </ArtifactContent>
           </Artifact>
         )
       }

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import {
   PlusIcon,
   SearchIcon,
@@ -231,10 +232,13 @@ export function AppSidebar({
                   tooltip={user?.name || "Account"}
                 >
                   {user?.avatar ? (
-                    <img
+                    <Image
                       src={user.avatar}
-                      alt={user.name}
-                      className="size-6 rounded-full"
+                      alt={user.name || "User avatar"}
+                      width={24}
+                      height={24}
+                      className="size-6 rounded-full object-cover"
+                      unoptimized
                     />
                   ) : (
                     <div className="flex size-6 items-center justify-center rounded-full bg-violet-100 text-xs font-medium text-violet-600">

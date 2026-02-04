@@ -82,6 +82,14 @@ describe("shell-store", () => {
       useShellStore.getState().togglePalette()
       expect(useShellStore.getState().palette.open).toBe(false)
     })
+
+    it("sets palette open directly", () => {
+      useShellStore.getState().setPaletteOpen(true)
+      expect(useShellStore.getState().palette.open).toBe(true)
+
+      useShellStore.getState().setPaletteOpen(false)
+      expect(useShellStore.getState().palette.open).toBe(false)
+    })
   })
 
   describe("closeTopmost", () => {
