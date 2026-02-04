@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 1 - Foundation Hardening (COMPLETE)
+**Current focus:** Phase 2 - Budget Protection (IN PROGRESS)
 
 ## Current Position
 
-Phase: 1 of 11 (Foundation Hardening)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-04 - Completed 01-03-PLAN.md (Validation Gates Integration)
+Phase: 2 of 11 (Budget Protection)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-04 - Completed 02-01-PLAN.md (Budget Infrastructure)
 
-Progress: [███░░░░░░░] ~10% (3 plans of ~30+ total)
+Progress: [████░░░░░░] ~13% (4 plans of ~30+ total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 2.8 min
-- Total execution time: 8.5 min
+- Total plans completed: 4
+- Average duration: 3.5 min
+- Total execution time: 15.5 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 3 | 8.5 min | 2.8 min |
+| 02 | 1 | 7 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2 min), 01-02 (3 min), 01-03 (3.5 min)
-- Trend: Steady
+- Last 5 plans: 01-01 (2 min), 01-02 (3 min), 01-03 (3.5 min), 02-01 (7 min)
+- Trend: Steady (02-01 longer due to schema changes and test fixes)
 
 *Updated after each plan completion*
 
@@ -52,6 +53,9 @@ Recent decisions affecting current work:
 - [01-03]: Validation gates run outside step.run() for immediate NonRetriableError
 - [01-03]: Failure state persisted inside step.run() for durability
 - [01-03]: Deterministic ID uses documentId + requestedAt for unique analysis per request
+- [02-01]: gpt-tokenizer as proxy for Claude tokenization (~10-15% variance acceptable)
+- [02-01]: Dynamic import for pdf-parse to avoid barrel export issues
+- [02-01]: Schema versioning in test/setup.ts for automatic recreation on changes
 
 ### Pending Todos
 
@@ -64,6 +68,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04T21:18:34Z
-Stopped at: Completed 01-03-PLAN.md (Validation Gates Integration) - Phase 01 complete
+Last session: 2026-02-04T22:04:27Z
+Stopped at: Completed 02-01-PLAN.md (Budget Infrastructure)
 Resume file: None
