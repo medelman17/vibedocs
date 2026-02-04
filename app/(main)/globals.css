@@ -420,6 +420,7 @@
   }
 
   html {
+    @apply h-full;
     /* Smooth scrolling for anchor links */
     scroll-behavior: smooth;
     /* Prevent text size adjustment on mobile */
@@ -427,7 +428,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply h-full bg-background text-foreground;
     /* Optimal body text settings */
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
