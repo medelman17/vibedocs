@@ -31,7 +31,7 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
 
   // Desktop: no artifact, just chat
   if (!artifactState.open) {
-    return <main className="flex-1 overflow-hidden">{chat}</main>
+    return <main className="flex min-h-0 flex-1 flex-col overflow-hidden">{chat}</main>
   }
 
   // Desktop: side-by-side layout (like Vercel AI Chatbot)
@@ -39,7 +39,7 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
   return (
     <div className="flex h-full w-full flex-1 overflow-hidden">
       {/* Chat panel - fixed width */}
-      <main className="h-full w-[400px] shrink-0 overflow-hidden border-r border-border/50">
+      <main className="flex h-full min-h-0 w-[400px] shrink-0 flex-col overflow-hidden border-r border-border/50">
         {chat}
       </main>
 
