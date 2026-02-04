@@ -94,7 +94,12 @@ export async function runClassifierAgent(
     totalInputTokens += usage?.inputTokens ?? 0
     totalOutputTokens += usage?.outputTokens ?? 0
 
-    // Skip low-confidence "Unknown" classifications
+    // Skip low-confidence "Unknown" classifications to reduce noise.
+    // Rationale: Low-confidence unknowns indicate the chunk likely contains
+    // boilerplate text, definitions, or non-substantive content that doesn't
+    // fit the CUAD taxonomy. Including these would clutter the analysis
+    // without adding meaningful risk assessment value. High-confidence unknowns
+    // (>= 0.5) are kept to flag potentially important uncategorized clauses.
     if (object.category === 'Unknown' && object.confidence < 0.5) {
       continue
     }

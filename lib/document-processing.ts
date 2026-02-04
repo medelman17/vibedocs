@@ -1,6 +1,7 @@
 import { PDFParse } from 'pdf-parse'
 import mammoth from 'mammoth'
 import { encode } from 'gpt-tokenizer'
+import { ValidationError } from '@/lib/errors'
 
 // ============================================================================
 // Types
@@ -40,13 +41,25 @@ export async function extractText(
 ): Promise<ExtractionResult> {
   switch (mimeType) {
     case 'application/pdf': {
-      const pdfParser = new PDFParse({ data: buffer })
-      const textResult = await pdfParser.getText()
-      return { text: textResult.text, pageCount: textResult.pages.length }
+      try {
+        const pdfParser = new PDFParse({ data: buffer })
+        const textResult = await pdfParser.getText()
+        return { text: textResult.text, pageCount: textResult.pages.length }
+      } catch (error) {
+        throw new ValidationError(
+          `Failed to extract text from PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      }
     }
     case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
-      const result = await mammoth.extractRawText({ buffer })
-      return { text: result.value, pageCount: 1 }
+      try {
+        const result = await mammoth.extractRawText({ buffer })
+        return { text: result.value, pageCount: 1 }
+      } catch (error) {
+        throw new ValidationError(
+          `Failed to extract text from DOCX: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      }
     }
     case 'text/plain':
     default:
@@ -161,6 +174,12 @@ export function chunkDocument(
 
 /**
  * Splits text into paragraphs while tracking their positions in the original text.
+ *
+ * Uses regex to identify paragraph boundaries (single or multiple newlines with content).
+ * Preserves the start and end positions of each paragraph for Word Add-in content control insertion.
+ *
+ * @param text - The full document text to split
+ * @returns Array of paragraphs with their text content and position offsets
  */
 function splitWithPositions(
   text: string
@@ -186,6 +205,17 @@ function splitWithPositions(
 
 /**
  * Gets overlap text from the end of a chunk for context continuity.
+ *
+ * Extracts approximately N tokens from the end of the previous chunk to prepend
+ * to the next chunk. This maintains semantic context across chunk boundaries,
+ * which is important for accurate classification of clauses that span multiple chunks.
+ *
+ * Note: Uses word-based approximation rather than exact token counting for performance.
+ * This may result in slightly more or fewer tokens than requested.
+ *
+ * @param text - The chunk text to extract overlap from
+ * @param overlapTokens - Target number of tokens to include (approximate)
+ * @returns The overlap text with trailing space, or empty string if overlapTokens is 0
  */
 function getOverlapText(text: string, overlapTokens: number): string {
   if (overlapTokens === 0) return ''

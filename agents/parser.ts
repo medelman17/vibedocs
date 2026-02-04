@@ -20,6 +20,7 @@ import { getVoyageAIClient } from '@/lib/embeddings'
 import { db } from '@/db/client'
 import { documents } from '@/db/schema/documents'
 import { eq } from 'drizzle-orm'
+import { NotFoundError, ValidationError, InternalError } from '@/lib/errors'
 
 // ============================================================================
 // Types
@@ -85,13 +86,13 @@ export async function runParserAgent(input: ParserInput): Promise<ParserOutput> 
     })
 
     if (!doc?.fileUrl) {
-      throw new Error(`Document ${documentId} not found or has no file URL`)
+      throw new NotFoundError(`Document ${documentId} not found or has no file URL`)
     }
 
     // Download from Vercel Blob URL directly
     const response = await fetch(doc.fileUrl)
     if (!response.ok) {
-      throw new Error(`Failed to download document: ${response.statusText}`)
+      throw new InternalError(`Failed to download document: ${response.statusText}`)
     }
     const arrayBuffer = await response.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
@@ -103,7 +104,7 @@ export async function runParserAgent(input: ParserInput): Promise<ParserOutput> 
   } else {
     // Word Add-in: use provided content
     if (!content) {
-      throw new Error('Word Add-in source requires content')
+      throw new ValidationError('Word Add-in source requires content')
     }
     rawText = content.rawText
     title = metadata?.title ?? 'Untitled'

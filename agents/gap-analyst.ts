@@ -26,6 +26,24 @@ import type { ClassifiedClause } from './classifier'
 import type { RiskAssessmentResult } from './risk-scorer'
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Gap score weights for calculating overall gap score.
+ * Higher scores indicate more severe gaps or risks.
+ */
+const GAP_SCORE_WEIGHTS = {
+  MISSING_CRITICAL: 15,
+  MISSING_IMPORTANT: 8,
+  MISSING_OPTIONAL: 3,
+  WEAK_CLAUSE: 5,
+  HYPOTHESIS_CONTRADICTION: 15,
+  HYPOTHESIS_MISSING_CRITICAL: 10,
+  HYPOTHESIS_MISSING: 5,
+} as const
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -145,7 +163,14 @@ export async function runGapAnalystAgent(
   totalInputTokens += gapUsage?.inputTokens ?? 0
   totalOutputTokens += gapUsage?.outputTokens ?? 0
 
-  // Test ContractNLI hypotheses (limit to first 5 for budget)
+  // Test ContractNLI hypotheses (limit to first 5 for budget constraints).
+  // Rationale: The PRD allocates ~52K tokens for the gap analyst agent.
+  // Each hypothesis test consumes ~10K tokens (prompt + classification).
+  // Testing 5 hypotheses (50K tokens) plus gap analysis (2K tokens) stays
+  // within budget. In production, this limit should be configurable or
+  // budget-aware. The first 5 hypotheses cover the most critical NDA clauses:
+  // Purpose Limitation, Standard of Care, Legal Compulsion, Public Info, and
+  // Governing Law (see CONTRACT_NLI_HYPOTHESES in agents/prompts/index.ts).
   const hypothesisCoverage: GapAnalystOutput['hypothesisCoverage'] = []
   const hypothesesToTest = CONTRACT_NLI_HYPOTHESES.slice(0, 5)
 
@@ -215,13 +240,8 @@ Determine if the document supports (entailment), opposes (contradiction), or doe
 /**
  * Calculates overall gap score based on findings.
  *
- * Scoring per GAP_ANALYST_SYSTEM_PROMPT:
- * - Missing critical: +15
- * - Missing important: +8
- * - Weak critical: +10
- * - Weak important: +5
- * - Critical hypothesis not_mentioned: +10
- * - Any hypothesis contradicted: +15
+ * Uses weights from GAP_SCORE_WEIGHTS to compute a composite score.
+ * Higher scores indicate more severe gaps or risks in the NDA.
  */
 function calculateGapScore(
   gapResult: z.infer<typeof gapAnalysisSchema>,
@@ -231,13 +251,13 @@ function calculateGapScore(
 
   // Missing categories
   for (const missing of gapResult.missingCategories) {
-    if (missing.importance === 'critical') score += 15
-    else if (missing.importance === 'important') score += 8
-    else score += 3
+    if (missing.importance === 'critical') score += GAP_SCORE_WEIGHTS.MISSING_CRITICAL
+    else if (missing.importance === 'important') score += GAP_SCORE_WEIGHTS.MISSING_IMPORTANT
+    else score += GAP_SCORE_WEIGHTS.MISSING_OPTIONAL
   }
 
-  // Weak clauses (simplified - could check category importance)
-  score += gapResult.weakClauses.length * 5
+  // Weak clauses (simplified - applies flat weight per weak clause)
+  score += gapResult.weakClauses.length * GAP_SCORE_WEIGHTS.WEAK_CLAUSE
 
   // Hypothesis coverage
   const criticalCategories = [
@@ -250,12 +270,12 @@ function calculateGapScore(
 
   for (const h of hypotheses) {
     if (h.status === 'contradiction') {
-      score += 15
+      score += GAP_SCORE_WEIGHTS.HYPOTHESIS_CONTRADICTION
     } else if (h.status === 'not_mentioned') {
       if (criticalCategories.includes(h.category)) {
-        score += 10
+        score += GAP_SCORE_WEIGHTS.HYPOTHESIS_MISSING_CRITICAL
       } else {
-        score += 5
+        score += GAP_SCORE_WEIGHTS.HYPOTHESIS_MISSING
       }
     }
   }
