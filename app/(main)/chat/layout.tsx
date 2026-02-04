@@ -4,10 +4,41 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/shell"
 import { CommandPalette } from "@/components/navigation"
 import { useShellStore } from "@/lib/stores/shell-store"
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { Separator } from "@/components/ui/separator"
 
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
-  const { togglePalette } = useShellStore()
+  const {
+    togglePalette,
+    closeArtifact,
+    toggleArtifactExpanded,
+    palette,
+    artifact,
+    setPaletteOpen,
+  } = useShellStore()
+
+  // Wire up keyboard shortcuts
+  useKeyboardShortcuts({
+    onTogglePalette: togglePalette,
+    onToggleSidebar: () => {}, // Handled by shadcn sidebar internally
+    onFocusChatInput: () => {
+      // Focus the textarea in the prompt input
+      const textarea = document.querySelector<HTMLTextAreaElement>(
+        '[data-slot="input-group"] textarea'
+      )
+      textarea?.focus()
+    },
+    onCollapseArtifact: closeArtifact,
+    onExpandArtifact: toggleArtifactExpanded,
+    onCloseTopmost: () => {
+      // Close in order: palette > artifact
+      if (palette.open) {
+        setPaletteOpen(false)
+      } else if (artifact.open) {
+        closeArtifact()
+      }
+    },
+  })
 
   return (
     <SidebarProvider>
