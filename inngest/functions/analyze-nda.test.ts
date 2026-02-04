@@ -226,4 +226,27 @@ describe('analyzeNda Pipeline', () => {
     expect(completionEvent?.[1].data.overallRiskScore).toBeDefined()
     expect(completionEvent?.[1].data.overallRiskLevel).toBeDefined()
   })
+
+  it('records budget estimate after parsing', async () => {
+    const event = {
+      data: {
+        documentId: 'doc-123',
+        tenantId: '550e8400-e29b-41d4-a716-446655440000',
+        source: 'web' as const,
+      },
+    }
+    const step = createMockStep()
+
+    const handler = (analyzeNda as unknown as { fn: (ctx: unknown) => Promise<unknown> }).fn
+    await handler({ event, step })
+
+    // Verify budget estimate step is called after parser
+    expect(step.run).toHaveBeenCalledWith('record-budget-estimate', expect.any(Function))
+
+    // Verify the order: parser-agent should come before record-budget-estimate
+    const stepCalls = step.run.mock.calls.map(([name]) => name)
+    const parserIndex = stepCalls.indexOf('parser-agent')
+    const budgetIndex = stepCalls.indexOf('record-budget-estimate')
+    expect(parserIndex).toBeLessThan(budgetIndex)
+  })
 })
