@@ -1,7 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { Group, Panel, Separator } from "react-resizable-panels"
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -37,32 +41,27 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
 
   // Desktop: resizable panels with artifact
   return (
-    <Group
-      orientation="horizontal"
-      onLayoutChanged={(layout) => {
-        const artifactWidth = layout["artifact-panel"]
-        if (artifactWidth !== undefined) {
-          setArtifactWidth(artifactWidth)
+    <ResizablePanelGroup
+      direction="horizontal"
+      onLayout={(layout) => {
+        // layout is [chatSize, artifactSize]
+        if (layout.length === 2) {
+          setArtifactWidth(layout[1])
         }
       }}
     >
-      <Panel
+      <ResizablePanel
         id="chat-panel"
         defaultSize={100 - artifactState.width}
         minSize={40}
         className="overflow-hidden"
       >
         <main className="h-full overflow-hidden">{chat}</main>
-      </Panel>
+      </ResizablePanel>
 
-      <Separator
-        className={cn(
-          "w-1 bg-neutral-200/50 hover:bg-violet-300 transition-colors",
-          "data-[state=dragging]:bg-violet-500"
-        )}
-      />
+      <ResizableHandle withHandle />
 
-      <Panel
+      <ResizablePanel
         id="artifact-panel"
         defaultSize={artifactState.width}
         minSize={30}
@@ -78,7 +77,7 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
         >
           {artifact}
         </aside>
-      </Panel>
-    </Group>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   )
 }
