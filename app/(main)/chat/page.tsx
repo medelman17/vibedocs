@@ -25,8 +25,9 @@ import {
   PromptInputActionMenuContent,
   PromptInputActionMenuItem,
   PromptInputActionAddAttachments,
-  SlashCommands,
+  InputAutocomplete,
   type SlashCommand,
+  type Mention,
   type PromptInputMessage,
 } from "@/components/chat"
 import { useRouter } from "next/navigation"
@@ -263,9 +264,33 @@ export default function ChatPage() {
     }
   }
 
-  const handleSlashClose = () => {
-    // Clear the slash if user presses escape
-    if (inputValue.trim() === "/") {
+  const handleMention = (mention: Mention) => {
+    // Replace the @query with the mention name
+    const lastAtIndex = inputValue.lastIndexOf("@")
+    const beforeAt = inputValue.slice(0, lastAtIndex)
+    const newValue = `${beforeAt}@${mention.name} `
+    setInputValue(newValue)
+
+    // Open the artifact panel if it's an analysis
+    if (mention.type === "analysis") {
+      openArtifact({
+        type: "analysis",
+        id: mention.id,
+        title: mention.name,
+      })
+    } else if (mention.type === "document") {
+      openArtifact({
+        type: "document",
+        id: mention.id,
+        title: mention.name,
+      })
+    }
+  }
+
+  const handleAutocompleteClose = () => {
+    // Clear the trigger character if user presses escape
+    const trimmed = inputValue.trim()
+    if (trimmed === "/" || trimmed === "@") {
       setInputValue("")
     }
   }
@@ -342,10 +367,11 @@ export default function ChatPage() {
             )}
 
             <div className="relative" ref={inputWrapperRef}>
-              <SlashCommands
+              <InputAutocomplete
                 inputValue={inputValue}
-                onSelect={handleSlashCommand}
-                onClose={handleSlashClose}
+                onSlashCommand={handleSlashCommand}
+                onMention={handleMention}
+                onClose={handleAutocompleteClose}
                 anchorRef={inputWrapperRef}
               />
               <PromptInputProvider initialInput={inputValue}>

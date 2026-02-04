@@ -58,10 +58,14 @@ export {
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input"
 
-// Slash commands
+// Slash commands and mentions
 export {
   SlashCommands,
-  useSlashCommands,
+  Mentions,
+  InputAutocomplete,
   defaultCommands,
+  defaultDocuments,
+  defaultAnalyses,
   type SlashCommand,
+  type Mention,
 } from "./slash-commands"
