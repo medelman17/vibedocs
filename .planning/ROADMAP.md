@@ -35,10 +35,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Pipeline halts with clear error when validation gate fails (e.g., 0 clauses detected)
   3. Database writes use upsert patterns - retrying a step does not create duplicate records
   4. Validation failures surface as user-visible errors (not silent progression)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md — Create validation gate infrastructure
+- [ ] 01-02-PLAN.md — Migrate agents to AI SDK 6 pattern
+- [ ] 01-03-PLAN.md — Integrate validation gates and idempotent writes
 
 ### Phase 2: Budget Protection
 **Goal**: Analysis cannot exceed token/cost limits - enforced before execution, not just tracked
@@ -193,7 +195,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation Hardening | 0/TBD | Not started | - |
+| 1. Foundation Hardening | 0/3 | Planned | - |
 | 2. Budget Protection | 0/TBD | Not started | - |
 | 3. Document Extraction | 0/TBD | Not started | - |
 | 4. OCR Processing | 0/TBD | Not started | - |
@@ -207,4 +209,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04*
+*Last updated: 2026-02-04 (Phase 1 planned)*
