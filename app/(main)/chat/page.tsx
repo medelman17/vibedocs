@@ -142,11 +142,14 @@ export default function ChatPage() {
         })),
       }))
 
-      // Add user message to chat
+      // Add user message and uploading indicator to chat
+      const uploadingMsgId = crypto.randomUUID()
       setMessages([
         ...messages,
         { id: userMessageId, role: "user", content: userMessageContent },
+        { id: uploadingMsgId, role: "assistant", content: "Uploading document..." },
       ])
+      setIsLoading(true)
 
       try {
         // Fetch the blob from the URL and create FormData
@@ -171,8 +174,9 @@ export default function ChatPage() {
           setMessages([
             ...messages,
             { id: userMessageId, role: "user", content: userMessageContent },
-            { id: crypto.randomUUID(), role: "assistant", content: `Failed to upload: ${uploadResult.error.message}` },
+            { id: crypto.randomUUID(), role: "assistant", content: `**Upload failed:** ${uploadResult.error.message}` },
           ])
+          setIsLoading(false)
           return
         }
 
@@ -184,8 +188,9 @@ export default function ChatPage() {
           setMessages([
             ...messages,
             { id: userMessageId, role: "user", content: userMessageContent },
-            { id: crypto.randomUUID(), role: "assistant", content: `Failed to start analysis: ${analysisResult.error.message}` },
+            { id: crypto.randomUUID(), role: "assistant", content: `**Analysis failed:** ${analysisResult.error.message}` },
           ])
+          setIsLoading(false)
           return
         }
 
@@ -193,8 +198,9 @@ export default function ChatPage() {
         setMessages([
           ...messages,
           { id: userMessageId, role: "user", content: userMessageContent },
-          { id: crypto.randomUUID(), role: "assistant", content: `I'm analyzing "${uploadResult.data.title}". This usually takes about 30 seconds...` },
+          { id: crypto.randomUUID(), role: "assistant", content: `I'm analyzing **"${uploadResult.data.title}"**. This usually takes about 30 seconds...` },
         ])
+        setIsLoading(false)
 
         // Auto-open artifact panel
         openArtifact({
@@ -208,8 +214,9 @@ export default function ChatPage() {
         setMessages([
           ...messages,
           { id: userMessageId, role: "user", content: userMessageContent },
-          { id: crypto.randomUUID(), role: "assistant", content: `An error occurred: ${err instanceof Error ? err.message : "Unknown error"}` },
+          { id: crypto.randomUUID(), role: "assistant", content: `**Error:** ${err instanceof Error ? err.message : "Unknown error"}` },
         ])
+        setIsLoading(false)
         return
       }
     }
