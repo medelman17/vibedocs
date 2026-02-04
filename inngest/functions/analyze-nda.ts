@@ -16,7 +16,11 @@ import { runParserAgent } from '@/agents/parser'
 import { runClassifierAgent } from '@/agents/classifier'
 import { runRiskScorerAgent } from '@/agents/risk-scorer'
 import { runGapAnalystAgent } from '@/agents/gap-analyst'
-import { validateParserOutput, validateClassifierOutput } from '@/agents/validation'
+import {
+  validateParserOutput,
+  validateClassifierOutput,
+  validateTokenBudget,
+} from '@/agents/validation'
 import { BudgetTracker } from '@/lib/ai/budget'
 import { analyses } from '@/db/schema/analyses'
 import { eq } from 'drizzle-orm'
@@ -138,10 +142,68 @@ export const analyzeNda = inngest.createFunction(
         throw new NonRetriableError(parserValidation.error!.userMessage)
       }
 
+      // Token budget validation gate - runs AFTER parser validation
+      // This gate always passes but may truncate the document
+      const budgetValidation = validateTokenBudget(
+        parserResult.document.rawText,
+        parserResult.document.chunks.map(c => ({
+          id: c.id,
+          index: c.index,
+          content: c.content,
+          tokenCount: c.tokenCount ?? 0,
+          sectionPath: c.sectionPath,
+          startPosition: c.startPosition,
+          endPosition: c.endPosition,
+        }))
+      )
+
+      // Track working document - may be truncated
+      let workingDocument = parserResult.document
+      let wasTruncated = false
+
+      if (budgetValidation.truncation) {
+        // Document was truncated to fit budget
+        workingDocument = {
+          ...parserResult.document,
+          rawText: budgetValidation.truncation.text,
+          chunks: budgetValidation.truncation.chunks.map((c, i) => ({
+            ...parserResult.document.chunks.find(orig => orig.id === c.id) ?? parserResult.document.chunks[i],
+            content: c.content,
+          })),
+        }
+        wasTruncated = true
+
+        console.log('[Budget] Document truncated', {
+          analysisId,
+          originalTokens: budgetValidation.estimate.tokenCount,
+          truncatedTokens: budgetValidation.truncation.truncatedTokens,
+          removedSections: budgetValidation.truncation.removedSections,
+        })
+      }
+
+      // Store estimate and truncation status in a durable step
+      await step.run('record-budget-estimate', async () => {
+        await ctx.db
+          .update(analyses)
+          .set({
+            estimatedTokens: budgetValidation.estimate.tokenCount,
+            wasTruncated,
+            ...(wasTruncated && {
+              metadata: {
+                truncationWarning: budgetValidation.warning?.message,
+                removedSections: budgetValidation.truncation?.removedSections,
+              },
+            }),
+          })
+          .where(eq(analyses.id, analysisId))
+      })
+
       await emitProgress(
         'parsing',
         20,
-        `Parsed ${parserResult.document.chunks.length} chunks`
+        wasTruncated
+          ? `Parsed and truncated to ${workingDocument.chunks.length} chunks`
+          : `Parsed ${parserResult.document.chunks.length} chunks`
       )
 
       // Rate limit delay after Claude API call
@@ -150,7 +212,7 @@ export const analyzeNda = inngest.createFunction(
       // Step 3: Classifier Agent
       const classifierResult = await step.run('classifier-agent', () =>
         runClassifierAgent({
-          parsedDocument: parserResult.document,
+          parsedDocument: workingDocument,  // Use truncated version if applicable
           budgetTracker,
         })
       )
