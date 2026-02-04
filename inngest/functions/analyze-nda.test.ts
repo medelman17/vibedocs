@@ -92,6 +92,7 @@ vi.mock('@/db/client', () => ({
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockReturnValue({
         returning: vi.fn().mockResolvedValue([{ id: 'analysis-123' }]),
+        onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
       }),
     }),
     update: vi.fn().mockReturnValue({
