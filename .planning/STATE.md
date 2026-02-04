@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 3 of 11 (Document Extraction)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-04 - Completed 03-02-PLAN.md (Structure Detection)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-04 - Completed 03-03-PLAN.md (Unified Extraction)
 
-Progress: [████████░░] ~30% (9 plans of ~30+ total)
+Progress: [████████░░] ~33% (10 plans of ~30+ total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 3.7 min
-- Total execution time: 33.5 min
+- Total plans completed: 10
+- Average duration: 4.0 min
+- Total execution time: 40.5 min
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [████████░░] ~30% (9 plans of ~30+ total)
 |-------|-------|-------|----------|
 | 01 | 3 | 8.5 min | 2.8 min |
 | 02 | 4 | 19.5 min | 4.9 min |
-| 03 | 2 | 5.5 min | 2.75 min |
+| 03 | 3 | 12.5 min | 4.2 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (5 min), 02-04 (4 min), 03-01 (2.5 min), 03-02 (3 min)
-- Trend: Fast (03-02 structure types already existed from 03-01)
+- Last 5 plans: 02-04 (4 min), 03-01 (2.5 min), 03-02 (3 min), 03-03 (7 min)
+- Trend: 03-03 took longer due to test mock updates for new architecture
 
 *Updated after each plan completion*
 
@@ -68,6 +68,10 @@ Recent decisions affecting current work:
 - [03-02]: Regex patterns for ARTICLE/Section/numbered headings detect "obvious" structure
 - [03-02]: LLM fallback with 50K char limit to prevent token overflow
 - [03-02]: Character positions computed via indexOf with sequential offset tracking
+- [03-03]: Unified extractDocument validates MIME → extract → OCR check → language check in sequence
+- [03-03]: OcrRequiredError thrown when requiresOcr flag true (unless skipOcrRouting option)
+- [03-03]: Non-English detection throws ValidationError with user-friendly message
+- [03-03]: Structured JSON logging for extraction observability metrics
 
 ### Pending Todos
 
@@ -80,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04T23:38:50Z
-Stopped at: Completed 03-02-PLAN.md (Structure Detection)
+Last session: 2026-02-04T23:48:07Z
+Stopped at: Completed 03-03-PLAN.md (Unified Extraction) - Phase 03 complete
 Resume file: None
