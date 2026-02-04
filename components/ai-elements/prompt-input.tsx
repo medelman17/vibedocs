@@ -399,10 +399,16 @@ export const PromptInput = ({
         .filter(Boolean);
 
       return patterns.some((pattern) => {
+        // Handle file extension patterns (e.g., .pdf, .docx)
+        if (pattern.startsWith(".")) {
+          return f.name.toLowerCase().endsWith(pattern.toLowerCase());
+        }
+        // Handle wildcard MIME types (e.g., image/*)
         if (pattern.endsWith("/*")) {
           const prefix = pattern.slice(0, -1); // e.g: image/* -> image/
           return f.type.startsWith(prefix);
         }
+        // Handle exact MIME type match
         return f.type === pattern;
       });
     },
