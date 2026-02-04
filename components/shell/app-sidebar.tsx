@@ -12,6 +12,7 @@ import {
   LogOutIcon,
   ChevronDownIcon,
   BuildingIcon,
+  FileText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -130,14 +131,35 @@ export function AppSidebar({
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
+        {/* Logo/Brand */}
+        <div className={cn(
+          "flex items-center gap-2 px-2 py-1",
+          isCollapsed && "justify-center"
+        )}>
+          <div
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+            style={{
+              background: "oklch(0.55 0.24 293)",
+            }}
+          >
+            <FileText className="size-4 text-white" />
+          </div>
+          {!isCollapsed && (
+            <span className="text-sm font-semibold tracking-tight">VibeDocs</span>
+          )}
+        </div>
+
+        <SidebarSeparator className="my-2" />
+
+        {/* Actions */}
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onNewChat}
               tooltip="New Chat"
-              className="justify-center gap-2"
+              className="gap-2"
             >
-              <PlusIcon className="size-4" />
+              <PlusIcon className="size-4 shrink-0" />
               <span>New Chat</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -145,9 +167,9 @@ export function AppSidebar({
             <SidebarMenuButton
               onClick={onOpenCommandPalette}
               tooltip="Search (⌘K)"
-              className="justify-center gap-2"
+              className="gap-2"
             >
-              <SearchIcon className="size-4" />
+              <SearchIcon className="size-4 shrink-0" />
               <span>Search</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

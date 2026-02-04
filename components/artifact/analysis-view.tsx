@@ -164,10 +164,10 @@ function ClauseCard({ clause }: { clause: ClauseAnalysis }) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card>
+      <Card className="min-w-0">
         <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-sm font-medium">{clause.category}</CardTitle>
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <CardTitle className="min-w-0 truncate text-sm font-medium">{clause.category}</CardTitle>
             <RiskBadge level={clause.riskLevel} />
           </div>
           <p className="text-sm text-muted-foreground">{clause.summary}</p>
@@ -271,10 +271,10 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
   )
 
   return (
-    <div className={cn("flex h-full flex-col", className)}>
+    <div className={cn("flex h-full min-w-0 flex-col", className)}>
       {/* Summary bar */}
       <div className="border-b bg-muted/50 px-4 py-3">
-        <h3 className="mb-2 font-medium">{analysis.title}</h3>
+        <h3 className="mb-2 truncate font-medium">{analysis.title}</h3>
         <div className="flex flex-wrap gap-2">
           {(["standard", "cautious", "aggressive", "unknown"] as RiskLevel[]).map(
             (level) =>

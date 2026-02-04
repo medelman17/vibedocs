@@ -69,13 +69,15 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
         className="overflow-hidden"
       >
         <aside
-          className={cn("h-full overflow-hidden backdrop-blur-md border-l")}
+          className={cn("h-full w-full overflow-hidden backdrop-blur-md border-l")}
           style={{
             background: "oklch(0.97 0.015 290 / 0.9)",
             borderColor: "oklch(0.90 0.02 293 / 0.5)",
           }}
         >
-          {artifact}
+          <div className="h-full w-full overflow-hidden">
+            {artifact}
+          </div>
         </aside>
       </ResizablePanel>
     </ResizablePanelGroup>
