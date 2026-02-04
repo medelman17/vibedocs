@@ -238,6 +238,15 @@ describe("POST /api/word-addin/analyze", () => {
           userId: "user-123",
           documentId: "doc-123",
           analysisId: "analysis-456",
+          source: "word-addin",
+          content: {
+            rawText: "This is a sample NDA document content.",
+            paragraphs: [],
+          },
+          metadata: {
+            title: "This is a sample NDA document content....",
+            author: undefined,
+          },
         },
       })
     })
