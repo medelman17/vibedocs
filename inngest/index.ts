@@ -86,5 +86,7 @@ export {
 // =============================================================================
 // Function Registry
 // =============================================================================
-
-export { functions } from "./functions"
+// NOTE: Functions are NOT exported from this barrel to avoid pulling in
+// heavy dependencies (pdf-parse, pdfjs-dist) that require browser APIs.
+// Import functions directly from "@/inngest/functions" in the serve handler only.
+// See: https://github.com/medelman17/vibedocs/issues/43

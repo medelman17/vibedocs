@@ -26,9 +26,9 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Redirect authenticated users from auth routes to dashboard
+  // Redirect authenticated users from auth routes to chat
   if (isAuthRoute && sessionToken) {
-    return NextResponse.redirect(new URL("/dashboard", req.nextUrl))
+    return NextResponse.redirect(new URL("/chat", req.nextUrl))
   }
 
   return NextResponse.next()
