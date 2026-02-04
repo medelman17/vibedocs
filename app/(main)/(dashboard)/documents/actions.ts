@@ -15,6 +15,7 @@ import { ok, err, type ApiResponse } from "@/lib/api-response"
 import { documents, documentChunks } from "@/db/schema"
 import { eq, and, isNull, ilike, desc, sql, count, isNotNull } from "drizzle-orm"
 import { uploadFile, deleteFile, computeContentHash } from "@/lib/blob"
+import { validateFileSize, validatePageCount } from "@/lib/budget"
 
 // ============================================================================
 // Types
@@ -56,9 +57,6 @@ const ALLOWED_FILE_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
 ] as const
-
-/** Maximum file size: 10MB */
-const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 /** Valid document status values */
 const documentStatusSchema = z.enum([
@@ -154,12 +152,25 @@ export async function uploadDocument(
     )
   }
 
-  // Validate file size
-  if (file.size > MAX_FILE_SIZE) {
-    return err(
-      "VALIDATION_ERROR",
-      "File size exceeds 10MB limit."
-    )
+  // Stage 1: Quick size check using centralized limits
+  const sizeValidation = validateFileSize(file.size)
+  if (!sizeValidation.valid) {
+    return err("VALIDATION_ERROR", sizeValidation.error!.message)
+  }
+
+  // Stage 1b: Page count check for PDFs (quick rejection before expensive operations)
+  if (file.type === "application/pdf") {
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const pageValidation = await validatePageCount(buffer, file.type)
+      if (!pageValidation.valid) {
+        return err("VALIDATION_ERROR", pageValidation.error!.message)
+      }
+    } catch (pageError) {
+      // If we can't read the PDF to count pages, let it through
+      // The token budget check after parsing will catch oversized documents
+      console.warn("[uploadDocument] Could not check page count:", pageError)
+    }
   }
 
   // Determine title
