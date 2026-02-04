@@ -9,9 +9,9 @@ Requirements for the analysis pipeline milestone. Each maps to roadmap phases.
 
 ### Foundation
 
-- [ ] **FND-01**: Migrate all agents from deprecated `generateObject` to `generateText` + `Output.object()`
-- [ ] **FND-02**: Add validation gates between pipeline stages to catch errors early
-- [ ] **FND-03**: Convert database INSERT operations to upsert patterns for idempotency
+- [x] **FND-01**: Migrate all agents from deprecated `generateObject` to `generateText` + `Output.object()`
+- [x] **FND-02**: Add validation gates between pipeline stages to catch errors early
+- [x] **FND-03**: Convert database INSERT operations to upsert patterns for idempotency
 - [ ] **FND-04**: Implement pre-flight token estimation before analysis starts
 - [ ] **FND-05**: Enforce hard budget limits that abort analysis if exceeded
 - [ ] **FND-06**: Add document size caps (page count, file size) with clear error messages
@@ -138,9 +138,9 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1 | Pending |
-| FND-02 | Phase 1 | Pending |
-| FND-03 | Phase 1 | Pending |
+| FND-01 | Phase 1 | Complete |
+| FND-02 | Phase 1 | Complete |
+| FND-03 | Phase 1 | Complete |
 | FND-04 | Phase 2 | Pending |
 | FND-05 | Phase 2 | Pending |
 | FND-06 | Phase 2 | Pending |
@@ -207,4 +207,4 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after roadmap creation*
+*Last updated: 2026-02-04 (Phase 1 requirements complete)*

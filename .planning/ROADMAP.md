@@ -12,7 +12,7 @@ This roadmap delivers the complete NDA analysis pipeline: document extraction th
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation Hardening** - Migrate to AI SDK 6 patterns, add validation gates, ensure idempotency
+- [x] **Phase 1: Foundation Hardening** - Migrate to AI SDK 6 patterns, add validation gates, ensure idempotency
 - [ ] **Phase 2: Budget Protection** - Pre-flight estimation, hard limits, document size caps
 - [ ] **Phase 3: Document Extraction** - Extract text from PDF/DOCX, handle failures, support Word Add-in text input
 - [ ] **Phase 4: OCR Processing** - Detect and process scanned PDFs, handle quality issues
@@ -38,9 +38,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Create validation gate infrastructure
-- [ ] 01-02-PLAN.md — Migrate agents to AI SDK 6 pattern
-- [ ] 01-03-PLAN.md — Integrate validation gates and idempotent writes
+- [x] 01-01-PLAN.md — Create validation gate infrastructure
+- [x] 01-02-PLAN.md — Migrate agents to AI SDK 6 pattern
+- [x] 01-03-PLAN.md — Integrate validation gates and idempotent writes
 
 ### Phase 2: Budget Protection
 **Goal**: Analysis cannot exceed token/cost limits - enforced before execution, not just tracked
@@ -195,7 +195,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation Hardening | 0/3 | Planned | - |
+| 1. Foundation Hardening | 3/3 | Complete | 2026-02-04 |
 | 2. Budget Protection | 0/TBD | Not started | - |
 | 3. Document Extraction | 0/TBD | Not started | - |
 | 4. OCR Processing | 0/TBD | Not started | - |
@@ -209,4 +209,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 (Phase 1 planned)*
+*Last updated: 2026-02-04 (Phase 1 complete)*
