@@ -143,5 +143,5 @@ export const ArtifactContent = ({
   className,
   ...props
 }: ArtifactContentProps) => (
-  <div className={cn("min-w-0 flex-1 overflow-auto p-4", className)} {...props} />
+  <div className={cn("flex-1 overflow-auto", className)} {...props} />
 );

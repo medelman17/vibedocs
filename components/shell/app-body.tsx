@@ -43,7 +43,7 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
   return (
     <ResizablePanelGroup
       orientation="horizontal"
-      onLayoutChanged={(layout: { [panelId: string]: number }) => {
+      onLayoutChange={(layout: { [id: string]: number }) => {
         const artifactWidth = layout["artifact-panel"]
         if (artifactWidth !== undefined) {
           setArtifactWidth(artifactWidth)
@@ -66,18 +66,15 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
         defaultSize={artifactState.width}
         minSize={30}
         maxSize={60}
-        className="overflow-hidden"
       >
         <aside
-          className={cn("h-full w-full overflow-hidden backdrop-blur-md border-l")}
+          className={cn("flex h-full flex-col border-l")}
           style={{
             background: "oklch(0.97 0.015 290 / 0.9)",
             borderColor: "oklch(0.90 0.02 293 / 0.5)",
           }}
         >
-          <div className="h-full w-full overflow-hidden">
-            {artifact}
-          </div>
+          {artifact}
         </aside>
       </ResizablePanel>
     </ResizablePanelGroup>

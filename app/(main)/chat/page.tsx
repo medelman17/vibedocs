@@ -132,8 +132,8 @@ export default function ChatPage() {
             {messages.length === 0 ? (
               <ConversationEmptyState
                 icon={
-                  <div className="rounded-full bg-violet-100 p-4">
-                    <FileTextIcon className="size-8 text-violet-500" />
+                  <div className="rounded-full bg-fuchsia-100 p-4">
+                    <FileTextIcon className="size-8 text-fuchsia-500" />
                   </div>
                 }
                 title="Welcome to VibeDocs"
