@@ -7,9 +7,10 @@
  * @module agents/gap-analyst
  */
 
-import { generateObject } from 'ai'
+import { generateText, Output, NoObjectGeneratedError } from 'ai'
 import { z } from 'zod'
 import { getAgentModel } from '@/lib/ai/config'
+import { AnalysisFailedError } from '@/lib/errors'
 import {
   cuadCategorySchema,
   type CuadCategory,
@@ -153,12 +154,28 @@ export async function runGapAnalystAgent(
     classifiedClauses
   )
 
-  const { object: gapResult, usage: gapUsage } = await generateObject({
-    model: getAgentModel('gapAnalyst'),
-    system: GAP_ANALYST_SYSTEM_PROMPT,
-    prompt: gapPrompt,
-    schema: gapAnalysisSchema,
-  })
+  let gapGenResult
+  try {
+    gapGenResult = await generateText({
+      model: getAgentModel('gapAnalyst'),
+      system: GAP_ANALYST_SYSTEM_PROMPT,
+      prompt: gapPrompt,
+      output: Output.object({ schema: gapAnalysisSchema }),
+    })
+  } catch (error) {
+    if (NoObjectGeneratedError.isInstance(error)) {
+      console.error('[GapAnalyst] Gap analysis generation failed', {
+        cause: error.cause,
+        text: error.text?.slice(0, 500),
+      })
+      throw new AnalysisFailedError(
+        'Gap analysis failed to produce valid output',
+        [{ field: 'gaps', message: 'Model output invalid' }]
+      )
+    }
+    throw error
+  }
+  const { output: gapResult, usage: gapUsage } = gapGenResult
 
   totalInputTokens += gapUsage?.inputTokens ?? 0
   totalOutputTokens += gapUsage?.outputTokens ?? 0
@@ -175,12 +192,26 @@ export async function runGapAnalystAgent(
   const hypothesesToTest = CONTRACT_NLI_HYPOTHESES.slice(0, 5)
 
   for (const hypothesis of hypothesesToTest) {
-    const { object, usage } = await generateObject({
-      model: getAgentModel('gapAnalyst'),
-      system: GAP_ANALYST_SYSTEM_PROMPT,
-      prompt: buildHypothesisPrompt(hypothesis, clauses),
-      schema: hypothesisSchema,
-    })
+    let hypResult
+    try {
+      hypResult = await generateText({
+        model: getAgentModel('gapAnalyst'),
+        system: GAP_ANALYST_SYSTEM_PROMPT,
+        prompt: buildHypothesisPrompt(hypothesis, clauses),
+        output: Output.object({ schema: hypothesisSchema }),
+      })
+    } catch (error) {
+      if (NoObjectGeneratedError.isInstance(error)) {
+        console.error('[GapAnalyst] Hypothesis test failed', {
+          hypothesisId: hypothesis.id,
+          cause: error.cause,
+        })
+        // Continue with next hypothesis rather than failing entire analysis
+        continue
+      }
+      throw error
+    }
+    const { output, usage } = hypResult
 
     totalInputTokens += usage?.inputTokens ?? 0
     totalOutputTokens += usage?.outputTokens ?? 0
@@ -188,9 +219,9 @@ export async function runGapAnalystAgent(
     hypothesisCoverage.push({
       hypothesisId: hypothesis.id,
       category: hypothesis.category as ContractNLICategory,
-      status: object.status,
-      supportingClauseId: object.supportingClauseId,
-      explanation: object.explanation,
+      status: output.status,
+      supportingClauseId: output.supportingClauseId,
+      explanation: output.explanation,
     })
   }
 
