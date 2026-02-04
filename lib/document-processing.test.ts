@@ -1,29 +1,37 @@
 import { describe, it, expect, vi } from 'vitest'
 import { extractText, chunkDocument } from './document-processing'
+import type { ExtractionResult } from '@/lib/document-extraction'
 
-// Note: Testing PDF/DOCX extraction requires actual files or mocking the libraries.
-// For unit tests, we'll mock pdf-parse and mammoth.
+// Note: Testing PDF/DOCX extraction requires actual files or mocking the extractors.
+// Mock the new extraction module that document-processing.ts uses.
 
-vi.mock('pdf-parse', () => ({
-  PDFParse: class MockPDFParse {
-    getText() {
-      return Promise.resolve({
-        text: 'CONFIDENTIALITY AGREEMENT\n\nThis Agreement is entered into...',
-        pages: [{}, {}], // 2 pages
-      })
-    }
-  },
-}))
-
-vi.mock('mammoth', () => ({
-  default: {
-    extractRawText: vi.fn().mockResolvedValue({
-      value: 'Agreement between parties for confidential information exchange.',
-    }),
-  },
-  extractRawText: vi.fn().mockResolvedValue({
-    value: 'Agreement between parties for confidential information exchange.',
-  }),
+vi.mock('@/lib/document-extraction', () => ({
+  extractPdf: vi.fn().mockResolvedValue({
+    text: 'CONFIDENTIALITY AGREEMENT\n\nThis Agreement is entered into...',
+    pageCount: 2,
+    quality: {
+      charCount: 60,
+      wordCount: 8,
+      pageCount: 2,
+      confidence: 0.9,
+      warnings: [],
+      requiresOcr: false,
+    },
+    metadata: {},
+  } satisfies ExtractionResult),
+  extractDocx: vi.fn().mockResolvedValue({
+    text: 'Agreement between parties for confidential information exchange.',
+    pageCount: 1,
+    quality: {
+      charCount: 65,
+      wordCount: 8,
+      pageCount: 1,
+      confidence: 0.85,
+      warnings: [],
+      requiresOcr: false,
+    },
+    metadata: {},
+  } satisfies ExtractionResult),
 }))
 
 describe('extractText', () => {

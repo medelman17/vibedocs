@@ -1,7 +1,5 @@
-import { PDFParse } from 'pdf-parse'
-import mammoth from 'mammoth'
 import { encode } from 'gpt-tokenizer'
-import { ValidationError } from '@/lib/errors'
+import { extractPdf, extractDocx } from '@/lib/document-extraction'
 
 // ============================================================================
 // Types
@@ -34,6 +32,8 @@ export interface ChunkOptions {
 /**
  * Extracts text from a document buffer based on MIME type.
  * Supports PDF, DOCX, and plain text.
+ *
+ * @deprecated Use extractDocument from lib/document-extraction for richer output
  */
 export async function extractText(
   buffer: Buffer,
@@ -41,25 +41,12 @@ export async function extractText(
 ): Promise<ExtractionResult> {
   switch (mimeType) {
     case 'application/pdf': {
-      try {
-        const pdfParser = new PDFParse({ data: buffer })
-        const textResult = await pdfParser.getText()
-        return { text: textResult.text, pageCount: textResult.pages.length }
-      } catch (error) {
-        throw new ValidationError(
-          `Failed to extract text from PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
-      }
+      const result = await extractPdf(buffer)
+      return { text: result.text, pageCount: result.pageCount }
     }
     case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
-      try {
-        const result = await mammoth.extractRawText({ buffer })
-        return { text: result.value, pageCount: 1 }
-      } catch (error) {
-        throw new ValidationError(
-          `Failed to extract text from DOCX: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
-      }
+      const result = await extractDocx(buffer)
+      return { text: result.text, pageCount: result.pageCount }
     }
     case 'text/plain':
     default:
