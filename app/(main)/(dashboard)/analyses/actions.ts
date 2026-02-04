@@ -263,7 +263,8 @@ export async function getAnalysisStatus(
     ),
     columns: {
       status: true,
-      processingTimeMs: true,
+      progressStage: true,
+      progressPercent: true,
     },
   });
 
@@ -271,22 +272,28 @@ export async function getAnalysisStatus(
     return err("NOT_FOUND", "Analysis not found");
   }
 
-  // Determine progress based on status
-  // In production, this would come from Inngest step tracking
-  let progress: AnalysisStatusResponse["progress"];
+  // Map progress stage to human-readable message
+  const stageMessages: Record<string, string> = {
+    parsing: "Parsing document...",
+    classifying: "Classifying clauses...",
+    scoring: "Assessing risk levels...",
+    analyzing_gaps: "Analyzing gaps...",
+    complete: "Analysis complete",
+    failed: "Analysis failed",
+  };
 
-  if (analysis.status === "processing") {
-    // Placeholder progress - would be populated from Inngest metadata
-    progress = {
-      step: "Processing document",
-      percent: 50,
-    };
-  } else if (analysis.status === "completed") {
-    progress = {
-      step: "Complete",
-      percent: 100,
-    };
-  }
+  const progress: AnalysisStatusResponse["progress"] = {
+    step: analysis.progressStage
+      ? stageMessages[analysis.progressStage] || analysis.progressStage
+      : analysis.status === "pending"
+        ? "Queued for analysis..."
+        : analysis.status === "completed"
+          ? "Complete"
+          : "Processing...",
+    percent: analysis.status === "completed"
+      ? 100
+      : analysis.progressPercent ?? 0,
+  };
 
   return ok({
     status: analysis.status as AnalysisStatus,
