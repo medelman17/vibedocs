@@ -92,29 +92,49 @@ const MOCK_ANALYSES: Record<string, { title: string; clauses: ClauseAnalysis[] }
 
 const riskConfig: Record<
   RiskLevel,
-  { label: string; color: string; icon: React.ElementType; description: string }
+  {
+    label: string
+    color: string
+    bgColor: string
+    textColor: string
+    borderColor: string
+    icon: React.ElementType
+    description: string
+  }
 > = {
   standard: {
     label: "Standard",
-    color: "bg-green-100 text-green-800 border-green-200",
+    color: "", // kept for backwards compat
+    bgColor: "oklch(0.90 0.08 175)",
+    textColor: "oklch(0.45 0.14 175)",
+    borderColor: "oklch(0.85 0.10 175)",
     icon: CheckCircleIcon,
     description: "Within market norms",
   },
   cautious: {
     label: "Cautious",
-    color: "bg-amber-100 text-amber-800 border-amber-200",
+    color: "", // kept for backwards compat
+    bgColor: "oklch(0.90 0.08 65)",
+    textColor: "oklch(0.50 0.14 65)",
+    borderColor: "oklch(0.85 0.10 65)",
     icon: AlertTriangleIcon,
     description: "Review recommended",
   },
   aggressive: {
     label: "Aggressive",
-    color: "bg-red-100 text-red-800 border-red-200",
+    color: "", // kept for backwards compat
+    bgColor: "oklch(0.90 0.08 25)",
+    textColor: "oklch(0.50 0.14 25)",
+    borderColor: "oklch(0.85 0.10 25)",
     icon: AlertCircleIcon,
     description: "Negotiation recommended",
   },
   unknown: {
     label: "Unknown",
-    color: "bg-neutral-100 text-neutral-600 border-neutral-200",
+    color: "", // kept for backwards compat
+    bgColor: "oklch(0.92 0.01 280)",
+    textColor: "oklch(0.45 0.01 280)",
+    borderColor: "oklch(0.88 0.02 280)",
     icon: HelpCircleIcon,
     description: "Could not classify",
   },
@@ -124,7 +144,15 @@ function RiskBadge({ level }: { level: RiskLevel }) {
   const config = riskConfig[level]
   const Icon = config.icon
   return (
-    <Badge variant="outline" className={cn("gap-1", config.color)}>
+    <Badge
+      variant="outline"
+      className="gap-1"
+      style={{
+        background: config.bgColor,
+        color: config.textColor,
+        borderColor: config.borderColor,
+      }}
+    >
       <Icon className="size-3" />
       {config.label}
     </Badge>
@@ -195,7 +223,10 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
           className
         )}
       >
-        <Loader2Icon className="size-8 animate-spin text-violet-500" />
+        <Loader2Icon
+          className="size-8 animate-spin"
+          style={{ color: "oklch(0.55 0.24 293)" }}
+        />
         <p className="mt-4 text-sm text-muted-foreground">Analyzing document...</p>
       </div>
     )
@@ -210,13 +241,16 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
           className
         )}
       >
-        <div className="mb-4 rounded-full bg-neutral-100 p-4">
-          <BarChartIcon className="size-8 text-neutral-400" />
+        <div
+          className="mb-4 rounded-full p-4"
+          style={{ background: "oklch(0.92 0.01 280)" }}
+        >
+          <BarChartIcon className="size-8" style={{ color: "oklch(0.60 0.01 280)" }} />
         </div>
-        <h3 className="mb-2 text-lg font-medium text-neutral-900">
+        <h3 className="mb-2 text-lg font-medium" style={{ color: "oklch(0.20 0.02 280)" }}>
           Analysis Not Found
         </h3>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm" style={{ color: "oklch(0.45 0.01 280)" }}>
           The requested analysis could not be loaded.
         </p>
         <p className="mt-2 font-mono text-xs text-neutral-400">ID: {analysisId}</p>

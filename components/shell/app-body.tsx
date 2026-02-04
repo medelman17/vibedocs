@@ -69,11 +69,11 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
         className="overflow-hidden"
       >
         <aside
-          className={cn(
-            "h-full overflow-hidden",
-            "bg-neutral-50/90 backdrop-blur-md",
-            "border-l border-neutral-200/50"
-          )}
+          className={cn("h-full overflow-hidden backdrop-blur-md border-l")}
+          style={{
+            background: "oklch(0.97 0.015 290 / 0.9)",
+            borderColor: "oklch(0.90 0.02 293 / 0.5)",
+          }}
         >
           {artifact}
         </aside>

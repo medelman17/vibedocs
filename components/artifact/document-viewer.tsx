@@ -77,7 +77,10 @@ export function DocumentViewer({ documentId, className }: DocumentViewerProps) {
           className
         )}
       >
-        <Loader2Icon className="size-8 animate-spin text-violet-500" />
+        <Loader2Icon
+          className="size-8 animate-spin"
+          style={{ color: "oklch(0.55 0.24 293)" }}
+        />
         <p className="mt-4 text-sm text-muted-foreground">Loading document...</p>
       </div>
     )
@@ -92,16 +95,21 @@ export function DocumentViewer({ documentId, className }: DocumentViewerProps) {
           className
         )}
       >
-        <div className="mb-4 rounded-full bg-neutral-100 p-4">
-          <FileTextIcon className="size-8 text-neutral-400" />
+        <div
+          className="mb-4 rounded-full p-4"
+          style={{ background: "oklch(0.92 0.01 280)" }}
+        >
+          <FileTextIcon className="size-8" style={{ color: "oklch(0.60 0.01 280)" }} />
         </div>
-        <h3 className="mb-2 text-lg font-medium text-neutral-900">
+        <h3 className="mb-2 text-lg font-medium" style={{ color: "oklch(0.20 0.02 280)" }}>
           Document Not Found
         </h3>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm" style={{ color: "oklch(0.45 0.01 280)" }}>
           The requested document could not be loaded.
         </p>
-        <p className="mt-2 font-mono text-xs text-neutral-400">ID: {documentId}</p>
+        <p className="mt-2 font-mono text-xs" style={{ color: "oklch(0.60 0.01 280)" }}>
+          ID: {documentId}
+        </p>
       </div>
     )
   }

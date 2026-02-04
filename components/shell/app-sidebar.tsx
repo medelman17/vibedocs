@@ -241,7 +241,13 @@ export function AppSidebar({
                       unoptimized
                     />
                   ) : (
-                    <div className="flex size-6 items-center justify-center rounded-full bg-violet-100 text-xs font-medium text-violet-600">
+                    <div
+                      className="flex size-6 items-center justify-center rounded-full text-xs font-medium"
+                      style={{
+                        background: "oklch(0.90 0.08 293)",
+                        color: "oklch(0.50 0.24 293)",
+                      }}
+                    >
                       {user?.name?.charAt(0) || "U"}
                     </div>
                   )}
