@@ -215,9 +215,13 @@ export function AppSidebar({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton tooltip={currentOrg?.name || "Switch org"}>
-                    <BuildingIcon className="size-4" />
-                    <span className="truncate">{currentOrg?.name || "Select org"}</span>
-                    <ChevronDownIcon className="ml-auto size-4" />
+                    <BuildingIcon className="size-4 shrink-0" />
+                    {!isCollapsed && (
+                      <>
+                        <span className="truncate">{currentOrg?.name || "Select org"}</span>
+                        <ChevronDownIcon className="ml-auto size-4 shrink-0" />
+                      </>
+                    )}
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -256,12 +260,12 @@ export function AppSidebar({
                       alt={user.name || "User avatar"}
                       width={24}
                       height={24}
-                      className="size-6 rounded-full object-cover"
+                      className="size-6 shrink-0 rounded-full object-cover"
                       unoptimized
                     />
                   ) : (
                     <div
-                      className="flex size-6 items-center justify-center rounded-full text-xs font-medium"
+                      className="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium"
                       style={{
                         background: "oklch(0.90 0.08 293)",
                         color: "oklch(0.50 0.24 293)",
@@ -270,14 +274,16 @@ export function AppSidebar({
                       {user?.name?.charAt(0) || "U"}
                     </div>
                   )}
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-medium truncate">
-                      {user?.name || "Guest"}
-                    </span>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {user?.email}
-                    </span>
-                  </div>
+                  {!isCollapsed && (
+                    <div className="flex min-w-0 flex-col items-start text-left">
+                      <span className="truncate text-sm font-medium">
+                        {user?.name || "Guest"}
+                      </span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {user?.email}
+                      </span>
+                    </div>
+                  )}
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
