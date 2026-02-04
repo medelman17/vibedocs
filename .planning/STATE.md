@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 3 - Document Extraction (IN PROGRESS)
+**Current focus:** Phase 3 - Document Extraction (COMPLETE)
 
 ## Current Position
 
 Phase: 3 of 11 (Document Extraction)
-Plan: 4 of 5 in current phase
-Status: In progress
-Last activity: 2026-02-04 - Completed 03-04-PLAN.md (Pipeline Integration)
+Plan: 5 of 5 in current phase
+Status: Phase complete
+Last activity: 2026-02-04 - Completed 03-05-PLAN.md (Word Add-in Extraction Enhancement)
 
-Progress: [████████░░] ~36% (11 plans of ~30+ total)
+Progress: [████████░░] ~40% (12 plans of ~30+ total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 4.4 min
-- Total execution time: 48.5 min
+- Total plans completed: 12
+- Average duration: 4.7 min
+- Total execution time: 56.5 min
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [████████░░] ~36% (11 plans of ~30+ total)
 |-------|-------|-------|----------|
 | 01 | 3 | 8.5 min | 2.8 min |
 | 02 | 4 | 19.5 min | 4.9 min |
-| 03 | 4 | 20.5 min | 5.1 min |
+| 03 | 5 | 28.5 min | 5.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (2.5 min), 03-02 (3 min), 03-03 (7 min), 03-04 (8 min)
-- Trend: 03-04 included test updates and schema fix deviation
+- Last 5 plans: 03-02 (3 min), 03-03 (7 min), 03-04 (8 min), 03-05 (8 min)
+- Trend: Phase 03 complete - ready for clause classification
 
 *Updated after each plan completion*
 
@@ -75,6 +75,9 @@ Recent decisions affecting current work:
 - [03-04]: Error messages stored in metadata JSONB, not separate column
 - [03-04]: Word Add-in content gets confidence 1.0 (clean text)
 - [03-04]: Parser tests mock extractDocument and detectStructure from document-extraction
+- [03-05]: Office.js creationDate property used (not creationDateTime)
+- [03-05]: Deduplication returns existing analysis without re-processing
+- [03-05]: Failed analyses create new document/analysis (fall through)
 
 ### Pending Todos
 
@@ -87,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04T23:53:00Z
-Stopped at: Completed 03-04-PLAN.md (Pipeline Integration)
+Last session: 2026-02-04T23:55:00Z
+Stopped at: Completed 03-05-PLAN.md (Word Add-in Extraction Enhancement)
 Resume file: None
