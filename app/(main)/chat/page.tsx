@@ -45,13 +45,80 @@ interface ChatMessage {
   id: string
   role: "user" | "assistant"
   content: string
-  files?: Array<{ url: string; filename?: string; mediaType?: string }>
 }
 
 export default function ChatPage() {
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
-  const [status, setStatus] = React.useState<"ready" | "submitted" | "streaming">("ready")
+  const [isLoading, setIsLoading] = React.useState(false)
   const { artifact, openArtifact, closeArtifact, toggleArtifactExpanded } = useShellStore()
+
+  // Track file uploads separately
+  const [fileAttachments, setFileAttachments] = React.useState<
+    Record<string, Array<{ url: string; filename?: string; mediaType?: string }>>
+  >({})
+
+  // Send message to AI and stream response
+  const sendMessage = async (text: string) => {
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text,
+    }
+
+    const newMessages = [...messages, userMessage]
+    setMessages(newMessages)
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      // Handle streaming response
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let assistantContent = ""
+      const assistantId = crypto.randomUUID()
+
+      // Add placeholder assistant message
+      setMessages([...newMessages, { id: assistantId, role: "assistant", content: "" }])
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          // Plain text stream - just append the chunk
+          const chunk = decoder.decode(value, { stream: true })
+          assistantContent += chunk
+          setMessages([
+            ...newMessages,
+            { id: assistantId, role: "assistant", content: assistantContent },
+          ])
+        }
+      }
+    } catch (error) {
+      console.error("Chat error:", error)
+      setMessages([
+        ...newMessages,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: "Sorry, I encountered an error. Please try again.",
+        },
+      ])
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleSubmit = async (message: PromptInputMessage) => {
     if (!message.text.trim() && message.files.length === 0) return
@@ -59,20 +126,26 @@ export default function ChatPage() {
     // Handle file upload flow
     if (message.files.length > 0) {
       const file = message.files[0] // MVP: single file
-      setStatus("submitted")
 
-      // Add user message immediately
-      const userMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content: message.text || `Analyze ${file.filename}`,
-        files: message.files.map((f) => ({
+      // Add user message with file attachment
+      const userMessageId = crypto.randomUUID()
+      const userMessageContent = message.text || `Analyze ${file.filename}`
+
+      // Track file attachment for this message
+      setFileAttachments((prev) => ({
+        ...prev,
+        [userMessageId]: message.files.map((f) => ({
           url: f.url,
           filename: f.filename,
           mediaType: f.mediaType,
         })),
-      }
-      setMessages((prev) => [...prev, userMessage])
+      }))
+
+      // Add user message to chat
+      setMessages([
+        ...messages,
+        { id: userMessageId, role: "user", content: userMessageContent },
+      ])
 
       try {
         // Fetch the blob from the URL and create FormData
@@ -94,15 +167,11 @@ export default function ChatPage() {
         // Upload document
         const uploadResult = await uploadDocument(formData)
         if (!uploadResult.success) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              role: "assistant",
-              content: `Failed to upload: ${uploadResult.error.message}`,
-            },
+          setMessages([
+            ...messages,
+            { id: userMessageId, role: "user", content: userMessageContent },
+            { id: crypto.randomUUID(), role: "assistant", content: `Failed to upload: ${uploadResult.error.message}` },
           ])
-          setStatus("ready")
           return
         }
 
@@ -111,26 +180,19 @@ export default function ChatPage() {
           userPrompt: message.text || undefined,
         })
         if (!analysisResult.success) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              role: "assistant",
-              content: `Failed to start analysis: ${analysisResult.error.message}`,
-            },
+          setMessages([
+            ...messages,
+            { id: userMessageId, role: "user", content: userMessageContent },
+            { id: crypto.randomUUID(), role: "assistant", content: `Failed to start analysis: ${analysisResult.error.message}` },
           ])
-          setStatus("ready")
           return
         }
 
         // Add assistant message
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: `I'm analyzing "${uploadResult.data.title}". This usually takes about 30 seconds...`,
-          },
+        setMessages([
+          ...messages,
+          { id: userMessageId, role: "user", content: userMessageContent },
+          { id: crypto.randomUUID(), role: "assistant", content: `I'm analyzing "${uploadResult.data.title}". This usually takes about 30 seconds...` },
         ])
 
         // Auto-open artifact panel
@@ -140,45 +202,22 @@ export default function ChatPage() {
           title: uploadResult.data.title,
         })
 
-        setStatus("ready")
         return
       } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: `An error occurred: ${err instanceof Error ? err.message : "Unknown error"}`,
-          },
+        setMessages([
+          ...messages,
+          { id: userMessageId, role: "user", content: userMessageContent },
+          { id: crypto.randomUUID(), role: "assistant", content: `An error occurred: ${err instanceof Error ? err.message : "Unknown error"}` },
         ])
-        setStatus("ready")
         return
       }
     }
 
-    // Regular text message handling (existing mock behavior)
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: message.text,
-    }
-    setMessages((prev) => [...prev, userMessage])
-    setStatus("submitted")
-
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    setStatus("streaming")
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
-    const assistantMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content: `I received your message: "${message.text}". Upload an NDA to analyze it!`,
-    }
-    setMessages((prev) => [...prev, assistantMessage])
-    setStatus("ready")
+    // Regular text message - send to AI
+    await sendMessage(message.text)
   }
 
-  const handleSuggestion = (suggestion: string) => {
+  const handleSuggestion = async (suggestion: string) => {
     if (suggestion === "Analyze NDA") {
       openArtifact({
         type: "analysis",
@@ -193,13 +232,8 @@ export default function ChatPage() {
       })
     }
 
-    // Create user message from suggestion
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: suggestion,
-    }
-    setMessages((prev) => [...prev, userMessage])
+    // Send suggestion as user message
+    await sendMessage(suggestion)
   }
 
   const renderArtifactContent = () => {
@@ -233,11 +267,11 @@ export default function ChatPage() {
             ) : (
               <ConversationContent>
                 {messages.map((message) => (
-                  <Message key={message.id} from={message.role}>
+                  <Message key={message.id} from={message.role as "user" | "assistant"}>
                     <MessageContent>
-                      {message.files && message.files.length > 0 && (
+                      {fileAttachments[message.id] && fileAttachments[message.id].length > 0 && (
                         <div className="mb-2 flex flex-wrap gap-2">
-                          {message.files.map((file, idx) => (
+                          {fileAttachments[message.id].map((file, idx) => (
                             <div
                               key={idx}
                               className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs"
@@ -289,8 +323,8 @@ export default function ChatPage() {
                   </PromptInputActionMenu>
                 </PromptInputTools>
                 <PromptInputSubmit
-                  status={status === "ready" ? undefined : status}
-                  disabled={status !== "ready"}
+                  status={isLoading ? "streaming" : undefined}
+                  disabled={isLoading}
                 />
               </PromptInputFooter>
             </PromptInput>
