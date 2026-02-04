@@ -372,6 +372,11 @@ pnpm dlx shadcn@latest add <component-name> -r @ai-elements
 - Claude Code action needs `write` permissions for `contents`, `pull-requests`, `issues`
 - Test workflow needs dummy env vars (modules like `db/client.ts` evaluate at load time)
 
+## GitHub Issues
+
+- **Always tag `@claude`** at the end of issue body when creating issues via `gh issue create`
+- This allows Claude Code GitHub Action to pick up and work on issues
+
 ## MCP Servers
 
 Project uses `.mcp.json` for MCP server configuration:
