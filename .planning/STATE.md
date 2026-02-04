@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 3 of 11 (Document Extraction)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-04 - Completed 03-03-PLAN.md (Unified Extraction)
+Plan: 4 of 5 in current phase
+Status: In progress
+Last activity: 2026-02-04 - Completed 03-04-PLAN.md (Pipeline Integration)
 
-Progress: [████████░░] ~33% (10 plans of ~30+ total)
+Progress: [████████░░] ~36% (11 plans of ~30+ total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 4.0 min
-- Total execution time: 40.5 min
+- Total plans completed: 11
+- Average duration: 4.4 min
+- Total execution time: 48.5 min
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [████████░░] ~33% (10 plans of ~30+ total)
 |-------|-------|-------|----------|
 | 01 | 3 | 8.5 min | 2.8 min |
 | 02 | 4 | 19.5 min | 4.9 min |
-| 03 | 3 | 12.5 min | 4.2 min |
+| 03 | 4 | 20.5 min | 5.1 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (4 min), 03-01 (2.5 min), 03-02 (3 min), 03-03 (7 min)
-- Trend: 03-03 took longer due to test mock updates for new architecture
+- Last 5 plans: 03-01 (2.5 min), 03-02 (3 min), 03-03 (7 min), 03-04 (8 min)
+- Trend: 03-04 included test updates and schema fix deviation
 
 *Updated after each plan completion*
 
@@ -72,6 +72,9 @@ Recent decisions affecting current work:
 - [03-03]: OcrRequiredError thrown when requiresOcr flag true (unless skipOcrRouting option)
 - [03-03]: Non-English detection throws ValidationError with user-friendly message
 - [03-03]: Structured JSON logging for extraction observability metrics
+- [03-04]: Error messages stored in metadata JSONB, not separate column
+- [03-04]: Word Add-in content gets confidence 1.0 (clean text)
+- [03-04]: Parser tests mock extractDocument and detectStructure from document-extraction
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04T23:48:07Z
-Stopped at: Completed 03-03-PLAN.md (Unified Extraction) - Phase 03 complete
+Last session: 2026-02-04T23:53:00Z
+Stopped at: Completed 03-04-PLAN.md (Pipeline Integration)
 Resume file: None
