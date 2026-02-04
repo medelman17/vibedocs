@@ -1,9 +1,18 @@
-import { streamText, stepCountIs } from "ai"
+import { streamText, convertToModelMessages, UIMessage, tool, stepCountIs } from "ai"
 import { gateway } from "ai"
 import { verifySession } from "@/lib/dal"
 import { vectorSearchTool } from "@/agents/tools/vector-search"
+import {
+  createConversation,
+  createMessage,
+  updateConversationTitle,
+} from "@/app/(main)/chat/actions"
+import { z } from "zod"
+import { nanoid } from "nanoid"
 
 const model = gateway("anthropic/claude-sonnet-4")
+
+export const maxDuration = 60
 
 const SYSTEM_PROMPT = `You are VibeDocs, an AI assistant specialized in analyzing Non-Disclosure Agreements (NDAs).
 
@@ -31,7 +40,9 @@ When users say "Generate NDA", explain this feature lets them create custom NDAs
 
 When users upload a document, a separate analysis pipeline will process it automatically. For text questions, provide helpful, accurate information about NDAs and contract law.
 
-Keep responses concise and practical. If you're unsure about specific legal advice, recommend consulting a lawyer.`
+Keep responses concise and practical. If you're unsure about specific legal advice, recommend consulting a lawyer.
+
+FORMATTING: When showing example clause language, use blockquotes (>) not code blocks. Legal text should be readable prose, not code.`
 
 export async function POST(req: Request) {
   // Verify user is authenticated
@@ -41,17 +52,117 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 })
   }
 
-  const { messages } = await req.json()
+  const {
+    messages,
+    conversationId,
+  }: { messages: UIMessage[]; conversationId?: string } = await req.json()
 
   const result = streamText({
     model,
     system: SYSTEM_PROMPT,
-    messages,
+    messages: await convertToModelMessages(messages),
     tools: {
       search_references: vectorSearchTool,
+      showArtifact: tool({
+        description:
+          "Display content in the artifact panel. Use when showing analysis results, documents, or comparisons.",
+        inputSchema: z.object({
+          type: z.enum(["analysis", "document", "comparison"]),
+          id: z.string().describe("The ID of the content to display"),
+          title: z
+            .string()
+            .describe("Title to show in the artifact panel header"),
+        }),
+        // No execute function = client-side tool
+      }),
     },
-    stopWhen: stepCountIs(5), // Allow up to 5 tool calls per conversation turn
+    stopWhen: stepCountIs(5),
   })
 
-  return result.toTextStreamResponse()
+  return result.toUIMessageStreamResponse({
+    originalMessages: messages,
+    generateMessageId: () => nanoid(),
+    onFinish: async ({ responseMessage }) => {
+      try {
+        if (!responseMessage) return
+
+        let convId = conversationId
+
+        // Create conversation if new
+        if (!convId) {
+          // Extract user content for title from the last user message
+          const userMessage = messages[messages.length - 1]
+          let userContent = ""
+          if (userMessage?.parts) {
+            const textPart = userMessage.parts.find(
+              (p): p is { type: "text"; text: string } => p.type === "text"
+            )
+            userContent = textPart?.text || ""
+          }
+          const title = userContent.slice(0, 50) || "New chat"
+
+          const convResult = await createConversation({ title })
+          if (convResult.success) {
+            convId = convResult.data.id
+
+            // Generate better title asynchronously (fire and forget)
+            generateAndUpdateTitle(convId, userContent).catch(console.error)
+          } else {
+            console.error(
+              "[chat/route] Failed to create conversation:",
+              convResult.error
+            )
+            return
+          }
+        }
+
+        // Persist user message (the one that triggered this response)
+        const userMsg = messages[messages.length - 1]
+        if (userMsg) {
+          await createMessage({
+            conversationId: convId,
+            role: "user",
+            content: JSON.stringify(userMsg.parts || []),
+          })
+        }
+
+        // Persist assistant response message
+        await createMessage({
+          conversationId: convId,
+          role: "assistant",
+          content: JSON.stringify(responseMessage.parts || []),
+        })
+      } catch (error) {
+        console.error("[chat/route] Failed to persist messages:", error)
+      }
+    },
+  })
+}
+
+/**
+ * Generate a better title using the model and update the conversation.
+ */
+async function generateAndUpdateTitle(
+  conversationId: string,
+  userMessage: string
+): Promise<void> {
+  if (!userMessage || userMessage.length < 10) return
+
+  try {
+    const { generateText } = await import("ai")
+    const { text } = await generateText({
+      model,
+      system:
+        "Generate a concise title (3-6 words) for a conversation that starts with this message. Return only the title, no quotes or punctuation.",
+      prompt: userMessage.slice(0, 500),
+      maxOutputTokens: 20,
+    })
+
+    const title = text.trim().slice(0, 50)
+    if (title) {
+      await updateConversationTitle({ conversationId, title })
+    }
+  } catch (error) {
+    console.error("[chat/route] Failed to generate title:", error)
+  }
 }

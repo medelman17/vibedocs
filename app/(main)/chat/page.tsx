@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { FileTextIcon, PlusIcon, SparklesIcon } from "lucide-react"
+import { useChat } from "@ai-sdk/react"
+import { UIMessage, DefaultChatTransport } from "ai"
+import { FileTextIcon, PlusIcon, SparklesIcon, BrainIcon } from "lucide-react"
 import { useShellStore } from "@/lib/stores/shell-store"
 import { AppBody } from "@/components/shell"
 import {
@@ -30,7 +32,7 @@ import {
   type Mention,
   type PromptInputMessage,
 } from "@/components/chat"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Artifact,
   ArtifactHeader,
@@ -42,207 +44,264 @@ import {
   DocumentViewer,
   AnalysisView,
 } from "@/components/artifact"
+import { Shimmer } from "@/components/ai-elements/shimmer"
+import { Tool, ToolHeader, ToolContent, ToolOutput } from "@/components/ai-elements/tool"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { ExpandIcon, MoreHorizontalIcon } from "lucide-react"
 import { uploadDocument } from "@/app/(main)/(dashboard)/documents/actions"
 import { triggerAnalysis } from "@/app/(main)/(dashboard)/analyses/actions"
-
-interface ChatMessage {
-  id: string
-  role: "user" | "assistant"
-  content: string
-}
+import { getMessages } from "./actions"
 
 export default function ChatPage() {
   const router = useRouter()
-  const [messages, setMessages] = React.useState<ChatMessage[]>([])
-  const [isLoading, setIsLoading] = React.useState(false)
+  const searchParams = useSearchParams()
+  const conversationId = searchParams.get("conversation")
+
   const [inputValue, setInputValue] = React.useState("")
+  const [isUploading, setIsUploading] = React.useState(false)
   const inputWrapperRef = React.useRef<HTMLDivElement>(null)
-  const { artifact, openArtifact, closeArtifact, toggleArtifactExpanded } = useShellStore()
+  const { artifact, openArtifact, closeArtifact, toggleArtifactExpanded } =
+    useShellStore()
 
-  // Track file uploads separately
-  const [fileAttachments, setFileAttachments] = React.useState<
-    Record<string, Array<{ url: string; filename?: string; mediaType?: string }>>
-  >({})
-
-  // Send message to AI and stream response
-  const sendMessage = async (text: string) => {
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: text,
-    }
-
-    const newMessages = [...messages, userMessage]
-    setMessages(newMessages)
-    setIsLoading(true)
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-
-      // Handle streaming response
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let assistantContent = ""
-      const assistantId = crypto.randomUUID()
-
-      // Add placeholder assistant message
-      setMessages([...newMessages, { id: assistantId, role: "assistant", content: "" }])
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          // Plain text stream - just append the chunk
-          const chunk = decoder.decode(value, { stream: true })
-          assistantContent += chunk
-          setMessages([
-            ...newMessages,
-            { id: assistantId, role: "assistant", content: assistantContent },
-          ])
+  // AI SDK v6 useChat hook
+  const {
+    messages,
+    sendMessage,
+    status,
+    setMessages,
+  } = useChat({
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      body: { conversationId },
+    }),
+    onToolCall: async ({ toolCall }) => {
+      // Handle client-side tools
+      if (toolCall.toolName === "showArtifact") {
+        const input = toolCall.input as {
+          type: "analysis" | "document" | "comparison"
+          id: string
+          title: string
         }
+        openArtifact(input)
+        return undefined // Silent execution
       }
-    } catch (error) {
+    },
+    onFinish: () => {
+      // Refresh sidebar history
+      window.dispatchEvent(new Event("refresh-chat-history"))
+    },
+    onError: (error) => {
       console.error("Chat error:", error)
-      setMessages([
-        ...newMessages,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
-        },
-      ])
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    },
+  })
 
+  const isLoading = status === "streaming" || status === "submitted" || isUploading
+
+  // Load existing conversation on mount
+  React.useEffect(() => {
+    async function loadConversation() {
+      if (!conversationId) return
+
+      const result = await getMessages(conversationId)
+      if (result.success) {
+        // Convert stored messages to UIMessage format
+        const uiMessages: UIMessage[] = result.data.map((msg) => {
+          // Parse stored content (JSON string of parts)
+          let parts: UIMessage["parts"] = []
+          try {
+            const parsed = JSON.parse(msg.content)
+            if (Array.isArray(parsed)) {
+              parts = parsed
+            } else {
+              // Fallback for plain text content
+              parts = [{ type: "text", text: msg.content }]
+            }
+          } catch {
+            // Plain text content
+            parts = [{ type: "text", text: msg.content }]
+          }
+
+          return {
+            id: msg.id,
+            role: msg.role,
+            parts,
+          }
+        })
+        setMessages(uiMessages)
+      }
+    }
+    loadConversation()
+  }, [conversationId, setMessages])
+
+  // Handle form submission
   const handleSubmit = async (message: PromptInputMessage) => {
     if (!message.text.trim() && message.files.length === 0) return
 
-    // Handle file upload flow
+    // Clear input immediately
+    setInputValue("")
+
+    // Handle file upload flow (document analysis)
     if (message.files.length > 0) {
-      const file = message.files[0] // MVP: single file
-
-      // Add user message with file attachment
-      const userMessageId = crypto.randomUUID()
-      const userMessageContent = message.text || `Analyze ${file.filename}`
-
-      // Track file attachment for this message
-      setFileAttachments((prev) => ({
-        ...prev,
-        [userMessageId]: message.files.map((f) => ({
-          url: f.url,
-          filename: f.filename,
-          mediaType: f.mediaType,
-        })),
-      }))
-
-      // Add user message and uploading indicator to chat
-      const uploadingMsgId = crypto.randomUUID()
-      setMessages([
-        ...messages,
-        { id: userMessageId, role: "user", content: userMessageContent },
-        { id: uploadingMsgId, role: "assistant", content: "Uploading document..." },
-      ])
-      setIsLoading(true)
-
-      try {
-        // Fetch the blob from the URL and create FormData
-        const response = await fetch(file.url)
-        if (!response.ok) {
-          throw new Error(`Failed to fetch file: ${response.statusText}`)
-        }
-        const blob = await response.blob()
-
-        // Create a File with the correct MIME type (blob from fetch loses it)
-        const fileObj = new File(
-          [blob],
-          file.filename || "document",
-          { type: file.mediaType || blob.type }
-        )
-        const formData = new FormData()
-        formData.append("file", fileObj)
-
-        // Upload document
-        const uploadResult = await uploadDocument(formData)
-        if (!uploadResult.success) {
-          setMessages([
-            ...messages,
-            { id: userMessageId, role: "user", content: userMessageContent },
-            { id: crypto.randomUUID(), role: "assistant", content: `**Upload failed:** ${uploadResult.error.message}` },
-          ])
-          setIsLoading(false)
-          return
-        }
-
-        // Trigger analysis
-        const analysisResult = await triggerAnalysis(uploadResult.data.id, {
-          userPrompt: message.text || undefined,
-        })
-        if (!analysisResult.success) {
-          setMessages([
-            ...messages,
-            { id: userMessageId, role: "user", content: userMessageContent },
-            { id: crypto.randomUUID(), role: "assistant", content: `**Analysis failed:** ${analysisResult.error.message}` },
-          ])
-          setIsLoading(false)
-          return
-        }
-
-        // Add assistant message
-        setMessages([
-          ...messages,
-          { id: userMessageId, role: "user", content: userMessageContent },
-          { id: crypto.randomUUID(), role: "assistant", content: `I'm analyzing **"${uploadResult.data.title}"**. This usually takes about 30 seconds...` },
-        ])
-        setIsLoading(false)
-
-        // Auto-open artifact panel
-        openArtifact({
-          type: "analysis",
-          id: analysisResult.data.id,
-          title: uploadResult.data.title,
-        })
-
-        return
-      } catch (err) {
-        setMessages([
-          ...messages,
-          { id: userMessageId, role: "user", content: userMessageContent },
-          { id: crypto.randomUUID(), role: "assistant", content: `**Error:** ${err instanceof Error ? err.message : "Unknown error"}` },
-        ])
-        setIsLoading(false)
-        return
-      }
+      await handleFileUpload(message)
+      return
     }
 
-    // Regular text message - send to AI
-    await sendMessage(message.text)
+    // Regular text message - send via useChat
+    sendMessage({ text: message.text })
+  }
+
+  // Handle file upload and analysis
+  const handleFileUpload = async (message: PromptInputMessage) => {
+    try {
+      setIsUploading(true)
+      const file = message.files[0] // MVP: single file
+
+      // Add user message with file info
+      const userMessageContent = message.text || `Analyze ${file.filename}`
+
+      // Show uploading status
+      const uploadingMessage: UIMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        parts: [{ type: "text", text: "Uploading document..." }],
+      }
+      setMessages([
+        ...messages,
+        {
+          id: crypto.randomUUID(),
+          role: "user",
+          parts: [
+            { type: "text", text: userMessageContent },
+            {
+              type: "file",
+              url: file.url,
+              filename: file.filename,
+              mediaType: file.mediaType,
+            },
+          ],
+        },
+        uploadingMessage,
+      ])
+
+      // Fetch the blob from the URL and create FormData
+      const response = await fetch(file.url)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.statusText}`)
+      }
+      const blob = await response.blob()
+
+      // Create a File with the correct MIME type
+      const fileObj = new File([blob], file.filename || "document", {
+        type: file.mediaType || blob.type,
+      })
+      const formData = new FormData()
+      formData.append("file", fileObj)
+
+      // Upload document
+      const uploadResult = await uploadDocument(formData)
+      if (!uploadResult.success) {
+        setMessages([
+          ...messages,
+          {
+            id: crypto.randomUUID(),
+            role: "user",
+            parts: [{ type: "text", text: userMessageContent }],
+          },
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            parts: [
+              {
+                type: "text",
+                text: `**Upload failed:** ${uploadResult.error.message}`,
+              },
+            ],
+          },
+        ])
+        return
+      }
+
+      // Trigger analysis
+      const analysisResult = await triggerAnalysis(uploadResult.data.id, {
+        userPrompt: message.text || undefined,
+      })
+      if (!analysisResult.success) {
+        setMessages([
+          ...messages,
+          {
+            id: crypto.randomUUID(),
+            role: "user",
+            parts: [{ type: "text", text: userMessageContent }],
+          },
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            parts: [
+              {
+                type: "text",
+                text: `**Analysis failed:** ${analysisResult.error.message}`,
+              },
+            ],
+          },
+        ])
+        return
+      }
+
+      // Success message
+      const successMsg = `I'm analyzing **"${uploadResult.data.title}"**. This usually takes about 30 seconds...`
+      setMessages([
+        ...messages,
+        {
+          id: crypto.randomUUID(),
+          role: "user",
+          parts: [
+            { type: "text", text: userMessageContent },
+            {
+              type: "file",
+              url: file.url,
+              filename: file.filename,
+              mediaType: file.mediaType,
+            },
+          ],
+        },
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          parts: [{ type: "text", text: successMsg }],
+        },
+      ])
+
+      // Auto-open artifact panel
+      openArtifact({
+        type: "analysis",
+        id: analysisResult.data.id,
+        title: uploadResult.data.title,
+      })
+
+      // Refresh sidebar
+      window.dispatchEvent(new Event("refresh-chat-history"))
+    } catch (err) {
+      const errorMsg = `**Error:** ${err instanceof Error ? err.message : "Unknown error"}`
+      setMessages([
+        ...messages,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          parts: [{ type: "text", text: errorMsg }],
+        },
+      ])
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleSuggestion = async (suggestion: string) => {
-    // Send suggestion as user message - AI will guide user on next steps
-    await sendMessage(suggestion)
+    sendMessage({ text: suggestion })
   }
 
   const handleSlashCommand = async (command: SlashCommand) => {
-    // Clear the input
     setInputValue("")
 
-    // Execute the command
     switch (command.id) {
       case "analyze":
         // Trigger file upload
@@ -258,20 +317,17 @@ export default function ChatPage() {
         router.push("/generate")
         break
       case "help":
-        // Send help message
-        await sendMessage("What can VibeDocs help me with?")
+        sendMessage({ text: "What can VibeDocs help me with?" })
         break
     }
   }
 
   const handleMention = (mention: Mention) => {
-    // Replace the @query with the mention name
     const lastAtIndex = inputValue.lastIndexOf("@")
     const beforeAt = inputValue.slice(0, lastAtIndex)
     const newValue = `${beforeAt}@${mention.name} `
     setInputValue(newValue)
 
-    // Open the artifact panel if it's an analysis
     if (mention.type === "analysis") {
       openArtifact({
         type: "analysis",
@@ -288,7 +344,6 @@ export default function ChatPage() {
   }
 
   const handleAutocompleteClose = () => {
-    // Clear the trigger character if user presses escape
     const trimmed = inputValue.trim()
     if (trimmed === "/" || trimmed === "@") {
       setInputValue("")
@@ -306,6 +361,78 @@ export default function ChatPage() {
       default:
         return null
     }
+  }
+
+  // Render message parts in order - interleaving text and tool states
+  const renderMessageParts = (message: UIMessage) => {
+    return message.parts.map((part, index) => {
+      // Text parts
+      if (part.type === "text") {
+        return (
+          <MessageResponse key={index}>{part.text}</MessageResponse>
+        )
+      }
+
+      // Tool parts - use ai-elements Tool component
+      if (part.type.startsWith("tool-")) {
+        const toolPart = part as {
+          type: string
+          toolCallId: string
+          state: "input-streaming" | "input-available" | "output-available" | "output-error" | "output-denied" | "approval-requested" | "approval-responded"
+          input?: unknown
+          output?: unknown
+          errorText?: string
+        }
+
+        // Skip silent tools (showArtifact)
+        if (part.type === "tool-showArtifact") return null
+
+        // Search tool - use Tool component
+        if (part.type === "tool-search_references") {
+          const results = toolPart.output as Array<{ id: string; content: string; source: string }> | null
+
+          return (
+            <Tool key={index} defaultOpen={false}>
+              <ToolHeader
+                type={part.type as `tool-${string}`}
+                state={toolPart.state}
+                title="Search Legal Corpus"
+              />
+              <ToolContent>
+                <ToolOutput
+                  output={results ? {
+                    found: results.length,
+                    sources: [...new Set(results.map(r => r.source))],
+                    samples: results.slice(0, 2).map(r => ({
+                      source: r.source,
+                      excerpt: r.content.slice(0, 100) + "..."
+                    }))
+                  } : undefined}
+                  errorText={toolPart.errorText}
+                />
+              </ToolContent>
+            </Tool>
+          )
+        }
+
+        return null
+      }
+
+      // File parts (shouldn't appear in assistant messages, but handle anyway)
+      if (part.type === "file") {
+        return (
+          <div
+            key={index}
+            className="mb-2 flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs"
+          >
+            <FileTextIcon className="size-3" />
+            {part.filename || "Attachment"}
+          </div>
+        )
+      }
+
+      return null
+    })
   }
 
   return (
@@ -326,43 +453,63 @@ export default function ChatPage() {
             ) : (
               <ConversationContent>
                 {messages.map((message) => (
-                  <Message key={message.id} from={message.role as "user" | "assistant"}>
+                  <Message
+                    key={message.id}
+                    from={message.role as "user" | "assistant"}
+                  >
                     {message.role === "user" ? (
                       <MessageContent>
-                        {fileAttachments[message.id] && fileAttachments[message.id].length > 0 && (
-                          <div className="mb-2 flex flex-wrap gap-2">
-                            {fileAttachments[message.id].map((file, idx) => (
+                        {message.parts.map((part, i) => {
+                          if (part.type === "file") {
+                            return (
                               <div
-                                key={idx}
-                                className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs"
+                                key={i}
+                                className="mb-2 flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs"
                               >
                                 <FileTextIcon className="size-3" />
-                                {file.filename || "Attachment"}
+                                {part.filename || "Attachment"}
                               </div>
-                            ))}
-                          </div>
-                        )}
-                        {message.content}
+                            )
+                          }
+                          if (part.type === "text") {
+                            return <span key={i}>{part.text}</span>
+                          }
+                          return null
+                        })}
                       </MessageContent>
                     ) : (
-                      <MessageContent>
-                        <MessageResponse>{message.content}</MessageResponse>
-                      </MessageContent>
+                      <MessageContent>{renderMessageParts(message)}</MessageContent>
                     )}
                   </Message>
                 ))}
+
+                {/* Thinking indicator - fixed height to prevent layout shift */}
+                <div className="h-8">
+                  {status === "submitted" && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <BrainIcon className="size-4" />
+                      <Shimmer duration={1.5}>Thinking...</Shimmer>
+                    </div>
+                  )}
+                </div>
               </ConversationContent>
             )}
             <ConversationScrollButton />
           </Conversation>
 
-          {/* Input area - shrink-0 keeps it visible when artifact panel opens */}
+          {/* Input area */}
           <div className="shrink-0 border-t bg-background p-4">
             {messages.length === 0 && (
               <Suggestions className="mb-3">
                 <Suggestion suggestion="Analyze NDA" onClick={handleSuggestion} />
-                <Suggestion suggestion="Compare documents" onClick={handleSuggestion} />
-                <Suggestion suggestion="Generate NDA" onClick={handleSuggestion} />
+                <Suggestion
+                  suggestion="Compare documents"
+                  onClick={handleSuggestion}
+                />
+                <Suggestion
+                  suggestion="Generate NDA"
+                  onClick={handleSuggestion}
+                />
               </Suggestions>
             )}
 

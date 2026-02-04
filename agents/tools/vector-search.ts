@@ -61,7 +61,9 @@ async function executeVectorSearch({
   const { embedding } = await voyageClient.embed(query, 'query')
 
   // Search with cosine distance
-  const distanceThreshold = 0.3 // similarity > 0.7
+  // Note: Legal clause similarity tends to be lower than exact matches
+  // 0.5 threshold = similarity > 0.5, which works well for semantic search
+  const distanceThreshold = 0.5
 
   const whereConditions = [
     lt(cosineDistance(referenceEmbeddings.embedding, embedding), distanceThreshold),
@@ -117,7 +119,21 @@ export const vectorSearchTool = tool({
     'Search the CUAD legal reference corpus for similar clauses. ' +
     'Use to find examples of standard clause language for comparison.',
   inputSchema: vectorSearchInputSchema,
-  execute: executeVectorSearch,
+  execute: async (input) => {
+    try {
+      return await executeVectorSearch(input)
+    } catch (error) {
+      console.error('[vector-search] Tool execution failed:', error)
+      // Return empty results with error info instead of throwing
+      return [{
+        id: 'error',
+        content: `Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        category: 'Error',
+        similarity: 0,
+        source: 'System',
+      }]
+    }
+  },
 })
 
 /**
