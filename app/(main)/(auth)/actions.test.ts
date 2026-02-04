@@ -8,6 +8,13 @@ import {
   resetFactoryCounter,
 } from "@/test/factories"
 
+// Mock next-auth to avoid ESM resolution issues with next/server
+vi.mock("@/lib/auth", () => ({
+  signOut: vi.fn(async () => undefined),
+  auth: vi.fn(async () => null),
+  handlers: { GET: vi.fn(), POST: vi.fn() },
+}))
+
 // Store mock state at module level
 let mockSessionContext: {
   userId: string
