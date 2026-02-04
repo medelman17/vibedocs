@@ -314,10 +314,18 @@ export async function deleteConversation(
       return wrapError(new ForbiddenError("Not authorized to delete this conversation"))
     }
 
-    // Soft delete
+    const now = new Date()
+
+    // Soft delete messages first
+    await db
+      .update(messages)
+      .set({ deletedAt: now })
+      .where(eq(messages.conversationId, conversationId))
+
+    // Soft delete conversation
     await db
       .update(conversations)
-      .set({ deletedAt: new Date() })
+      .set({ deletedAt: now })
       .where(eq(conversations.id, conversationId))
 
     return ok({ deleted: true })
