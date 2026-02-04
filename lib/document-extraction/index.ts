@@ -13,6 +13,12 @@ export type {
   QualityMetrics,
   ExtractionWarning,
   DocumentMetadata,
+  // Structure types
+  DocumentStructure,
+  DocumentSection,
+  PositionedSection,
+  PartyInfo,
+  SectionType,
 } from './types'
 
 // Extractors
@@ -21,3 +27,6 @@ export { extractDocx } from './docx-extractor'
 
 // Validators
 export { validateExtractionQuality, detectLanguage } from './validators'
+
+// Structure detection
+export { detectStructure, parseObviousStructure } from './structure-detector'
