@@ -7,7 +7,7 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["./test/setup.ts"],
     include: ["**/*.test.ts"],
-    exclude: ["node_modules", ".next"],
+    exclude: ["**/node_modules/**", ".next", ".worktrees/**"],
     fileParallelism: false,
     coverage: {
       provider: "v8",

@@ -33,7 +33,7 @@ vi.mock("@/db/client", () => ({
 let inTransaction = false
 
 // Schema version - increment when schema changes to force recreation
-const SCHEMA_VERSION = 2 // v2: added estimated_tokens, actual_tokens, estimated_cost, was_truncated to analyses
+const SCHEMA_VERSION = 3 // v3: added ocr_text, ocr_confidence, ocr_warning, ocr_completed_at to analyses
 
 // Track if schema has been created (survives across test files in same worker)
 // Using globalThis to persist across module re-evaluations
@@ -177,6 +177,10 @@ const SCHEMA_SQL = `
     progress_stage TEXT,
     progress_percent INTEGER DEFAULT 0,
     metadata JSONB DEFAULT '{}',
+    ocr_text TEXT,
+    ocr_confidence REAL,
+    ocr_warning TEXT,
+    ocr_completed_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
