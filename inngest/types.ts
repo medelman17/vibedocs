@@ -93,6 +93,7 @@ export const analysisProgressPayload = z.object({
   /** Pipeline stage */
   stage: z.enum([
     "parsing",
+    "ocr_processing",
     "classifying",
     "scoring",
     "analyzing_gaps",

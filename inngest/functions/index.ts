@@ -15,7 +15,7 @@ import { ingestCoordinator } from "./bootstrap/ingest-coordinator"
 import { ingestSource } from "./bootstrap/ingest-source"
 
 // Analysis pipeline
-import { analyzeNda } from "./analyze-nda"
+import { analyzeNda, analyzeNdaAfterOcr } from "./analyze-nda"
 import { ocrDocument } from "./ocr-document"
 
 // Production functions - will be populated as functions are created
@@ -39,6 +39,7 @@ export const functions = [
 
   // Analysis pipeline
   analyzeNda,
+  analyzeNdaAfterOcr,
   ocrDocument,
 
   // Production functions - TBD
