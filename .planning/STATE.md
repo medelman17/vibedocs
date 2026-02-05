@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 5 - Legal Chunking (next)
+**Current focus:** Phase 5 - Legal Chunking (in progress)
 
 ## Current Position
 
-Phase: 4 of 11 (OCR Processing)
-Plan: 5 of 5 in current phase (gap closure)
-Status: Phase complete (including gap closure)
-Last activity: 2026-02-05 - Completed 04-05-PLAN.md (OCR Trigger Event Wiring - gap closure)
+Phase: 5 of 11 (Legal Chunking)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-05 - Completed 05-01-PLAN.md (Foundation Types, Token Counter & Schema)
 
-Progress: [█████████░] ~55% (17 plans of ~30+ total)
+Progress: [██████████░] ~58% (18 plans of ~31 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
+- Total plans completed: 18
 - Average duration: 4.2 min
-- Total execution time: 72 min
+- Total execution time: 75.2 min
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: [█████████░] ~55% (17 plans of ~30+ total)
 | 02 | 4 | 19.5 min | 4.9 min |
 | 03 | 5 | 28.5 min | 5.7 min |
 | 04 | 5 | 15.5 min | 3.1 min |
+| 05 | 1 | 3.2 min | 3.2 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (3 min), 04-03 (5 min), 04-04 (4 min), 04-05 (2 min)
-- Trend: Phase 04 fully complete including gap closure - OCR event chain wired end-to-end
+- Last 5 plans: 04-03 (5 min), 04-04 (4 min), 04-05 (2 min), 05-01 (3.2 min)
+- Trend: Phase 05 started - foundation types and schema in place
 
 *Updated after each plan completion*
 
@@ -90,6 +91,10 @@ Recent decisions affecting current work:
 - [04-04]: Safe JSONB metadata access with type assertion for pageCount
 - [04-04]: Warning component returns null for good quality (>= 85%) for clean UX
 - [04-05]: No new decisions - gap closure plan followed exactly as written
+- [05-01]: llama-tokenizer-js for Voyage AI token counting (Llama 2 tokenizer, not gpt-tokenizer)
+- [05-01]: analysisId on documentChunks is plain UUID without FK reference (avoids circular imports)
+- [05-01]: Unique constraint updated to (documentId, analysisId, chunkIndex) for per-analysis chunks
+- [05-01]: Sync token counter fallback uses 4.5 chars/token for legal English text
 
 ### Pending Todos
 
@@ -102,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T03:58:00Z
-Stopped at: Completed 04-05-PLAN.md (OCR Trigger Event Wiring - gap closure) - Phase 4 FULLY COMPLETE
+Last session: 2026-02-05T04:48:00Z
+Stopped at: Completed 05-01-PLAN.md (Foundation Types, Token Counter & Schema)
 Resume file: None
