@@ -33,7 +33,7 @@ vi.mock("@/db/client", () => ({
 let inTransaction = false
 
 // Schema version - increment when schema changes to force recreation
-const SCHEMA_VERSION = 4 // v4: added chunk columns to document_chunks + chunk_map/chunk_stats to analyses
+const SCHEMA_VERSION = 5 // v5: added progress_message to analyses, chunk_classifications table, conversations/messages tables
 
 // Track if schema has been created (survives across test files in same worker)
 // Using globalThis to persist across module re-evaluations
@@ -159,7 +159,7 @@ const SCHEMA_SQL = `
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE(document_id, chunk_index)
+    UNIQUE(document_id, analysis_id, chunk_index)
   );
 
   -- Analysis tables
@@ -181,6 +181,7 @@ const SCHEMA_SQL = `
     inngest_run_id TEXT,
     progress_stage TEXT,
     progress_percent INTEGER DEFAULT 0,
+    progress_message TEXT,
     chunk_map JSONB,
     chunk_stats JSONB,
     metadata JSONB DEFAULT '{}',
@@ -297,6 +298,49 @@ const SCHEMA_SQL = `
     category TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS chunk_classifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL,
+    analysis_id UUID NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+    chunk_id UUID NOT NULL REFERENCES document_chunks(id) ON DELETE CASCADE,
+    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    category TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    is_primary BOOLEAN NOT NULL DEFAULT true,
+    rationale TEXT,
+    chunk_index INTEGER NOT NULL,
+    start_position INTEGER,
+    end_position INTEGER,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(analysis_id, chunk_id, category)
+  );
+
+  -- Chat tables
+  CREATE TABLE IF NOT EXISTS conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    document_id UUID REFERENCES documents(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    last_message_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ
+  );
+
+  CREATE TABLE IF NOT EXISTS messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    attachments JSONB,
+    metadata JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ
+  );
+
   CREATE TABLE IF NOT EXISTS bootstrap_progress (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source TEXT NOT NULL,
@@ -321,9 +365,10 @@ beforeAll(async () => {
     // Schema version changed or first run - recreate schema
     // Drop and recreate to ensure clean state with new columns
     await client.exec(`
+      DROP TABLE IF EXISTS bootstrap_progress CASCADE;
       DROP TABLE IF EXISTS messages CASCADE;
       DROP TABLE IF EXISTS conversations CASCADE;
-      DROP TABLE IF EXISTS bootstrap_progress CASCADE;
+      DROP TABLE IF EXISTS chunk_classifications CASCADE;
       DROP TABLE IF EXISTS contract_nli_hypotheses CASCADE;
       DROP TABLE IF EXISTS cuad_categories CASCADE;
       DROP TABLE IF EXISTS reference_embeddings CASCADE;

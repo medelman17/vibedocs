@@ -73,15 +73,16 @@ describe("documents schema", () => {
       expect(chunk.chunkIndex).toBe(0)
     })
 
-    it("enforces unique (documentId, chunkIndex)", async () => {
+    it("enforces unique (documentId, analysisId, chunkIndex)", async () => {
       const org = await createTestOrg()
       const doc = await createTestDocument(org.id)
+      const analysisId = "00000000-0000-0000-0000-000000000001"
 
-      await createTestChunk(org.id, doc.id, 0)
+      await createTestChunk(org.id, doc.id, 0, { analysisId })
 
-      // Duplicate should fail
+      // Duplicate with same analysisId should fail
       await expect(
-        createTestChunk(org.id, doc.id, 0)
+        createTestChunk(org.id, doc.id, 0, { analysisId })
       ).rejects.toThrow()
     })
 
