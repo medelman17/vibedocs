@@ -158,10 +158,13 @@ Plans:
   2. Each missing category includes importance explanation
   3. Missing categories show recommended language from Bonterms/CommonAccord
   4. Gap severity compared against Bonterms baseline
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 08-01: TBD
+- [ ] 08-01-PLAN.md — Enhanced gap analysis types and schemas
+- [ ] 08-02-PLAN.md — Agent prompts and core logic enhancement (template retrieval, two-tier detection)
+- [ ] 08-03-PLAN.md — Pipeline persistence, queries, and server action
+- [ ] 08-04-PLAN.md — GapsView UI with coverage summary, gap cards, and copy functionality
 
 ### Phase 9: Pipeline Orchestration
 **Goal**: Full pipeline runs durably with progress events and supports cancellation
