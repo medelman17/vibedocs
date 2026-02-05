@@ -273,6 +273,100 @@ export interface GapAnalysis {
 }
 
 // ============================================================================
+// Enhanced Gap Analysis (Phase 8)
+// ============================================================================
+
+/** Gap severity levels based on cuadCategories.riskWeight */
+export const GAP_SEVERITY = [
+  'critical',
+  'important',
+  'informational',
+] as const
+
+export type GapSeverity = (typeof GAP_SEVERITY)[number]
+
+export const gapSeveritySchema = z.enum(GAP_SEVERITY)
+
+/** Two-tier gap status: Missing (absent) vs Incomplete (weak coverage) */
+export const ENHANCED_GAP_STATUS = ['missing', 'incomplete'] as const
+
+export type EnhancedGapStatus = (typeof ENHANCED_GAP_STATUS)[number]
+
+export const enhancedGapStatusSchema = z.enum(ENHANCED_GAP_STATUS)
+
+/** Individual gap identified in the analysis */
+export const enhancedGapItemSchema = z.object({
+  category: cuadCategorySchema,
+  status: enhancedGapStatusSchema,
+  severity: gapSeveritySchema,
+  explanation: z
+    .string()
+    .max(300)
+    .describe('Why this gap matters for this NDA'),
+  suggestedLanguage: z
+    .string()
+    .max(500)
+    .describe('Full clause draft (1-3 paragraphs), insertable'),
+  templateSource: z
+    .string()
+    .max(100)
+    .optional()
+    .describe('e.g., "Bonterms NDA Section 3.2"'),
+  styleMatch: z
+    .string()
+    .max(200)
+    .optional()
+    .describe('How language was adapted to match NDA style'),
+})
+
+export type EnhancedGapItem = z.infer<typeof enhancedGapItemSchema>
+
+/** Coverage summary for the gap analysis */
+export const coverageSummarySchema = z.object({
+  totalCategories: z.number(),
+  presentCount: z.number(),
+  missingCount: z.number(),
+  incompleteCount: z.number(),
+  coveragePercent: z.number().min(0).max(100),
+})
+
+export type CoverageSummary = z.infer<typeof coverageSummarySchema>
+
+/** Enhanced gap analysis schema for the LLM call */
+export const enhancedGapAnalysisSchema = z.object({
+  gaps: z.array(enhancedGapItemSchema),
+  coverageSummary: coverageSummarySchema,
+  presentCategories: z.array(cuadCategorySchema),
+  weakClauses: z.array(
+    z.object({
+      clauseId: z.string(),
+      category: cuadCategorySchema,
+      issue: z.string(),
+      recommendation: z.string(),
+    })
+  ),
+})
+
+export type EnhancedGapAnalysisOutput = z.infer<
+  typeof enhancedGapAnalysisSchema
+>
+
+/** Full enhanced gap result stored in analyses.gapAnalysis JSONB */
+export interface EnhancedGapResult {
+  gaps: EnhancedGapItem[]
+  coverageSummary: CoverageSummary
+  presentCategories: CuadCategory[]
+  weakClauses: Array<{
+    clauseId: string
+    category: CuadCategory
+    issue: string
+    recommendation: string
+  }>
+  hypothesisCoverage: HypothesisCoverage[]
+  gapScore: number
+}
+
+// ============================================================================
 // Multi-Label Classification (Phase 6 - Enhanced CUAD Classification)
 // ============================================================================
 
