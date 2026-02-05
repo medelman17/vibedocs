@@ -504,6 +504,46 @@ export const documentChunks = pgTable(
     tokenCount: integer("token_count"),
 
     /**
+     * Character offset where chunk starts in original extracted text.
+     * Used for document viewer highlighting (Phase 11).
+     * @type {number | null}
+     */
+    startPosition: integer("start_position"),
+
+    /**
+     * Character offset where chunk ends in original extracted text (exclusive).
+     * Used for document viewer highlighting (Phase 11).
+     * @type {number | null}
+     */
+    endPosition: integer("end_position"),
+
+    /**
+     * Type discriminator for this chunk.
+     * One of: 'definition', 'clause', 'sub-clause', 'recital', 'boilerplate',
+     * 'exhibit', 'merged', 'split', 'fallback'.
+     * @type {string | null}
+     */
+    chunkType: text("chunk_type"),
+
+    /**
+     * Reference to the analysis run that produced this chunk.
+     * Stored as a plain UUID column without foreign key reference to avoid
+     * circular imports (analyses.ts already imports from documents.ts).
+     * The application layer enforces this relationship.
+     * Re-analysis creates new chunks, so chunks are per-analysis.
+     * @type {string | null}
+     */
+    analysisId: uuid("analysis_id"),
+
+    /**
+     * Number of overlap tokens prepended from the previous chunk.
+     * Zero when this chunk has no overlap.
+     * @type {number}
+     * @default 0
+     */
+    overlapTokens: integer("overlap_tokens").default(0),
+
+    /**
      * Extensible JSONB metadata field.
      * Commonly includes: pageNumber, boundingBox, chunkingMethod, etc.
      * @type {Record<string, unknown>}
@@ -519,10 +559,15 @@ export const documentChunks = pgTable(
   },
   (table) => [
     /**
-     * Unique constraint ensuring no duplicate chunk indexes per document.
+     * Unique constraint ensuring no duplicate chunk indexes per document per analysis.
+     * Re-analysis creates new chunks, so analysisId is part of the constraint.
      * Enables idempotent chunk insertion with ON CONFLICT handling.
      */
-    unique("chunk_doc_index").on(table.documentId, table.chunkIndex),
+    unique("chunk_doc_analysis_index").on(
+      table.documentId,
+      table.analysisId,
+      table.chunkIndex
+    ),
 
     /**
      * Composite index for efficient ordered retrieval of document chunks.
@@ -535,5 +580,11 @@ export const documentChunks = pgTable(
      * Supports RLS enforcement and cross-document similarity searches.
      */
     index("idx_chunks_tenant").on(table.tenantId),
+
+    /**
+     * Index for efficient analysis-scoped chunk queries.
+     * Optimizes queries like "get all chunks for analysis Y".
+     */
+    index("idx_chunks_analysis").on(table.analysisId),
   ]
 )

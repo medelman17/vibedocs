@@ -330,7 +330,7 @@ export const analyses = pgTable(
      * Current progress stage for UI display.
      * Updated by Inngest function as pipeline progresses.
      *
-     * Valid values: 'parsing' | 'classifying' | 'scoring' | 'analyzing_gaps' | 'complete' | 'failed'
+     * Valid values: 'parsing' | 'chunking' | 'classifying' | 'scoring' | 'analyzing_gaps' | 'complete' | 'failed'
      */
     progressStage: text("progress_stage"),
 
@@ -339,6 +339,23 @@ export const analyses = pgTable(
      * @default 0
      */
     progressPercent: integer("progress_percent").default(0),
+
+    /**
+     * Summary of all chunks produced for this analysis.
+     * Stored as JSONB for debugging and admin observability.
+     * Contains document ID, chunk count, token stats, distribution, and per-chunk previews.
+     *
+     * @see {@link ../../lib/document-chunking/types|ChunkMap} for TypeScript interface
+     */
+    chunkMap: jsonb("chunk_map"),
+
+    /**
+     * Aggregate statistics about chunks produced for this analysis.
+     * Contains total count, avg/min/max tokens, and distribution by chunk type.
+     *
+     * @see {@link ../../lib/document-chunking/types|ChunkStats} for TypeScript interface
+     */
+    chunkStats: jsonb("chunk_stats"),
 
     /**
      * Additional analysis metadata including user prompts.
