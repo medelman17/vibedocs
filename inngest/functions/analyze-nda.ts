@@ -40,7 +40,11 @@ import type { LegalChunk } from '@/lib/document-chunking/types'
 import type { EmbeddedChunk } from '@/lib/document-chunking/types'
 import type { ParserOutput } from '@/agents/parser'
 import type { ParsedChunk } from '@/agents/classifier'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
+import {
+  persistRiskAssessments,
+  calculateWeightedRisk,
+} from '@/db/queries/risk-scoring'
 import type { AnalysisProgressPayload } from '../types'
 
 type ProgressStage = AnalysisProgressPayload['stage']
@@ -567,6 +571,7 @@ export const analyzeNda = inngest.createFunction(
         runRiskScorerAgent({
           clauses: classifierResult.clauses,
           budgetTracker,
+          perspective: 'balanced', // Default perspective per user decision
         })
       )
       await emitProgress(
@@ -574,6 +579,18 @@ export const analyzeNda = inngest.createFunction(
         70,
         `Scored ${riskResult.assessments.length} clauses`
       )
+
+      // Step: Persist per-clause risk assessments to clauseExtractions
+      await step.run('persist-risk-assessments', async () => {
+        await persistRiskAssessments(
+          ctx.db,
+          tenantId,
+          analysisId,
+          documentId,
+          riskResult.assessments,
+          riskResult.perspective,
+        )
+      })
 
       // Rate limit delay after Claude API calls
       await step.sleep('rate-limit-risk', getRateLimitDelay('claude'))
@@ -594,12 +611,16 @@ export const analyzeNda = inngest.createFunction(
       await step.run('persist-final', async () => {
         const usage = budgetTracker.getUsage()
 
+        // Calculate weighted risk score using category importance from cuadCategories
+        const weightedRisk = await calculateWeightedRisk(ctx.db, riskResult.assessments)
+
         await ctx.db
           .update(analyses)
           .set({
             status: 'completed',
-            overallRiskScore: riskResult.overallRiskScore,
-            overallRiskLevel: riskResult.overallRiskLevel,
+            overallRiskScore: weightedRisk.score,
+            overallRiskLevel: weightedRisk.level,
+            summary: riskResult.executiveSummary,
             gapAnalysis: gapResult.gapAnalysis,
             tokenUsage: usage,
             // Budget tracking fields
@@ -607,6 +628,10 @@ export const analyzeNda = inngest.createFunction(
             estimatedCost: usage.total.estimatedCost,
             processingTimeMs: Date.now() - startTime,
             completedAt: new Date(),
+            metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+              perspective: riskResult.perspective,
+              riskDistribution: riskResult.riskDistribution,
+            })}::jsonb`,
           })
           .where(eq(analyses.id, analysisId))
       })
@@ -847,6 +872,7 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
         runRiskScorerAgent({
           clauses: classifierResult.clauses,
           budgetTracker,
+          perspective: 'balanced', // Default perspective per user decision
         })
       )
       await emitProgress(
@@ -854,6 +880,18 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
         75,
         `Scored ${riskResult.assessments.length} clauses`
       )
+
+      // Step: Persist per-clause risk assessments to clauseExtractions
+      await step.run('persist-risk-assessments', async () => {
+        await persistRiskAssessments(
+          ctx.db,
+          tenantId,
+          analysisId,
+          documentId,
+          riskResult.assessments,
+          riskResult.perspective,
+        )
+      })
 
       await step.sleep('rate-limit-risk', getRateLimitDelay('claude'))
 
@@ -873,18 +911,26 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
       await step.run('persist-final', async () => {
         const usage = budgetTracker.getUsage()
 
+        // Calculate weighted risk score using category importance from cuadCategories
+        const weightedRisk = await calculateWeightedRisk(ctx.db, riskResult.assessments)
+
         await ctx.db
           .update(analyses)
           .set({
             status: 'completed',
-            overallRiskScore: riskResult.overallRiskScore,
-            overallRiskLevel: riskResult.overallRiskLevel,
+            overallRiskScore: weightedRisk.score,
+            overallRiskLevel: weightedRisk.level,
+            summary: riskResult.executiveSummary,
             gapAnalysis: gapResult.gapAnalysis,
             tokenUsage: usage,
             actualTokens: usage.total.total,
             estimatedCost: usage.total.estimatedCost,
             processingTimeMs: Date.now() - startTime,
             completedAt: new Date(),
+            metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify({
+              perspective: riskResult.perspective,
+              riskDistribution: riskResult.riskDistribution,
+            })}::jsonb`,
           })
           .where(eq(analyses.id, analysisId))
       })
