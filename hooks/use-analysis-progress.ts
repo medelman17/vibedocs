@@ -10,8 +10,10 @@ interface AnalysisProgressState {
   status: AnalysisStatus
   progress: number
   stage: string
-  /** Human-readable progress message from the pipeline */
+  /** Detailed progress message from the pipeline (e.g. "Classifying clause 7 of 15...") */
   message: string
+  /** Queue position when analysis is pending (0 = next in line) */
+  queuePosition: number | undefined
   isLoading: boolean
   error: string | null
 }
@@ -29,6 +31,7 @@ export function useAnalysisProgress(
     progress: 0,
     stage: "",
     message: "",
+    queuePosition: undefined,
     isLoading: true,
     error: null,
   })
@@ -48,6 +51,7 @@ export function useAnalysisProgress(
         progress: 0,
         stage: "",
         message: "",
+        queuePosition: undefined,
         isLoading: false,
         error: null,
       })
@@ -79,7 +83,8 @@ export function useAnalysisProgress(
             status: result.data.status,
             progress: result.data.progress?.percent ?? 0,
             stage: result.data.progress?.step ?? "",
-            message: result.data.progress?.step ?? "",
+            message: result.data.message ?? result.data.progress?.step ?? "",
+            queuePosition: result.data.queuePosition,
             isLoading: false,
             error: null,
           })
