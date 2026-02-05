@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: OCR Processing** - Detect and process scanned PDFs, handle quality issues
 - [x] **Phase 5: Legal Chunking** - Split into legal-aware chunks, embed with Voyage AI, store in tenant DB
 - [x] **Phase 6: CUAD Classification** - Classify chunks against 41-category taxonomy with confidence scoring
-- [ ] **Phase 7: Risk Scoring** - Assign risk levels with evidence-grounded explanations and citations
+- [x] **Phase 7: Risk Scoring** - Assign risk levels with evidence-grounded explanations and citations
 - [ ] **Phase 8: Gap Analysis** - Identify missing clauses, explain importance, suggest language
 - [ ] **Phase 9: Pipeline Orchestration** - Wrap agents in Inngest steps, emit progress events, support cancellation
 - [ ] **Phase 10: Progress Streaming** - SSE endpoint for real-time UI updates, Word Add-in consumption
@@ -144,10 +144,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 07-01-PLAN.md -- Enhanced types & schema (structured citations, perspective, atypical language)
-- [ ] 07-02-PLAN.md -- Prompt refactor & agent enhancement (perspective-aware scoring, multi-source RAG)
-- [ ] 07-03-PLAN.md -- Pipeline persistence & weighted scoring (clauseExtractions, executive summary)
-- [ ] 07-04-PLAN.md -- Re-score via Inngest, queries, UI (perspective toggle, evidence expandable)
+- [x] 07-01-PLAN.md -- Enhanced types & schema (structured citations, perspective, atypical language)
+- [x] 07-02-PLAN.md -- Prompt refactor & agent enhancement (perspective-aware scoring, multi-source RAG)
+- [x] 07-03-PLAN.md -- Pipeline persistence & weighted scoring (clauseExtractions, executive summary)
+- [x] 07-04-PLAN.md -- Re-score via Inngest, queries, UI (perspective toggle, evidence expandable)
 
 ### Phase 8: Gap Analysis
 **Goal**: Missing CUAD categories identified with importance explanation and recommended language
@@ -220,7 +220,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 4. OCR Processing | 5/5 | Complete | 2026-02-04 |
 | 5. Legal Chunking | 3/3 | Complete | 2026-02-05 |
 | 6. CUAD Classification | 4/4 | Complete | 2026-02-05 |
-| 7. Risk Scoring | 0/4 | Not started | - |
+| 7. Risk Scoring | 4/4 | Complete | 2026-02-05 |
 | 8. Gap Analysis | 0/TBD | Not started | - |
 | 9. Pipeline Orchestration | 0/TBD | Not started | - |
 | 10. Progress Streaming | 0/TBD | Not started | - |
@@ -228,4 +228,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-05 (Phase 6 complete)*
+*Last updated: 2026-02-05 (Phase 7 complete)*
