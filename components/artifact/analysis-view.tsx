@@ -18,6 +18,7 @@ import {
   fetchRiskAssessments,
   resumeAnalysis,
   triggerAnalysis,
+  cancelAnalysis,
   type Analysis,
   type ClauseExtraction,
   type Perspective,
@@ -25,6 +26,7 @@ import {
 import { type RiskLevel } from "@/components/analysis/config"
 import { RiskBadge } from "@/components/analysis/risk-tab"
 import { AnalysisTabs, PerspectiveToggle } from "@/components/analysis/analysis-tabs"
+import { OcrWarning, hasOcrIssues } from "@/components/analysis/ocr-warning"
 
 // ============================================================================
 // Types
@@ -44,12 +46,22 @@ function ProgressView({
   progress,
   message,
   queuePosition,
+  analysisId,
 }: {
   stage: string
   progress: number
   message?: string
   queuePosition?: number
+  analysisId?: string
 }) {
+  const [isCancelling, setIsCancelling] = React.useState(false)
+
+  const handleCancel = async () => {
+    if (!analysisId) return
+    setIsCancelling(true)
+    await cancelAnalysis(analysisId)
+  }
+
   return (
     <div className="flex h-full flex-col items-center justify-center p-8">
       <Loader2Icon
@@ -67,6 +79,22 @@ function ProgressView({
       )}
       <Progress value={progress} className="mt-4 w-48" />
       <p className="mt-2 text-xs text-muted-foreground">{progress}%</p>
+      {analysisId && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-4 text-muted-foreground"
+          onClick={handleCancel}
+          disabled={isCancelling}
+        >
+          {isCancelling ? (
+            <Loader2Icon className="mr-1.5 size-3.5 animate-spin" />
+          ) : (
+            <BanIcon className="mr-1.5 size-3.5" />
+          )}
+          Cancel
+        </Button>
+      )}
     </div>
   )
 }
@@ -255,6 +283,7 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
           progress={progress}
           message={message}
           queuePosition={queuePosition}
+          analysisId={analysisId}
         />
       </div>
     )
@@ -311,6 +340,16 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
 
   return (
     <div className={cn("flex h-full min-h-0 min-w-0 flex-col", className)}>
+      {/* OCR quality warning */}
+      {hasOcrIssues(analysis) && (
+        <div className="shrink-0 px-4 pt-3">
+          <OcrWarning
+            confidence={analysis.ocrConfidence!}
+            warningMessage={analysis.ocrWarning}
+          />
+        </div>
+      )}
+
       {/* Summary bar with perspective toggle */}
       <div className="shrink-0 border-b bg-muted/50 px-4 py-3">
         <div className="mb-2 flex items-center justify-between">
