@@ -33,7 +33,7 @@ vi.mock("@/db/client", () => ({
 let inTransaction = false
 
 // Schema version - increment when schema changes to force recreation
-const SCHEMA_VERSION = 3 // v3: added ocr_text, ocr_confidence, ocr_warning, ocr_completed_at to analyses
+const SCHEMA_VERSION = 4 // v4: added chunk columns to document_chunks + chunk_map/chunk_stats to analyses
 
 // Track if schema has been created (survives across test files in same worker)
 // Using globalThis to persist across module re-evaluations
@@ -151,6 +151,11 @@ const SCHEMA_SQL = `
     section_path TEXT[],
     embedding TEXT,
     token_count INTEGER,
+    start_position INTEGER,
+    end_position INTEGER,
+    chunk_type TEXT,
+    analysis_id UUID,
+    overlap_tokens INTEGER DEFAULT 0,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -176,6 +181,8 @@ const SCHEMA_SQL = `
     inngest_run_id TEXT,
     progress_stage TEXT,
     progress_percent INTEGER DEFAULT 0,
+    chunk_map JSONB,
+    chunk_stats JSONB,
     metadata JSONB DEFAULT '{}',
     ocr_text TEXT,
     ocr_confidence REAL,

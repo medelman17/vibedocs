@@ -7,21 +7,30 @@ vi.mock('@/agents/parser', () => ({
     document: {
       documentId: 'doc-1',
       title: 'Test NDA',
-      rawText: 'Sample text content',
-      chunks: [
-        {
-          id: 'chunk-0',
-          index: 0,
-          content: 'Sample clause',
-          sectionPath: [],
-          tokenCount: 10,
-          startPosition: 0,
-          endPosition: 13,
-          embedding: [0.1, 0.2],
-        },
-      ],
+      rawText: 'Sample text content for testing',
+      structure: {
+        sections: [
+          {
+            title: 'Section 1',
+            startOffset: 0,
+            endOffset: 30,
+            depth: 0,
+            children: [],
+          },
+        ],
+        parties: { disclosing: undefined, receiving: undefined },
+        hasExhibits: false,
+        hasSignatureBlock: false,
+        hasRedactedText: false,
+      },
     },
-    tokenUsage: { embeddingTokens: 100 },
+    quality: {
+      charCount: 30,
+      wordCount: 5,
+      pageCount: 1,
+      confidence: 0.95,
+      warnings: [],
+    },
   }),
 }))
 
@@ -37,6 +46,17 @@ vi.mock('@/agents/classifier', () => ({
         reasoning: 'Test',
         startPosition: 0,
         endPosition: 13,
+      },
+    ],
+    rawClassifications: [
+      {
+        chunkIndex: 0,
+        primary: {
+          category: 'Governing Law',
+          confidence: 0.9,
+          rationale: 'Test classification',
+        },
+        secondary: [],
       },
     ],
     tokenUsage: { inputTokens: 500, outputTokens: 100 },
@@ -61,13 +81,16 @@ vi.mock('@/agents/risk-scorer', () => ({
         riskLevel: 'standard',
         confidence: 0.9,
         explanation: 'Standard clause',
-        evidence: { citations: ['sample'], comparisons: ['ref'] },
+        evidence: { citations: ['sample'], references: [] },
         startPosition: 0,
         endPosition: 13,
       },
     ],
     overallRiskScore: 25,
     overallRiskLevel: 'standard',
+    executiveSummary: 'Low risk NDA with standard clauses.',
+    perspective: 'balanced',
+    riskDistribution: { standard: 1, cautious: 0, aggressive: 0, unknown: 0 },
     tokenUsage: { inputTokens: 800, outputTokens: 200 },
   }),
 }))
@@ -85,25 +108,130 @@ vi.mock('@/agents/gap-analyst', () => ({
   }),
 }))
 
+// Mock validation gates
+vi.mock('@/agents/validation', () => ({
+  validateParserOutput: vi.fn().mockReturnValue({ valid: true }),
+  validateClassifierOutput: vi.fn().mockReturnValue({ valid: true }),
+  validateTokenBudget: vi.fn().mockReturnValue({
+    estimate: { tokenCount: 100, estimatedCost: 0.01 },
+    withinBudget: true,
+    truncation: null,
+    warning: null,
+  }),
+  mapExtractionError: vi.fn(),
+}))
+
+// Mock legal chunker
+vi.mock('@/lib/document-chunking/legal-chunker', () => ({
+  chunkLegalDocument: vi.fn().mockReturnValue([
+    {
+      id: 'chunk-0',
+      index: 0,
+      content: 'Sample clause',
+      sectionPath: ['Section 1'],
+      tokenCount: 10,
+      startPosition: 0,
+      endPosition: 13,
+      chunkType: 'clause',
+      metadata: {
+        overlapTokens: 0,
+        references: [],
+        structureSource: 'heading',
+        isOcr: false,
+        parentClauseIntro: null,
+      },
+    },
+  ]),
+}))
+
+// Mock chunk map utilities
+vi.mock('@/lib/document-chunking/chunk-map', () => ({
+  generateChunkMap: vi.fn().mockReturnValue({ chunks: [] }),
+  computeChunkStats: vi.fn().mockReturnValue({ totalChunks: 1 }),
+}))
+
+// Mock tokenizer init
+vi.mock('@/lib/document-chunking/token-counter', () => ({
+  initVoyageTokenizer: vi.fn().mockResolvedValue(undefined),
+}))
+
+// Mock embeddings client
+vi.mock('@/lib/embeddings', () => ({
+  getVoyageAIClient: vi.fn().mockReturnValue({
+    embedBatch: vi.fn().mockResolvedValue({ embeddings: [[0.1, 0.2, 0.3]] }),
+  }),
+  VOYAGE_CONFIG: { batchLimit: 128 },
+}))
+
+// Mock risk scoring persistence
+vi.mock('@/db/queries/risk-scoring', () => ({
+  persistRiskAssessments: vi.fn().mockResolvedValue(undefined),
+  calculateWeightedRisk: vi.fn().mockResolvedValue({ score: 25, level: 'standard' }),
+}))
+
+// Mock budget tracker
+vi.mock('@/lib/ai/budget', () => {
+  class MockBudgetTracker {
+    getUsage() {
+      return { total: { total: 2000, estimatedCost: 0.05 } }
+    }
+  }
+  return { BudgetTracker: MockBudgetTracker }
+})
+
 // Mock database
+const mockDb = {
+  execute: vi.fn().mockResolvedValue({ rows: [] }),
+  insert: vi.fn().mockReturnValue({
+    values: vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([{ id: 'analysis-123' }]),
+      onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+    }),
+  }),
+  update: vi.fn().mockReturnValue({
+    set: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue(undefined),
+    }),
+  }),
+  delete: vi.fn().mockReturnValue({
+    where: vi.fn().mockResolvedValue(undefined),
+  }),
+}
+
 vi.mock('@/db/client', () => ({
-  db: {
-    execute: vi.fn().mockResolvedValue({ rows: [] }),
-    insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockReturnValue({
-        returning: vi.fn().mockResolvedValue([{ id: 'analysis-123' }]),
-        onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
-      }),
-    }),
-    update: vi.fn().mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue(undefined),
-      }),
-    }),
+  db: mockDb,
+}))
+
+// Mock inngest barrel (client, utils, types)
+vi.mock('@/inngest', () => ({
+  inngest: {
+    createFunction: vi.fn((config, trigger, handler) => ({
+      ...config,
+      trigger,
+      fn: handler,
+    })),
+  },
+  CONCURRENCY: { analysis: { limit: 5 } },
+  RETRY_CONFIG: { default: { retries: 3 } },
+  withTenantContext: vi.fn().mockImplementation(
+    async (_tenantId: string, fn: (ctx: { db: typeof mockDb }) => Promise<unknown>) => {
+      return await fn({ db: mockDb })
+    }
+  ),
+  getRateLimitDelay: vi.fn().mockReturnValue('1s'),
+}))
+
+// Mock inngest errors
+vi.mock('@/inngest/utils/errors', () => ({
+  NonRetriableError: class NonRetriableError extends Error {
+    constructor(message: string) {
+      super(message)
+      this.name = 'NonRetriableError'
+    }
   },
 }))
 
-// Mock inngest client
+// Mock inngest client (direct import used by barrel)
 vi.mock('@/inngest/client', () => ({
   inngest: {
     createFunction: vi.fn((config, trigger, handler) => ({
@@ -112,6 +240,32 @@ vi.mock('@/inngest/client', () => ({
       fn: handler,
     })),
   },
+}))
+
+// Mock error classes
+vi.mock('@/lib/errors', () => ({
+  EncryptedDocumentError: class extends Error {},
+  CorruptDocumentError: class extends Error {},
+  OcrRequiredError: class extends Error {},
+}))
+
+// Mock drizzle-orm
+vi.mock('drizzle-orm', () => ({
+  eq: vi.fn().mockReturnValue({}),
+  and: vi.fn().mockReturnValue({}),
+  sql: Object.assign(vi.fn().mockReturnValue({}), {
+    raw: vi.fn().mockReturnValue({}),
+  }),
+}))
+
+// Mock schema tables
+vi.mock('@/db/schema/analyses', () => ({
+  analyses: { id: 'id' },
+  chunkClassifications: { id: 'id' },
+}))
+
+vi.mock('@/db/schema/documents', () => ({
+  documentChunks: { documentId: 'document_id', analysisId: 'analysis_id' },
 }))
 
 /**
@@ -143,12 +297,12 @@ describe('analyzeNda Pipeline', () => {
     }
     const step = createMockStep()
 
-    // Access handler via the mock's fn property (bypassing private access)
     const handler = (analyzeNda as unknown as { fn: (ctx: unknown) => Promise<{ success: boolean; analysisId: string }> }).fn
     const result = await handler({ event, step })
 
     expect(step.run).toHaveBeenCalledWith('create-analysis', expect.any(Function))
     expect(step.run).toHaveBeenCalledWith('parser-agent', expect.any(Function))
+    expect(step.run).toHaveBeenCalledWith('chunk-document', expect.any(Function))
     expect(step.run).toHaveBeenCalledWith('classifier-agent', expect.any(Function))
     expect(step.run).toHaveBeenCalledWith('risk-scorer-agent', expect.any(Function))
     expect(step.run).toHaveBeenCalledWith('gap-analyst-agent', expect.any(Function))
@@ -174,7 +328,7 @@ describe('analyzeNda Pipeline', () => {
       ([_name, payload]) => payload.name === 'nda/analysis.progress'
     )
 
-    // Should have progress events for: parsing, classifying, scoring, analyzing_gaps, complete
+    // Should have progress events for: parsing, chunking, classifying, scoring, analyzing_gaps, complete
     expect(progressEvents.length).toBeGreaterThanOrEqual(4)
   })
 

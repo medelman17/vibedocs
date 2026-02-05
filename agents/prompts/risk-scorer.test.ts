@@ -10,15 +10,15 @@ describe('RISK_SCORER_SYSTEM_PROMPT', () => {
   })
 
   it('includes assessment criteria', () => {
-    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('Scope')
-    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('Duration')
-    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('Remedies')
-    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('Balance')
+    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('Assessment Approach')
+    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('Explanation Requirements')
+    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('Evidence Requirements')
+    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('Output Format')
   })
 
   it('requires evidence in assessments', () => {
-    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('Citations')
-    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('Comparisons')
+    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('citations')
+    expect(RISK_SCORER_SYSTEM_PROMPT).toContain('references')
     expect(RISK_SCORER_SYSTEM_PROMPT).toContain('MANDATORY')
   })
 
