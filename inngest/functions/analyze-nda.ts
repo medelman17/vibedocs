@@ -596,7 +596,8 @@ export const analyzeNda = inngest.createFunction(
       await step.sleep('rate-limit-risk', getRateLimitDelay('claude'))
 
       // Step 10: Gap Analyst Agent
-      const documentSummary = `${parserResult.document.title}: ${classifierResult.clauses.length} clauses identified.`
+      const uniqueCategories = [...new Set(classifierResult.clauses.map(c => c.category))]
+      const documentSummary = `${parserResult.document.title}: ${classifierResult.clauses.length} clauses classified across ${uniqueCategories.length} categories.`
       const gapResult = await step.run('gap-analyst-agent', () =>
         runGapAnalystAgent({
           clauses: classifierResult.clauses,
@@ -896,7 +897,8 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
       await step.sleep('rate-limit-risk', getRateLimitDelay('claude'))
 
       // Step 9: Gap Analyst Agent
-      const documentSummary = `${parserResult.document.title}: ${classifierResult.clauses.length} clauses identified (via OCR).`
+      const uniqueOcrCategories = [...new Set(classifierResult.clauses.map(c => c.category))]
+      const documentSummary = `${parserResult.document.title}: ${classifierResult.clauses.length} clauses classified across ${uniqueOcrCategories.length} categories (via OCR).`
       const gapResult = await step.run('gap-analyst-agent', () =>
         runGapAnalystAgent({
           clauses: classifierResult.clauses,
