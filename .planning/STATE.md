@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 6 of 11 (CUAD Classification)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 06-02-PLAN.md (Enhanced Batch Classifier)
+Last activity: 2026-02-05 - Completed 06-03-PLAN.md (Pipeline Integration)
 
-Progress: [███████████████░] ~71% (22 plans of ~31 total)
+Progress: [████████████████░] ~74% (23 plans of ~31 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
-- Average duration: 4.6 min
-- Total execution time: 101.8 min
+- Total plans completed: 23
+- Average duration: 4.5 min
+- Total execution time: 103.9 min
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [███████████████░] ~71% (22 plans of ~
 | 03 | 5 | 28.5 min | 5.7 min |
 | 04 | 5 | 15.5 min | 3.1 min |
 | 05 | 3 | 18.3 min | 6.1 min |
-| 06 | 2 | 11.5 min | 5.8 min |
+| 06 | 3 | 13.6 min | 4.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-02 (6.1 min), 05-03 (9.0 min), 06-01 (4.2 min), 06-02 (7.3 min)
-- Trend: Classifier rewrite required prompt + agent + test updates; moderate complexity
+- Last 5 plans: 05-03 (9.0 min), 06-01 (4.2 min), 06-02 (7.3 min), 06-03 (2.1 min)
+- Trend: Pipeline integration was straightforward; single file modification
 
 *Updated after each plan completion*
 
@@ -107,6 +107,7 @@ Recent decisions affecting current work:
 - [06-02]: Batch size 4 chunks per LLM call (3-5 range), configurable constant
 - [06-02]: 7 references per chunk via findSimilarClauses, deduplicated to top 10 per batch
 - [06-02]: Both Uncategorized and Unknown filtered from clauses output; rawClassifications preserves all
+- [06-03]: Single persist-classifications step (not per-batch) with ON CONFLICT DO NOTHING for idempotency
 
 ### Pending Todos
 
@@ -119,6 +120,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T06:12:00Z
-Stopped at: Completed 06-02-PLAN.md (Enhanced Batch Classifier)
+Last session: 2026-02-05T06:17:00Z
+Stopped at: Completed 06-03-PLAN.md (Pipeline Integration)
 Resume file: None
