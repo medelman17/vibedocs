@@ -42,6 +42,33 @@ import type { EnhancedGapResult } from "@/agents/types";
  */
 export type AnalysisStatus = "pending" | "pending_ocr" | "processing" | "completed" | "failed" | "cancelled";
 
+/** Pipeline step status for debug panel */
+export interface PipelineStepInfo {
+  name: string
+  status: 'completed' | 'running' | 'pending' | 'failed' | 'skipped' | 'cancelled'
+  durationMs?: number
+  error?: string
+}
+
+/** Debug info for the pipeline */
+export interface PipelineDebugInfo {
+  analysisId: string
+  status: AnalysisStatus
+  steps: PipelineStepInfo[]
+  totalDurationMs: number | null
+  tokenUsage: {
+    total: { input: number; output: number; estimatedCost: number }
+  } | null
+  progressStage: string | null
+  progressMessage: string | null
+  progressPercent: number
+  metadata: Record<string, unknown> | null
+  chunkStats: Record<string, unknown> | null
+  wasTruncated: boolean
+  estimatedTokens: number | null
+  actualTokens: number | null
+}
+
 /**
  * Risk level classification for clauses (PRD-aligned taxonomy).
  * - standard: Typical NDA terms, acceptable risk
@@ -1061,4 +1088,125 @@ export async function fetchRiskAssessments(
 
   const assessments = await queryRiskAssessments(analysisId, tenantId);
   return ok(assessments);
+}
+
+// ============================================================================
+// Debug Actions
+// ============================================================================
+
+/**
+ * Get pipeline debug information for an analysis.
+ *
+ * Returns detailed pipeline state including step timings, token usage,
+ * and metadata for the debug panel. Reads from the analyses table
+ * metadata and status columns.
+ *
+ * @param analysisId - UUID of the analysis
+ * @returns Pipeline debug information
+ */
+export async function getDebugInfo(
+  analysisId: string
+): Promise<ApiResponse<PipelineDebugInfo>> {
+  if (!z.string().uuid().safeParse(analysisId).success) {
+    return err("VALIDATION_ERROR", "Invalid analysis ID");
+  }
+
+  const { db, tenantId } = await withTenant();
+
+  const analysis = await db.query.analyses.findFirst({
+    where: and(
+      eq(analyses.id, analysisId),
+      eq(analyses.tenantId, tenantId)
+    ),
+  });
+
+  if (!analysis) {
+    return err("NOT_FOUND", "Analysis not found");
+  }
+
+  // Derive step statuses from analysis state
+  const currentStage = analysis.progressStage ?? "";
+  const analysisStatus = analysis.status as AnalysisStatus;
+
+  const stageOrder = [
+    "parsing",
+    "chunking",
+    "classifying",
+    "scoring",
+    "analyzing_gaps",
+    "complete",
+  ];
+
+  const currentStageIndex = stageOrder.indexOf(currentStage);
+  const isTerminal = ["completed", "failed", "cancelled"].includes(
+    analysisStatus
+  );
+
+  const steps: PipelineStepInfo[] = stageOrder
+    .filter((s) => s !== "complete") // 'complete' is not a real step
+    .map((stageName, index) => {
+      let stepStatus: PipelineStepInfo["status"];
+
+      if (isTerminal && analysisStatus === "completed") {
+        stepStatus = "completed";
+      } else if (isTerminal && analysisStatus === "cancelled") {
+        stepStatus =
+          index < currentStageIndex
+            ? "completed"
+            : index === currentStageIndex
+              ? "cancelled"
+              : "skipped";
+      } else if (isTerminal && analysisStatus === "failed") {
+        stepStatus =
+          index < currentStageIndex
+            ? "completed"
+            : index === currentStageIndex
+              ? "failed"
+              : "skipped";
+      } else if (index < currentStageIndex) {
+        stepStatus = "completed";
+      } else if (index === currentStageIndex) {
+        stepStatus = "running";
+      } else {
+        stepStatus = "pending";
+      }
+
+      return {
+        name: stageName
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase()),
+        status: stepStatus,
+      };
+    });
+
+  // Parse token usage from JSONB
+  const tokenUsage = analysis.tokenUsage as {
+    total?: { input?: number; output?: number; estimatedCost?: number };
+  } | null;
+
+  const debugInfo: PipelineDebugInfo = {
+    analysisId: analysis.id,
+    status: analysisStatus,
+    steps,
+    totalDurationMs: analysis.processingTimeMs,
+    tokenUsage: tokenUsage?.total
+      ? {
+          total: {
+            input: tokenUsage.total.input ?? 0,
+            output: tokenUsage.total.output ?? 0,
+            estimatedCost: tokenUsage.total.estimatedCost ?? 0,
+          },
+        }
+      : null,
+    progressStage: analysis.progressStage,
+    progressMessage: analysis.progressMessage,
+    progressPercent: analysis.progressPercent ?? 0,
+    metadata: analysis.metadata as Record<string, unknown> | null,
+    chunkStats: analysis.chunkStats as Record<string, unknown> | null,
+    wasTruncated: analysis.wasTruncated ?? false,
+    estimatedTokens: analysis.estimatedTokens,
+    actualTokens: analysis.actualTokens,
+  };
+
+  return ok(debugInfo);
 }
