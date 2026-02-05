@@ -47,8 +47,8 @@ describe("convertToMarkdown", () => {
     // "# " (2 chars) inserted before "Introduction"
     expect(result.markdown).toBe("# Introduction\n\nThis is the content.")
     expect(result.offsetMap.length).toBeGreaterThan(0)
-    // The first mapping should show the shift at position 0
-    expect(result.offsetMap[0]).toEqual({ original: 0, markdown: 0 })
+    // At original position 0, markdown position is 0 + 2 (for "# " prefix) = 2
+    expect(result.offsetMap[0]).toEqual({ original: 0, markdown: 2 })
   })
 
   it("inserts ## prefix for level 2 heading", () => {
@@ -66,7 +66,7 @@ describe("convertToMarkdown", () => {
     ]
 
     const result = convertToMarkdown(text, sections)
-    expect(result.markdown).toStartWith("## Section One")
+    expect(result.markdown.startsWith("## Section One")).toBe(true)
   })
 
   it("inserts ### prefix for level 3 heading", () => {
@@ -84,7 +84,7 @@ describe("convertToMarkdown", () => {
     ]
 
     const result = convertToMarkdown(text, sections)
-    expect(result.markdown).toStartWith("### Subsection")
+    expect(result.markdown.startsWith("### Subsection")).toBe(true)
   })
 
   it("inserts #### prefix for level 4 heading", () => {
@@ -102,7 +102,7 @@ describe("convertToMarkdown", () => {
     ]
 
     const result = convertToMarkdown(text, sections)
-    expect(result.markdown).toStartWith("#### Paragraph")
+    expect(result.markdown.startsWith("#### Paragraph")).toBe(true)
   })
 
   it("handles multiple headings with cumulative offset tracking", () => {
@@ -135,11 +135,11 @@ describe("convertToMarkdown", () => {
     expect(result.markdown).toContain("# Article 2")
 
     // The second heading's offset map should show cumulative shift
-    // First heading adds 2 chars, so second heading at original pos 27
-    // appears at markdown pos 29 (27 + 2 from first heading)
+    // First heading adds 2 chars ("# "), second heading adds 2 more ("# ")
+    // At original pos 27, cumulative shift is 2+2=4, so markdown pos = 27+4 = 31
     const secondMapping = result.offsetMap.find((m) => m.original === 27)
     expect(secondMapping).toBeDefined()
-    expect(secondMapping!.markdown).toBe(29) // 27 + 2 chars from "# "
+    expect(secondMapping!.markdown).toBe(31) // 27 + 4 cumulative chars
   })
 
   it("handles mixed heading levels with correct prefixes", () => {
@@ -220,7 +220,8 @@ describe("convertToMarkdown", () => {
 
     expect(result.markdown).toBe("Preamble text here.\n\n# Article 1\n\nContent.")
     expect(result.offsetMap.length).toBe(1)
-    expect(result.offsetMap[0]).toEqual({ original: 21, markdown: 21 })
+    // At original pos 21, "# " (2 chars) inserted, so markdown pos = 21 + 2 = 23
+    expect(result.offsetMap[0]).toEqual({ original: 21, markdown: 23 })
   })
 })
 
@@ -255,11 +256,13 @@ describe("splitIntoParagraphs", () => {
     expect(result[0].index).toBe(0)
 
     expect(result[1].text).toBe("Second paragraph.")
-    expect(result[1].startOffset).toBe(18) // "First paragraph.\n\n" = 18 chars
+    // "First paragraph.\n\n" = 18 chars
+    expect(result[1].startOffset).toBe(18)
     expect(result[1].index).toBe(1)
 
     expect(result[2].text).toBe("Third paragraph.")
-    expect(result[2].startOffset).toBe(36) // 18 + "Second paragraph.\n\n" = 36
+    // "First paragraph.\n\nSecond paragraph.\n\n" = 18 + 19 = 37 chars
+    expect(result[2].startOffset).toBe(37)
     expect(result[2].index).toBe(2)
   })
 
@@ -286,6 +289,6 @@ describe("splitIntoParagraphs", () => {
     const result = splitIntoParagraphs(text)
 
     expect(result[0].endOffset).toBe(9) // "Para one." = 9 chars
-    expect(result[1].endOffset).toBe(20) // ends at "Para two." = position 20
+    expect(result[1].endOffset).toBe(20) // ends at position 20
   })
 })
