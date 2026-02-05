@@ -7,12 +7,15 @@ export const contentType = 'image/png'
 
 export default async function Image() {
   // Load fonts - Cormorant Garamond for display, Inter for body
+  // Note: Google Fonts URLs change over time. Get current URLs from:
+  // https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400&display=swap
+  // https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap
   const [cormorantFont, interFont] = await Promise.all([
     fetch(
-      'https://fonts.gstatic.com/s/cormorantgaramond/v16/co3YmX5slCNuHLi8bLeY9MK7whWMhyjYrEtFnS8r.woff2'
+      'https://fonts.gstatic.com/s/cormorantgaramond/v21/co3umX5slCNuHLi8bLeY9MK7whWMhyjypVO7abI26QOD_v86KnTOig.woff2'
     ).then((res) => res.arrayBuffer()),
     fetch(
-      'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff2'
+      'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fAZ9hiA.woff2'
     ).then((res) => res.arrayBuffer()),
   ])
 
