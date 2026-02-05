@@ -34,13 +34,13 @@ Requirements for the analysis pipeline milestone. Each maps to roadmap phases.
 
 ### Chunking
 
-- [ ] **CHK-01**: Split extracted text into legal-aware chunks
-- [ ] **CHK-02**: Detect section boundaries using legal patterns (ARTICLE, Section, numbered clauses)
-- [ ] **CHK-03**: Use LLM for boundary detection when structure is ambiguous
-- [ ] **CHK-04**: Preserve section paths for each chunk (e.g., ["Article 5", "Section 5.2"])
-- [ ] **CHK-05**: Respect max token limit per chunk (512 tokens, 50 token overlap)
-- [ ] **CHK-06**: Generate Voyage AI embeddings for each chunk
-- [ ] **CHK-07**: Store chunks with embeddings in tenant database
+- [x] **CHK-01**: Split extracted text into legal-aware chunks
+- [x] **CHK-02**: Detect section boundaries using legal patterns (ARTICLE, Section, numbered clauses)
+- [x] **CHK-03**: Use LLM for boundary detection when structure is ambiguous
+- [x] **CHK-04**: Preserve section paths for each chunk (e.g., ["Article 5", "Section 5.2"])
+- [x] **CHK-05**: Respect max token limit per chunk (512 tokens, 50 token overlap)
+- [x] **CHK-06**: Generate Voyage AI embeddings for each chunk
+- [x] **CHK-07**: Store chunks with embeddings in tenant database
 
 ### Classification
 
@@ -154,13 +154,13 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | OCR-02 | Phase 4 | Complete |
 | OCR-03 | Phase 4 | Complete |
 | OCR-04 | Phase 4 | Complete |
-| CHK-01 | Phase 5 | Pending |
-| CHK-02 | Phase 5 | Pending |
-| CHK-03 | Phase 5 | Pending |
-| CHK-04 | Phase 5 | Pending |
-| CHK-05 | Phase 5 | Pending |
-| CHK-06 | Phase 5 | Pending |
-| CHK-07 | Phase 5 | Pending |
+| CHK-01 | Phase 5 | Complete |
+| CHK-02 | Phase 5 | Complete |
+| CHK-03 | Phase 5 | Complete |
+| CHK-04 | Phase 5 | Complete |
+| CHK-05 | Phase 5 | Complete |
+| CHK-06 | Phase 5 | Complete |
+| CHK-07 | Phase 5 | Complete |
 | CLS-01 | Phase 6 | Pending |
 | CLS-02 | Phase 6 | Pending |
 | CLS-03 | Phase 6 | Pending |
