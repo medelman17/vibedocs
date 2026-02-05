@@ -116,6 +116,10 @@ Recent decisions affecting current work:
 - [07-01]: Bridge transformation from legacy to enhanced evidence in risk-scorer.ts (removed in Plan 02)
 - [07-01]: executiveSummary initialized to empty string placeholder (populated in Plan 03)
 - [07-01]: computeRiskDistribution uses explicit object literal initialization (no RISK_LEVELS runtime dep)
+- [07-02]: Accept all LLM-generated references, log warnings for unverified sourceIds (IDs come from vector search results in prompt context)
+- [07-02]: Budget-aware reference limits: 3/2/2 normal, 2/1/1 on warning
+- [07-02]: Executive summary populated in Plan 02 (not Plan 03 as originally planned)
+- [07-02]: System prompt cached across clauses in scoring loop (same perspective for all)
 - [07-03]: ON CONFLICT DO UPDATE (not DO NOTHING) for clauseExtractions supports re-scoring
 - [07-03]: JSONB merge preserves existing metadata while adding perspective/riskDistribution
 - [07-03]: Fallback to uniform weight 1.0 when cuadCategories empty (bootstrap not run)
