@@ -20,6 +20,12 @@ import { analyses, clauseExtractions, documents } from "@/db/schema";
 import { eq, and, desc, gte, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { inngest } from "@/inngest";
+import {
+  getClassificationsByCategory,
+  getClassificationsByPosition,
+  type ChunkClassificationRow,
+  type ClassificationsByCategory,
+} from "@/db/queries/classifications";
 
 // ============================================================================
 // Types
@@ -82,6 +88,9 @@ export interface AnalysisWithDocument extends Analysis {
     title: string;
   };
 }
+
+// Re-export classification types for UI consumption
+export type { ChunkClassificationRow, ClassificationsByCategory };
 
 // ============================================================================
 // Input Schemas
@@ -732,4 +741,50 @@ export async function exportAnalysisPdf(
     url: `https://placeholder.blob.vercel-storage.com/analysis-${analysisId}.pdf`,
     expiresAt,
   });
+}
+
+/**
+ * Get CUAD classifications for an analysis.
+ *
+ * Supports two views:
+ * - "category": Grouped by CUAD category with all instances per category
+ * - "position": In document order (by chunk index), primary labels first
+ *
+ * Both views include "Uncategorized" entries for chunks matching no category,
+ * and all secondary labels alongside primary ones.
+ *
+ * @param analysisId - UUID of the analysis
+ * @param view - View mode: "category" for grouped view, "position" for document order
+ * @returns Classifications in the requested view format
+ */
+export async function getAnalysisClassifications(
+  analysisId: string,
+  view: "category" | "position" = "category"
+): Promise<ApiResponse<ClassificationsByCategory[] | ChunkClassificationRow[]>> {
+  if (!z.string().uuid().safeParse(analysisId).success) {
+    return err("VALIDATION_ERROR", "Invalid analysis ID");
+  }
+
+  const { db, tenantId } = await withTenant();
+
+  // Verify analysis exists and belongs to tenant
+  const analysis = await db.query.analyses.findFirst({
+    where: and(
+      eq(analyses.id, analysisId),
+      eq(analyses.tenantId, tenantId)
+    ),
+    columns: { id: true },
+  });
+
+  if (!analysis) {
+    return err("NOT_FOUND", "Analysis not found");
+  }
+
+  if (view === "category") {
+    const result = await getClassificationsByCategory(analysisId, tenantId);
+    return ok(result);
+  } else {
+    const result = await getClassificationsByPosition(analysisId, tenantId);
+    return ok(result);
+  }
 }
