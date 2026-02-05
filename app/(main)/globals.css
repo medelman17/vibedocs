@@ -510,4 +510,29 @@
   .badge-risk-unknown {
     @apply bg-risk-unknown text-risk-unknown-foreground;
   }
+
+  /* Safe areas for notched devices (iPhone X+, etc.) */
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .safe-left {
+    padding-left: env(safe-area-inset-left, 0);
+  }
+
+  .safe-right {
+    padding-right: env(safe-area-inset-right, 0);
+  }
+
+  /* Performance optimization: Skip rendering off-screen messages
+   * content-visibility: auto defers layout/paint for messages not in viewport
+   * contain-intrinsic-size provides estimated height to prevent layout shift */
+  .message-item {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 80px;
+  }
 }

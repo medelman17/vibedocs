@@ -1,6 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Public_Sans, Geist_Mono } from "next/font/google";
 import "./(main)/globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover", // For notched devices (iPhone X+)
+};
 
 const publicSans = Public_Sans({
   variable: "--font-public-sans",

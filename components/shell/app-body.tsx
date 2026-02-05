@@ -19,7 +19,7 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
   if (isMobile) {
     return (
       <>
-        <main className="flex-1 overflow-hidden">{chat}</main>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{chat}</div>
         <Sheet open={artifactState.open} onOpenChange={(open) => !open && closeArtifact()}>
           <SheetContent side="bottom" className="h-[90dvh] p-0" showCloseButton={false}>
             {artifact}
@@ -31,7 +31,7 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
 
   // Desktop: no artifact, just chat
   if (!artifactState.open) {
-    return <main className="flex min-h-0 flex-1 flex-col overflow-hidden">{chat}</main>
+    return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{chat}</div>
   }
 
   // Desktop: side-by-side layout (like Vercel AI Chatbot)
@@ -40,9 +40,9 @@ export function AppBody({ chat, artifact }: AppBodyProps) {
   return (
     <div className="flex h-full w-full flex-1 overflow-hidden">
       {/* Chat panel - fixed width, children handle scrolling */}
-      <main className="flex h-full min-h-0 w-[400px] shrink-0 flex-col overflow-hidden border-r border-border/50">
+      <div className="flex h-full min-h-0 w-[400px] shrink-0 flex-col overflow-hidden border-r border-border/50">
         {chat}
-      </main>
+      </div>
 
       {/* Artifact panel - takes remaining width, children handle scrolling */}
       <aside

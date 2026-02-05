@@ -157,17 +157,17 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
         // onOpenSettings={handleOpenSettings}
       />
       <SidebarInset className="min-h-0 overflow-hidden">
-        {/* Header with sidebar trigger */}
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+        {/* Header with sidebar trigger - safe-top for notched devices */}
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4 safe-top">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <span className="text-sm font-semibold">VibeDocs</span>
         </header>
 
-        {/* Main content - min-h-0 allows flex child to shrink below content size */}
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {/* Content area - min-h-0 allows flex child to shrink below content size */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {children}
-        </main>
+        </div>
       </SidebarInset>
 
       {/* Command palette overlay */}

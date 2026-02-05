@@ -459,6 +459,7 @@ export default function ChatPage() {
                   <Message
                     key={message.id}
                     from={message.role as "user" | "assistant"}
+                    className="message-item"
                   >
                     {message.role === "user" ? (
                       <MessageContent>
@@ -500,8 +501,8 @@ export default function ChatPage() {
             <ConversationScrollButton />
           </Conversation>
 
-          {/* Input area */}
-          <div className="shrink-0 border-t bg-background p-4">
+          {/* Input area - safe-bottom for notched devices */}
+          <div className="shrink-0 border-t bg-background p-4 safe-bottom">
             {messages.length === 0 && (
               <Suggestions className="mb-3">
                 <Suggestion
