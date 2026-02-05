@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 10 - Progress Streaming (not started)
+**Current focus:** Phase 10 - Progress Streaming (in progress)
 
 ## Current Position
 
 Phase: 10 of 11 (Progress Streaming)
-Plan: 0 of TBD in current phase
-Status: Phase not started
-Last activity: 2026-02-05 - Phase 9 (Pipeline Orchestration) verified complete
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-05 - Completed 10-01-PLAN.md (Realtime Infrastructure Foundation)
 
-Progress: [████████████████████████████████████████] 100% (39 plans of 39 total)
+Progress: [█████████████████████████████████████████░░░] 93% (40 plans of 43 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 39
+- Total plans completed: 40
 - Average duration: 4.3 min
-- Total execution time: 168.2 min
+- Total execution time: 173.0 min
 
 **By Phase:**
 
@@ -37,9 +37,11 @@ Progress: [███████████████████████
 | 08 | 4 | 16.2 min | 4.1 min |
 | 09 | 7 | 20.6 min | 2.9 min |
 
+| 10 | 1 | 4.8 min | 4.8 min |
+
 **Recent Trend:**
-- Last 5 plans: 09-04 (1.5 min), 09-05 (2.7 min), 09-07 (2.7 min), 09-06 (4.0 min)
-- Trend: Phase 09 complete - all plans consistently fast (~1.5-5 min)
+- Last 5 plans: 09-05 (2.7 min), 09-07 (2.7 min), 09-06 (4.0 min), 10-01 (4.8 min)
+- Trend: Phase 10 started - first plan on track
 
 *Updated after each plan completion*
 
@@ -151,6 +153,9 @@ Recent decisions affecting current work:
 - [09-07]: setTimeout(0) for initial fetch to satisfy react-hooks/set-state-in-effect lint rule
 - [09-07]: No barrel export in components/debug/ per project convention
 - [09-07]: Step statuses derived from progressStage and analysis status (no additional DB columns)
+- [10-01]: No @inngest/realtime exports in inngest/index.ts barrel (barrel export anti-pattern)
+- [10-01]: generateAnalysisToken has no auth checks; callers verify ownership (shared by two auth mechanisms)
+- [10-01]: Channel scoping: analysis:{analysisId} per analysis for progress isolation
 
 ### Pending Todos
 
@@ -158,10 +163,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Research]: Phase 10 (SSE) may need Inngest Realtime vs custom SSE evaluation
+- [Resolved]: Phase 10 SSE evaluation complete - using Inngest Realtime (not custom SSE)
 
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Phase 9 verified complete. Phase 10 (Progress Streaming) ready to start.
+Stopped at: Completed 10-01-PLAN.md (Realtime Infrastructure Foundation)
 Resume file: None
