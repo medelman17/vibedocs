@@ -80,6 +80,7 @@
     "gpt-tokenizer": "^3.4.0",
     "inngest": "^3.50.0",
     "input-otp": "^1.4.2",
+    "llama-tokenizer-js": "^1.2.2",
     "lru-cache": "^11.2.5",
     "lucide-react": "^0.563.0",
     "mammoth": "^1.11.0",
