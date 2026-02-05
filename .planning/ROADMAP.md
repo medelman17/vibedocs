@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Gap Analysis** - Identify missing clauses, explain importance, suggest language
 - [x] **Phase 9: Pipeline Orchestration** - Wrap agents in Inngest steps, emit progress events, support cancellation
 - [x] **Phase 10: Progress Streaming** - Inngest Realtime for real-time UI updates, Word Add-in consumption
-- [ ] **Phase 11: Document Rendering** - Display extracted documents with clause highlighting in UI
+- [x] **Phase 11: Document Rendering** - Display extracted documents with clause highlighting in UI
 
 ## Phase Details
 
@@ -220,11 +220,11 @@ Plans:
 - [x] 11-01-PLAN.md -- Data layer: text-to-markdown conversion with offset mapping (TDD)
 - [x] 11-02-PLAN.md -- Clause selection store and document search hook
 - [x] 11-03-PLAN.md -- Document renderer with virtual scrolling, clause highlights, search
-- [ ] 11-04-PLAN.md -- Analysis panel tab refactor (extract from monolithic AnalysisView)
-- [ ] 11-05-PLAN.md -- Split-panel layout, /analysis/[analysisId] route, chat navigation
-- [ ] 11-06-PLAN.md -- Chat tab integration with "Ask about this" clause flow
-- [ ] 11-07-PLAN.md -- Bidirectional scroll navigation and keyboard controls
-- [ ] 11-08-PLAN.md -- Progressive reveal, URL state, responsive layout, visual verification
+- [x] 11-04-PLAN.md -- Analysis panel tab refactor (extract from monolithic AnalysisView)
+- [x] 11-05-PLAN.md -- Split-panel layout, /analysis/[analysisId] route, chat navigation
+- [x] 11-06-PLAN.md -- Chat tab integration with "Ask about this" clause flow
+- [x] 11-07-PLAN.md -- Bidirectional scroll navigation and keyboard controls
+- [x] 11-08-PLAN.md -- Progressive reveal, URL state, responsive layout, visual verification
 
 ## Progress
 
@@ -243,8 +243,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 8. Gap Analysis | 4/4 | Complete | 2026-02-05 |
 | 9. Pipeline Orchestration | 7/7 | Complete | 2026-02-05 |
 | 10. Progress Streaming | 4/4 | Complete | 2026-02-05 |
-| 11. Document Rendering | 3/8 | In Progress | - |
+| 11. Document Rendering | 8/8 | Complete | 2026-02-05 |
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-05 (Phase 11 plans 01-03 complete)*
+*Last updated: 2026-02-05 (All phases complete - milestone finished)*
