@@ -67,10 +67,11 @@ import { documents, documentChunks } from "./documents"
 /**
  * Analysis processing status values.
  *
- * @typedef {'pending' | 'processing' | 'completed' | 'failed'} AnalysisStatus
+ * @typedef {'pending' | 'pending_ocr' | 'processing' | 'completed' | 'failed'} AnalysisStatus
  *
  * Status progression:
  * - **pending**: Analysis queued, awaiting processing
+ * - **pending_ocr**: Document requires OCR before analysis can proceed
  * - **processing**: Inngest workflow actively running agents
  * - **completed**: All agents finished successfully
  * - **failed**: Pipeline encountered unrecoverable error
@@ -344,6 +345,44 @@ export const analyses = pgTable(
      * JSONB structure may include: { userPrompt?: string, ... }
      */
     metadata: jsonb("metadata").default({}),
+
+    // OCR Processing Fields (for scanned documents)
+    // ==============================================
+
+    /**
+     * OCR-extracted text (if document required OCR processing).
+     *
+     * Populated by the ocr-document Inngest function when a scanned
+     * PDF is detected. Null for documents that extracted text normally.
+     *
+     * @see {@link lib/ocr/ocr-processor.ts|OCR Processor}
+     */
+    ocrText: text("ocr_text"),
+
+    /**
+     * Average OCR confidence score (0-100).
+     *
+     * Tesseract provides per-page confidence; this is the average.
+     * - >= 85: Good quality, no warning
+     * - 60-84: Low quality, show warning
+     * - < 60: Critical quality, may be unusable
+     */
+    ocrConfidence: real("ocr_confidence"),
+
+    /**
+     * User-facing warning message about OCR quality.
+     *
+     * Null if OCR quality is acceptable (>= 85% confidence).
+     * Displayed in UI to inform user about potential accuracy issues.
+     */
+    ocrWarning: text("ocr_warning"),
+
+    /**
+     * Timestamp when OCR processing completed.
+     *
+     * Tracks OCR-specific timing separately from overall completion.
+     */
+    ocrCompletedAt: timestamp("ocr_completed_at", { withTimezone: true }),
 
     /**
      * Timestamp when analysis completed successfully.
