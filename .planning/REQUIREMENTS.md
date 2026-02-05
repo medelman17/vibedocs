@@ -62,11 +62,11 @@ Requirements for the analysis pipeline milestone. Each maps to roadmap phases.
 
 ### Gap Analysis
 
-- [ ] **GAP-01**: Compare extracted categories against full CUAD 41-category taxonomy
-- [ ] **GAP-02**: Identify missing categories relevant to NDAs
-- [ ] **GAP-03**: Explain importance of each missing clause type
-- [ ] **GAP-04**: Retrieve recommended language from Bonterms/CommonAccord templates
-- [ ] **GAP-05**: Compare against Bonterms baseline for gap severity
+- [x] **GAP-01**: Compare extracted categories against full CUAD 41-category taxonomy
+- [x] **GAP-02**: Identify missing categories relevant to NDAs
+- [x] **GAP-03**: Explain importance of each missing clause type
+- [x] **GAP-04**: Retrieve recommended language from Bonterms/CommonAccord templates
+- [x] **GAP-05**: Compare against Bonterms baseline for gap severity
 
 ### Pipeline Orchestration
 
@@ -173,11 +173,11 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | RSK-04 | Phase 7 | Pending |
 | RSK-05 | Phase 7 | Pending |
 | RSK-06 | Phase 7 | Pending |
-| GAP-01 | Phase 8 | Pending |
-| GAP-02 | Phase 8 | Pending |
-| GAP-03 | Phase 8 | Pending |
-| GAP-04 | Phase 8 | Pending |
-| GAP-05 | Phase 8 | Pending |
+| GAP-01 | Phase 8 | Complete |
+| GAP-02 | Phase 8 | Complete |
+| GAP-03 | Phase 8 | Complete |
+| GAP-04 | Phase 8 | Complete |
+| GAP-05 | Phase 8 | Complete |
 | PIP-01 | Phase 9 | Pending |
 | PIP-02 | Phase 9 | Pending |
 | PIP-03 | Phase 9 | Pending |

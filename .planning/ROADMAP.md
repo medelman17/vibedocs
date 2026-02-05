@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Legal Chunking** - Split into legal-aware chunks, embed with Voyage AI, store in tenant DB
 - [x] **Phase 6: CUAD Classification** - Classify chunks against 41-category taxonomy with confidence scoring
 - [x] **Phase 7: Risk Scoring** - Assign risk levels with evidence-grounded explanations and citations
-- [ ] **Phase 8: Gap Analysis** - Identify missing clauses, explain importance, suggest language
+- [x] **Phase 8: Gap Analysis** - Identify missing clauses, explain importance, suggest language
 - [ ] **Phase 9: Pipeline Orchestration** - Wrap agents in Inngest steps, emit progress events, support cancellation
 - [ ] **Phase 10: Progress Streaming** - SSE endpoint for real-time UI updates, Word Add-in consumption
 - [ ] **Phase 11: Document Rendering** - Display extracted documents with clause highlighting in UI
@@ -161,10 +161,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Enhanced gap analysis types and schemas
-- [ ] 08-02-PLAN.md — Agent prompts and core logic enhancement (template retrieval, two-tier detection)
-- [ ] 08-03-PLAN.md — Pipeline persistence, queries, and server action
-- [ ] 08-04-PLAN.md — GapsView UI with coverage summary, gap cards, and copy functionality
+- [x] 08-01-PLAN.md — Enhanced gap analysis types and schemas
+- [x] 08-02-PLAN.md — Agent prompts and core logic enhancement (template retrieval, two-tier detection)
+- [x] 08-03-PLAN.md — Pipeline persistence, queries, and server action
+- [x] 08-04-PLAN.md — GapsView UI with coverage summary, gap cards, and copy functionality
 
 ### Phase 9: Pipeline Orchestration
 **Goal**: Full pipeline runs durably with progress events and supports cancellation
@@ -224,11 +224,11 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 5. Legal Chunking | 3/3 | Complete | 2026-02-05 |
 | 6. CUAD Classification | 4/4 | Complete | 2026-02-05 |
 | 7. Risk Scoring | 4/4 | Complete | 2026-02-05 |
-| 8. Gap Analysis | 0/TBD | Not started | - |
+| 8. Gap Analysis | 4/4 | Complete | 2026-02-05 |
 | 9. Pipeline Orchestration | 0/TBD | Not started | - |
 | 10. Progress Streaming | 0/TBD | Not started | - |
 | 11. Document Rendering | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-05 (Phase 7 complete)*
+*Last updated: 2026-02-05 (Phase 8 complete)*
