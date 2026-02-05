@@ -25,9 +25,13 @@ import { useAnalysisProgress } from "@/hooks/use-analysis-progress"
 import {
   getAnalysis,
   getAnalysisClauses,
+  getAnalysisClassifications,
   type Analysis,
   type ClauseExtraction,
+  type ChunkClassificationRow,
+  type ClassificationsByCategory,
 } from "@/app/(main)/(dashboard)/analyses/actions"
+import { CLASSIFICATION_THRESHOLDS } from "@/agents/types"
 
 type RiskLevel = "standard" | "cautious" | "aggressive" | "unknown"
 
@@ -151,6 +155,206 @@ function ClauseCard({ clause }: { clause: ClauseExtraction }) {
   )
 }
 
+// ============================================================================
+// Classification Components
+// ============================================================================
+
+function ConfidenceBadge({ confidence }: { confidence: number }) {
+  const isLow = confidence < CLASSIFICATION_THRESHOLDS.LOW_CONFIDENCE
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "gap-1 text-xs",
+        isLow &&
+          "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-600 dark:bg-amber-950 dark:text-amber-400"
+      )}
+    >
+      {isLow && <AlertTriangleIcon className="size-3" />}
+      {Math.round(confidence * 100)}%
+      {isLow && " Review"}
+    </Badge>
+  )
+}
+
+function ClassificationCard({
+  classification,
+}: {
+  classification: ChunkClassificationRow
+}) {
+  const [open, setOpen] = React.useState(false)
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card className="min-w-0">
+        <CardHeader className="pb-2">
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <div className="min-w-0">
+              <CardTitle className="min-w-0 truncate text-sm font-medium">
+                {classification.category}
+              </CardTitle>
+              {!classification.isPrimary && (
+                <span className="text-xs text-muted-foreground">Secondary</span>
+              )}
+            </div>
+            <ConfidenceBadge confidence={classification.confidence} />
+          </div>
+          {classification.rationale && (
+            <p className="line-clamp-2 text-sm text-muted-foreground">
+              {classification.rationale}
+            </p>
+          )}
+        </CardHeader>
+        <CardContent className="pt-0">
+          <CollapsibleTrigger className="flex w-full items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            {open ? (
+              <ChevronDownIcon className="size-3" />
+            ) : (
+              <ChevronRightIcon className="size-3" />
+            )}
+            {open ? "Hide details" : "Show chunk"}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-3">
+            <p className="text-xs text-muted-foreground">
+              Chunk {classification.chunkIndex + 1}
+              {classification.startPosition != null &&
+                ` (pos ${classification.startPosition}-${classification.endPosition})`}
+            </p>
+          </CollapsibleContent>
+        </CardContent>
+      </Card>
+    </Collapsible>
+  )
+}
+
+function CategoryGroupView({
+  groups,
+}: {
+  groups: ClassificationsByCategory[]
+}) {
+  if (groups.length === 0) {
+    return (
+      <p className="text-center text-sm text-muted-foreground">
+        No classifications found.
+      </p>
+    )
+  }
+  return (
+    <div className="space-y-4">
+      {groups.map((group) => (
+        <div key={group.category}>
+          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+            {group.category}
+            <Badge variant="secondary" className="text-xs">
+              {group.classifications.length}
+            </Badge>
+          </h4>
+          <div className="space-y-2 pl-2">
+            {group.classifications.map((c) => (
+              <ClassificationCard key={c.id} classification={c} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DocumentOrderView({
+  classifications,
+}: {
+  classifications: ChunkClassificationRow[]
+}) {
+  if (classifications.length === 0) {
+    return (
+      <p className="text-center text-sm text-muted-foreground">
+        No classifications found.
+      </p>
+    )
+  }
+  return (
+    <div className="space-y-2">
+      {classifications.map((c) => (
+        <ClassificationCard key={c.id} classification={c} />
+      ))}
+    </div>
+  )
+}
+
+function ClassificationView({ analysisId }: { analysisId: string }) {
+  const [view, setView] = React.useState<"category" | "position">("category")
+  const [categoryData, setCategoryData] = React.useState<
+    ClassificationsByCategory[]
+  >([])
+  const [positionData, setPositionData] = React.useState<
+    ChunkClassificationRow[]
+  >([])
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    setLoading(true)
+    getAnalysisClassifications(analysisId, view)
+      .then((result) => {
+        if (result.success) {
+          if (view === "category") {
+            setCategoryData(result.data as ClassificationsByCategory[])
+          } else {
+            setPositionData(result.data as ChunkClassificationRow[])
+          }
+        }
+      })
+      .finally(() => setLoading(false))
+  }, [analysisId, view])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <Loader2Icon className="size-5 animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Toggle */}
+      <div className="flex gap-1 rounded-md border p-1">
+        <button
+          className={cn(
+            "flex-1 rounded px-3 py-1.5 text-xs font-medium transition-colors",
+            view === "category"
+              ? "bg-primary text-primary-foreground"
+              : "hover:bg-muted"
+          )}
+          onClick={() => setView("category")}
+        >
+          By Category
+        </button>
+        <button
+          className={cn(
+            "flex-1 rounded px-3 py-1.5 text-xs font-medium transition-colors",
+            view === "position"
+              ? "bg-primary text-primary-foreground"
+              : "hover:bg-muted"
+          )}
+          onClick={() => setView("position")}
+        >
+          Document Order
+        </button>
+      </div>
+
+      {/* Content */}
+      {view === "category" ? (
+        <CategoryGroupView groups={categoryData} />
+      ) : (
+        <DocumentOrderView classifications={positionData} />
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Progress & Error Views
+// ============================================================================
+
 function ProgressView({ stage, progress }: { stage: string; progress: number }) {
   return (
     <div className="flex h-full flex-col items-center justify-center p-8">
@@ -272,6 +476,14 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
             Overall Risk Score: {analysis.overallRiskScore.toFixed(1)}%
           </p>
         )}
+      </div>
+
+      {/* Classification results */}
+      <div className="border-b px-4 py-3">
+        <h4 className="mb-3 text-sm font-medium text-muted-foreground">
+          CUAD Classifications
+        </h4>
+        <ClassificationView analysisId={analysisId} />
       </div>
 
       {/* Clause list */}
