@@ -501,8 +501,8 @@ export default function ChatPage() {
             <ConversationScrollButton />
           </Conversation>
 
-          {/* Input area - safe-bottom for notched devices */}
-          <div className="shrink-0 border-t bg-background p-4 safe-bottom">
+          {/* Input area - safe-bottom for notched devices, pb-6 for visual breathing room */}
+          <div className="shrink-0 border-t bg-background px-4 pt-4 pb-6 safe-bottom">
             {messages.length === 0 && (
               <Suggestions className="mb-3">
                 <Suggestion
@@ -554,7 +554,7 @@ export default function ChatPage() {
                     <AttachmentPreview />
                   </PromptInputHeader>
                   <PromptInputTextarea
-                    placeholder="Ask about NDAs or upload a document... (try /help)"
+                    placeholder="Message VibeDocs..."
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                   />
