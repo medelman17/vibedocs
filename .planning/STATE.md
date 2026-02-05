@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 6 - CUAD Classification (complete)
+**Current focus:** Phase 7 - Risk Scoring (in progress)
 
 ## Current Position
 
-Phase: 6 of 11 (CUAD Classification)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-05 - Completed 06-04-PLAN.md (Classification Queries & UI)
+Phase: 7 of 11 (Risk Scoring)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-05 - Completed 07-01-PLAN.md (Risk Assessment Schema & Types)
 
-Progress: [█████████████████░] ~77% (24 plans of ~31 total)
+Progress: [██████████████████░] ~81% (25 plans of ~31 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
-- Average duration: 4.5 min
-- Total execution time: 108.5 min
+- Total plans completed: 25
+- Average duration: 4.6 min
+- Total execution time: 116.4 min
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [█████████████████░] ~77% (24 plan
 | 04 | 5 | 15.5 min | 3.1 min |
 | 05 | 3 | 18.3 min | 6.1 min |
 | 06 | 4 | 18.2 min | 4.6 min |
+| 07 | 1 | 7.9 min | 7.9 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-01 (4.2 min), 06-02 (7.3 min), 06-03 (2.1 min), 06-04 (4.6 min)
-- Trend: Phase 6 complete; UI + query plans consistently fast
+- Last 5 plans: 06-02 (7.3 min), 06-03 (2.1 min), 06-04 (4.6 min), 07-01 (7.9 min)
+- Trend: Schema/type plans take slightly longer due to careful backward compatibility
 
 *Updated after each plan completion*
 
@@ -111,6 +112,10 @@ Recent decisions affecting current work:
 - [06-04]: Classification queries use shared db client directly (existing db/queries pattern, tenantId filtering explicit)
 - [06-04]: ClassificationView fetches via useEffect on mount/toggle (matches existing AnalysisView pattern)
 - [06-04]: No barrel export for db/queries/classifications (import directly per CLAUDE.md)
+- [07-01]: Keep original riskAssessmentSchema alongside enhancedRiskAssessmentSchema for backward compatibility
+- [07-01]: Bridge transformation from legacy to enhanced evidence in risk-scorer.ts (removed in Plan 02)
+- [07-01]: executiveSummary initialized to empty string placeholder (populated in Plan 03)
+- [07-01]: computeRiskDistribution uses explicit object literal initialization (no RISK_LEVELS runtime dep)
 
 ### Pending Todos
 
@@ -123,6 +128,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T06:21:00Z
-Stopped at: Completed 06-04-PLAN.md (Classification Queries & UI) - Phase 6 complete
+Last session: 2026-02-05T07:47:00Z
+Stopped at: Completed 07-01-PLAN.md (Risk Assessment Schema & Types)
 Resume file: None
