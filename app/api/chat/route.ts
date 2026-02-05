@@ -89,6 +89,19 @@ export async function POST(req: Request) {
       try {
         if (!responseMessage) return
 
+        // Debug: Log incoming message structure
+        const lastMsg = messages[messages.length - 1]
+        console.log("[chat/route] onFinish debug:", {
+          conversationId,
+          messageCount: messages.length,
+          lastMsgRole: lastMsg?.role,
+          lastMsgHasParts: !!lastMsg?.parts,
+          lastMsgPartsLength: lastMsg?.parts?.length ?? 0,
+          lastMsgKeys: lastMsg ? Object.keys(lastMsg) : [],
+          responseMsgHasParts: !!responseMessage.parts,
+          responseMsgPartsLength: responseMessage.parts?.length ?? 0,
+        })
+
         let convId = conversationId
 
         // Create conversation if new
@@ -127,20 +140,41 @@ export async function POST(req: Request) {
         // Persist user message (the one that triggered this response)
         const userMsg = messages[messages.length - 1]
         if (userMsg) {
+          // Ensure parts exist - construct from content if missing
+          let userParts = userMsg.parts
+          if (!userParts || userParts.length === 0) {
+            // Fallback: check if there's a content property (legacy format)
+            const content = (userMsg as unknown as { content?: string }).content
+            if (content) {
+              userParts = [{ type: "text" as const, text: content }]
+            }
+            console.warn("[chat/route] User message missing parts, constructed from content:", {
+              hasContent: !!content,
+              messageKeys: Object.keys(userMsg)
+            })
+          }
+
           await createMessageInternal({
             conversationId: convId,
             role: "user",
-            content: JSON.stringify(userMsg.parts || []),
+            content: JSON.stringify(userParts || []),
             tenantId: tenantContext.tenantId,
             userId: tenantContext.userId,
           })
         }
 
         // Persist assistant response message
+        const assistantParts = responseMessage.parts || []
+        if (assistantParts.length === 0) {
+          console.warn("[chat/route] Assistant response has no parts:", {
+            messageKeys: Object.keys(responseMessage)
+          })
+        }
+
         await createMessageInternal({
           conversationId: convId,
           role: "assistant",
-          content: JSON.stringify(responseMessage.parts || []),
+          content: JSON.stringify(assistantParts),
           tenantId: tenantContext.tenantId,
           userId: tenantContext.userId,
         })
