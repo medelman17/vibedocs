@@ -5,8 +5,8 @@
  * whenever an Inngest function is cancelled via `cancelOn`. Updates the
  * analysis status to 'cancelled' in the database.
  *
- * This is a system event handler - `inngest/function.cancelled` is NOT
- * added to the InngestEvents type map since it's an Inngest internal event.
+ * This is a system event handler - `inngest/function.cancelled` is an
+ * Inngest internal event recognized via realtimeMiddleware type augmentation.
  *
  * @module inngest/functions/cleanup-cancelled
  */
@@ -32,7 +32,6 @@ export const cleanupCancelledAnalysis = inngest.createFunction(
     name: "Cleanup After Cancelled Analysis",
     retries: RETRY_CONFIG.nonCritical.retries,
   },
-  // @ts-expect-error -- inngest/function.cancelled is a system event not in InngestEvents
   { event: "inngest/function.cancelled" },
   async ({ event, step }) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

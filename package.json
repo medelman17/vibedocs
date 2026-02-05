@@ -28,6 +28,7 @@
     "@base-ui/react": "^1.1.0",
     "@dsnp/parquetjs": "^1.8.7",
     "@hookform/resolvers": "^5.2.2",
+    "@inngest/realtime": "^0.4.5",
     "@neondatabase/serverless": "^1.0.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",

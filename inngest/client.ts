@@ -9,6 +9,7 @@
  */
 
 import { Inngest, EventSchemas } from "inngest"
+import { realtimeMiddleware } from "@inngest/realtime/middleware"
 import type { InngestEvents } from "./types"
 
 /**
@@ -43,6 +44,7 @@ import type { InngestEvents } from "./types"
 export const inngest = new Inngest({
   id: "nda-analyst",
   schemas: new EventSchemas().fromRecord<InngestEvents>(),
+  middleware: [realtimeMiddleware()],
 })
 
 /**
