@@ -256,6 +256,50 @@ export const bootstrapSourceCompletedPayload = z.object({
   errorCount: z.number().int().nonnegative(),
 });
 
+// =============================================================================
+// OCR Events
+// =============================================================================
+
+/**
+ * OCR processing request event - triggers OCR for scanned documents.
+ * Sent when extraction detects a document that requires OCR processing.
+ */
+export const ocrRequestedPayload = baseTenantPayload.extend({
+  /** Document requiring OCR */
+  documentId: z.string().uuid(),
+  /** Analysis record ID (pre-created with status='pending_ocr') */
+  analysisId: z.string().uuid(),
+});
+
+/**
+ * OCR quality assessment result structure.
+ */
+export const ocrQualityPayload = z.object({
+  /** Average confidence 0-100 */
+  confidence: z.number().min(0).max(100),
+  /** True if warning should be shown to user */
+  isLowQuality: z.boolean(),
+  /** User-facing warning message (if applicable) */
+  warningMessage: z.string().optional(),
+  /** Pages with confidence below threshold */
+  affectedPages: z.array(z.number().int().positive()),
+});
+
+/**
+ * OCR processing completed event - triggers pipeline continuation.
+ * Sent after OCR extracts text from a scanned document.
+ */
+export const ocrCompletedPayload = baseTenantPayload.extend({
+  /** Processed document ID */
+  documentId: z.string().uuid(),
+  /** Analysis record ID */
+  analysisId: z.string().uuid(),
+  /** OCR-extracted text */
+  ocrText: z.string(),
+  /** OCR quality assessment */
+  quality: ocrQualityPayload,
+});
+
 /**
  * Analysis cancelled event - triggers cancellation of running analysis.
  * Sent when user deletes document or explicitly cancels analysis.
@@ -299,6 +343,13 @@ export type InngestEvents = {
   };
   "nda/comparison.requested": {
     data: z.infer<typeof comparisonRequestedPayload>;
+  };
+  // OCR events
+  "nda/ocr.requested": {
+    data: z.infer<typeof ocrRequestedPayload>;
+  };
+  "nda/analysis.ocr-complete": {
+    data: z.infer<typeof ocrCompletedPayload>;
   };
   // Demo events
   "demo/process": {
@@ -352,6 +403,9 @@ export type BootstrapSourceProcessPayload = z.infer<
 export type BootstrapSourceCompletedPayload = z.infer<
   typeof bootstrapSourceCompletedPayload
 >;
+export type OcrRequestedPayload = z.infer<typeof ocrRequestedPayload>;
+export type OcrCompletedPayload = z.infer<typeof ocrCompletedPayload>;
+export type OcrQualityPayload = z.infer<typeof ocrQualityPayload>;
 
 /**
  * Map of event names to their Zod schemas for runtime validation.
@@ -364,6 +418,9 @@ export const eventSchemas = {
   "nda/analysis.cancelled": analysisCancelledPayload,
   "nda/document.deleted": documentDeletedPayload,
   "nda/comparison.requested": comparisonRequestedPayload,
+  // OCR events
+  "nda/ocr.requested": ocrRequestedPayload,
+  "nda/analysis.ocr-complete": ocrCompletedPayload,
   // Demo events
   "demo/process": demoProcessPayload,
   "demo/multi-step": demoMultiStepPayload,
