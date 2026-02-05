@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 12 of 12 (Admin Document CRUD)
-Plan: 0 of 0 in current phase
-Status: Not started - needs planning
-Last activity: 2026-02-05 - Phase 12 added to roadmap
+Plan: 1 of TBD in current phase
+Status: In progress
+Last activity: 2026-02-05 - Completed 12-01-PLAN.md
 
-Progress: [██████████████████████████████████████████████████] 100% (51 plans of 51 total)
-**Next Phase:** Phase 12 - Admin Document CRUD (not yet planned)
+Progress: [██████████████████████████████████████████████████░] 98% (52 plans of 53 total)
+**Next Phase:** Phase 12 Plan 02 - Admin Data Table UI
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 51
-- Average duration: 4.9 min
-- Total execution time: 248.4 min
+- Total plans completed: 52
+- Average duration: 5.0 min
+- Total execution time: 258.4 min
 
 **By Phase:**
 
@@ -37,14 +37,13 @@ Progress: [███████████████████████
 | 07 | 4 | 22.9 min | 5.7 min |
 | 08 | 4 | 16.2 min | 4.1 min |
 | 09 | 7 | 20.6 min | 2.9 min |
-
 | 10 | 4 | 24.2 min | 6.1 min |
-
 | 11 | 8 | 56.0 min | 7.0 min |
+| 12 | 1 | 10.0 min | 10.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 11-05 (7.0 min), 11-07 (3.9 min), 11-06 (6.7 min), 11-08 (4.0 min)
-- Trend: Phase 11 complete - all 8 plans executed
+- Last 5 plans: 11-06 (6.7 min), 11-07 (3.9 min), 11-08 (4.0 min), 12-01 (10.0 min)
+- Trend: Phase 12 started - admin server actions foundation complete
 
 *Updated after each plan completion*
 
@@ -192,6 +191,11 @@ Recent decisions affecting current work:
 - [11-08]: URL sync uses prevClauseIdRef to avoid redundant router.replace calls
 - [11-08]: proxy.ts already includes /analysis in protectedRoutes - no changes needed
 - [11-08]: Responsive layout already handled by useIsMobile from 11-05 - no changes needed
+- [12-01]: Admin actions use requireRole(['admin', 'owner']) not withTenant, no uploadedBy filter
+- [12-01]: Hard delete with cascade cleanup - comparisons deleted before document (documentAId and documentBId)
+- [12-01]: Blob file deleted before DB row to avoid orphaned files
+- [12-01]: Admin can delete last analysis (no guard unlike dashboard)
+- [12-01]: Inngest source field uses "web" for admin-triggered analyses (enum constraint)
 
 ### Pending Todos
 
@@ -207,6 +211,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-05T20:30:00Z
-Stopped at: Milestone complete - all 11 phases delivered (51 plans)
+Last session: 2026-02-05T23:11:01Z
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
