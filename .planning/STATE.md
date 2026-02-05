@@ -158,6 +158,9 @@ Recent decisions affecting current work:
 - [10-01]: Channel scoping: analysis:{analysisId} per analysis for progress isolation
 - [10-02]: publish() outside step.run() - fire-and-forget, at-most-once delivery acceptable
 - [10-02]: 1s throttle with terminal bypass for realtime publish (per CONTEXT.md)
+- [10-03]: fetchRealtimeToken throws on error (not ApiResponse) for useInngestSubscription refreshToken compatibility
+- [10-03]: Degraded polling at 5s (was 2s) when realtime unavailable
+- [10-03]: Late-join DB snapshot on mount before realtime subscription starts
 - [10-04]: Track disconnectedFor analysisId instead of boolean flag (React 19 ref-in-render prohibition)
 - [10-04]: Derive progress via useMemo not setState in effect (React 19 set-state-in-effect rule)
 - [10-04]: setTimeout(0) for terminal stage auto-disconnect (cannot setState in useMemo body)
