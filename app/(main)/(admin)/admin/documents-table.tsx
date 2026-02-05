@@ -23,6 +23,7 @@ import {
   useReactTable,
   type SortingState,
   type RowSelectionState,
+  type Table as TanstackTable,
 } from "@tanstack/react-table"
 import { ChevronUp, ChevronDown, FileIcon } from "lucide-react"
 import { columns, type AdminDocument } from "./columns"
@@ -398,7 +399,7 @@ export function DocumentsTable({
 }
 
 // Export selected row IDs for use by parent (toolbar)
-export function useSelectedRows(table: ReturnType<typeof useReactTable>) {
+export function useSelectedRows(table: TanstackTable<AdminDocument>) {
   return React.useMemo(() => {
     const selection = table.getState().rowSelection
     return Object.keys(selection)

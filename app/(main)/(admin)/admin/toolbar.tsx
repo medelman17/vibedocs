@@ -48,8 +48,8 @@ export function Toolbar({ selectedCount, onBulkDelete }: ToolbarProps) {
   )
 
   // Read current filter values from URL
-  const currentStatus = searchParams.get("status") ?? ""
-  const currentFileType = searchParams.get("fileType") ?? ""
+  const currentStatus = searchParams.get("status") ?? "all"
+  const currentFileType = searchParams.get("fileType") ?? "all"
   const currentDateRange = searchParams.get("dateRange") ?? "all"
 
   // Debounced search effect
@@ -100,7 +100,7 @@ export function Toolbar({ selectedCount, onBulkDelete }: ToolbarProps) {
           <SelectValue placeholder="All statuses" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All statuses</SelectItem>
+          <SelectItem value="all">All statuses</SelectItem>
           <SelectItem value="pending">Pending</SelectItem>
           <SelectItem value="parsing">Processing</SelectItem>
           <SelectItem value="ready">Complete</SelectItem>
@@ -118,7 +118,7 @@ export function Toolbar({ selectedCount, onBulkDelete }: ToolbarProps) {
           <SelectValue placeholder="All types" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All types</SelectItem>
+          <SelectItem value="all">All types</SelectItem>
           <SelectItem value="application/pdf">PDF</SelectItem>
           <SelectItem value="application/vnd.openxmlformats-officedocument.wordprocessingml.document">
             DOCX

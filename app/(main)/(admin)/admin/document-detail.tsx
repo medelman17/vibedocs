@@ -27,6 +27,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -237,7 +238,13 @@ export function DocumentDetail({
     <Sheet open={documentId !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         {loading ? (
-          <LoadingSkeleton />
+          <>
+            <SheetHeader className="sr-only">
+              <SheetTitle>Loading document</SheetTitle>
+              <SheetDescription>Loading document details</SheetDescription>
+            </SheetHeader>
+            <LoadingSkeleton />
+          </>
         ) : document ? (
           <>
             {/* Header: Title + Status */}
@@ -413,16 +420,23 @@ export function DocumentDetail({
               </div>
 
               {/* Error Info */}
-              {document.status === "failed" && document.metadata && typeof document.metadata === "object" && "errorMessage" in document.metadata && typeof (document.metadata as { errorMessage: unknown }).errorMessage === "string" && (
-                <div>
-                  <h3 className="text-sm font-medium mb-3">Error Info</h3>
-                  <Alert variant="destructive">
-                    <AlertDescription className="text-sm">
-                      {(document.metadata as { errorMessage: string }).errorMessage}
-                    </AlertDescription>
-                  </Alert>
-                </div>
-              )}
+              {document.status === "failed" && (() => {
+                const meta = document.metadata as Record<string, unknown> | null
+                const errMsg = meta && typeof meta === "object" && "errorMessage" in meta
+                  ? String(meta.errorMessage)
+                  : null
+                if (!errMsg) return null
+                return (
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">Error Info</h3>
+                    <Alert variant="destructive">
+                      <AlertDescription className="text-sm">
+                        {errMsg}
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )
+              })()}
             </div>
           </>
         ) : null}
