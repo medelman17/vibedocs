@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 5 - Legal Chunking (in progress)
+**Current focus:** Phase 5 - Legal Chunking (COMPLETE)
 
 ## Current Position
 
 Phase: 5 of 11 (Legal Chunking)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-05 - Completed 05-02-PLAN.md (Legal Chunker Engine)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-05 - Completed 05-03-PLAN.md (Pipeline Integration)
 
-Progress: [████████████░] ~61% (19 plans of ~31 total)
+Progress: [█████████████░] ~65% (20 plans of ~31 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
-- Average duration: 4.3 min
-- Total execution time: 81.3 min
+- Total plans completed: 20
+- Average duration: 4.5 min
+- Total execution time: 90.3 min
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [████████████░] ~61% (19 plans of ~31 total)
 | 02 | 4 | 19.5 min | 4.9 min |
 | 03 | 5 | 28.5 min | 5.7 min |
 | 04 | 5 | 15.5 min | 3.1 min |
-| 05 | 2 | 9.3 min | 4.7 min |
+| 05 | 3 | 18.3 min | 6.1 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-04 (4 min), 04-05 (2 min), 05-01 (3.2 min), 05-02 (6.1 min)
-- Trend: Phase 05 chunker engine largest plan yet - six strategies plus post-processing
+- Last 5 plans: 04-05 (2 min), 05-01 (3.2 min), 05-02 (6.1 min), 05-03 (9.0 min)
+- Trend: Phase 05 pipeline integration was the most complex plan yet - full pipeline rewrite with chunking/embedding/persistence
 
 *Updated after each plan completion*
 
@@ -70,7 +70,7 @@ Recent decisions affecting current work:
 - [03-02]: Regex patterns for ARTICLE/Section/numbered headings detect "obvious" structure
 - [03-02]: LLM fallback with 50K char limit to prevent token overflow
 - [03-02]: Character positions computed via indexOf with sequential offset tracking
-- [03-03]: Unified extractDocument validates MIME → extract → OCR check → language check in sequence
+- [03-03]: Unified extractDocument validates MIME -> extract -> OCR check -> language check in sequence
 - [03-03]: OcrRequiredError thrown when requiresOcr flag true (unless skipOcrRouting option)
 - [03-03]: Non-English detection throws ValidationError with user-friendly message
 - [03-03]: Structured JSON logging for extraction observability metrics
@@ -98,6 +98,10 @@ Recent decisions affecting current work:
 - [05-02]: chunk-merger.ts and cross-reference.ts created in Task 1 (legal-chunker.ts requires them for compilation)
 - [05-02]: Recital detection via WHEREAS content pattern since SectionType has no 'recital' value
 - [05-02]: LLM re-chunking only replaces initial results when chunk count improves
+- [05-03]: Parser does extraction + structure detection only (chunking/embedding in separate Inngest steps)
+- [05-03]: Token budget estimation runs pre-chunking on raw text with empty chunks array
+- [05-03]: Shared runChunkingPipeline helper with InngestStep type alias for step parameter
+- [05-03]: validateParserOutput chunks parameter made optional (parser no longer produces chunks)
 
 ### Pending Todos
 
@@ -110,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T05:00:00Z
-Stopped at: Completed 05-02-PLAN.md (Legal Chunker Engine)
+Last session: 2026-02-05T05:10:00Z
+Stopped at: Completed 05-03-PLAN.md (Pipeline Integration) - Phase 5 COMPLETE
 Resume file: None

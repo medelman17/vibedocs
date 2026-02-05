@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Budget Protection** - Pre-flight estimation, hard limits, document size caps
 - [x] **Phase 3: Document Extraction** - Extract text from PDF/DOCX, handle failures, support Word Add-in text input
 - [x] **Phase 4: OCR Processing** - Detect and process scanned PDFs, handle quality issues
-- [ ] **Phase 5: Legal Chunking** - Split into legal-aware chunks, embed with Voyage AI, store in tenant DB
+- [x] **Phase 5: Legal Chunking** - Split into legal-aware chunks, embed with Voyage AI, store in tenant DB
 - [ ] **Phase 6: CUAD Classification** - Classify chunks against 41-category taxonomy with confidence scoring
 - [ ] **Phase 7: Risk Scoring** - Assign risk levels with evidence-grounded explanations and citations
 - [ ] **Phase 8: Gap Analysis** - Identify missing clauses, explain importance, suggest language
@@ -109,9 +109,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Infrastructure: types, Voyage AI token counter, schema extensions
-- [ ] 05-02-PLAN.md — Legal chunker: strategies, merging, cross-references, chunk map
-- [ ] 05-03-PLAN.md — Pipeline integration: refactor parser, wire Inngest steps, embed + persist
+- [x] 05-01-PLAN.md — Infrastructure: types, Voyage AI token counter, schema extensions
+- [x] 05-02-PLAN.md — Legal chunker: strategies, merging, cross-references, chunk map
+- [x] 05-03-PLAN.md — Pipeline integration: refactor parser, wire Inngest steps, embed + persist
 
 ### Phase 6: CUAD Classification
 **Goal**: Every chunk classified against CUAD 41-category taxonomy with confidence scores
@@ -212,7 +212,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. Budget Protection | 4/4 | Complete | 2026-02-04 |
 | 3. Document Extraction | 5/5 | Complete | 2026-02-04 |
 | 4. OCR Processing | 5/5 | Complete | 2026-02-04 |
-| 5. Legal Chunking | 0/3 | Not started | - |
+| 5. Legal Chunking | 3/3 | Complete | 2026-02-05 |
 | 6. CUAD Classification | 0/TBD | Not started | - |
 | 7. Risk Scoring | 0/TBD | Not started | - |
 | 8. Gap Analysis | 0/TBD | Not started | - |
@@ -222,4 +222,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-05 (Phase 5 planned)*
+*Last updated: 2026-02-05 (Phase 5 complete)*
