@@ -217,9 +217,9 @@ Plans:
 **Plans**: 8 plans
 
 Plans:
-- [ ] 11-01-PLAN.md -- Data layer: text-to-markdown conversion with offset mapping (TDD)
-- [ ] 11-02-PLAN.md -- Clause selection store and document search hook
-- [ ] 11-03-PLAN.md -- Document renderer with virtual scrolling, clause highlights, search
+- [x] 11-01-PLAN.md -- Data layer: text-to-markdown conversion with offset mapping (TDD)
+- [x] 11-02-PLAN.md -- Clause selection store and document search hook
+- [x] 11-03-PLAN.md -- Document renderer with virtual scrolling, clause highlights, search
 - [ ] 11-04-PLAN.md -- Analysis panel tab refactor (extract from monolithic AnalysisView)
 - [ ] 11-05-PLAN.md -- Split-panel layout, /analysis/[analysisId] route, chat navigation
 - [ ] 11-06-PLAN.md -- Chat tab integration with "Ask about this" clause flow
@@ -243,8 +243,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 8. Gap Analysis | 4/4 | Complete | 2026-02-05 |
 | 9. Pipeline Orchestration | 7/7 | Complete | 2026-02-05 |
 | 10. Progress Streaming | 4/4 | Complete | 2026-02-05 |
-| 11. Document Rendering | 0/8 | Planned | - |
+| 11. Document Rendering | 3/8 | In Progress | - |
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-05 (Phase 11 planned)*
+*Last updated: 2026-02-05 (Phase 11 plans 01-03 complete)*

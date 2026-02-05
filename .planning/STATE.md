@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 11 of 11 (Document Rendering)
-Plan: 3 of 8 in current phase
+Plan: 4 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 11-01-PLAN.md
+Last activity: 2026-02-05 - Completed 11-03-PLAN.md
 
-Progress: [█████████████████████████████████████████████] 90% (46 plans of 51 total)
+Progress: [██████████████████████████████████████████████] 92% (47 plans of 51 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 46
-- Average duration: 4.4 min
-- Total execution time: 203.8 min
+- Total plans completed: 47
+- Average duration: 4.5 min
+- Total execution time: 211.8 min
 
 **By Phase:**
 
@@ -39,11 +39,11 @@ Progress: [███████████████████████
 
 | 10 | 4 | 24.2 min | 6.1 min |
 
-| 11 | 3 | 11.4 min | 3.8 min |
+| 11 | 4 | 19.4 min | 4.9 min |
 
 **Recent Trend:**
-- Last 5 plans: 10-03 (8.5 min), 10-04 (7.0 min), 11-01 (7.6 min), 11-02 (3.8 min)
-- Trend: Phase 11 in progress - 3 of 8 plans executed
+- Last 5 plans: 10-04 (7.0 min), 11-01 (7.6 min), 11-02 (3.8 min), 11-03 (8.0 min)
+- Trend: Phase 11 in progress - 4 of 8 plans executed
 
 *Updated after each plan completion*
 
@@ -172,6 +172,9 @@ Recent decisions affecting current work:
 - [11-01]: Offset map convention: { original: X, markdown: X + cumulativeShift } for absolute positions
 - [11-01]: Markdown conversion is client-side only; server action returns raw data
 - [11-01]: DocumentStructure parsed from document.metadata.structure JSONB with safe fallback
+- [11-03]: useMemo for section tracking instead of useEffect + setState (React 19 pattern)
+- [11-03]: Paper styling uses bg-card semantic token (dark mode adaptive)
+- [11-03]: estimateSize only for virtual scrolling (no measureElement per research pitfall 2)
 
 ### Pending Todos
 
@@ -183,6 +186,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T19:03:31Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-02-05T19:15:00Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None
