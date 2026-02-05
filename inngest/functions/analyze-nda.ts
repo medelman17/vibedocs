@@ -45,6 +45,7 @@ import {
   persistRiskAssessments,
   calculateWeightedRisk,
 } from '@/db/queries/risk-scoring'
+import { analysisChannel } from '@/inngest/channels'
 import type { AnalysisProgressPayload } from '../types'
 
 type ProgressStage = AnalysisProgressPayload['stage']
@@ -307,7 +308,7 @@ export const analyzeNda = inngest.createFunction(
     }],
   },
   { event: 'nda/analysis.requested' },
-  async ({ event, step }) => {
+  async ({ event, step, publish }) => {
     const { documentId, tenantId, source } = event.data
     const content = 'content' in event.data ? event.data.content : undefined
     const metadata = 'metadata' in event.data ? event.data.metadata : undefined
@@ -344,6 +345,7 @@ export const analyzeNda = inngest.createFunction(
       // Helper to emit progress events AND persist to DB
       // Monotonic counter for unique progress step IDs (prevents duplicate step names)
       let progressCounter = 0
+      let lastPublishTime = 0
 
       const emitProgress = async (
         stage: ProgressStage,
@@ -367,18 +369,19 @@ export const analyzeNda = inngest.createFunction(
             .where(eq(analyses.id, analysisId))
         })
 
-        // Also emit event for real-time consumers (future SSE)
-        await step.sendEvent(`emit-progress-${stepSuffix}`, {
-          name: 'nda/analysis.progress',
-          data: {
-            documentId,
-            analysisId,
-            tenantId,
-            stage,
-            progress: clampedProgress,
-            message,
-          },
-        })
+        // Publish to Inngest Realtime (throttled to max 1/sec per CONTEXT.md decision)
+        const now = Date.now()
+        const isTerminal = stage === 'complete' || stage === 'failed' || stage === 'cancelled'
+        if (isTerminal || now - lastPublishTime >= 1000) {
+          await publish(
+            analysisChannel(analysisId).progress({
+              stage,
+              percent: clampedProgress,
+              message,
+            })
+          )
+          lastPublishTime = now
+        }
       }
 
       // Step 2: Parser Agent with extraction error handling
@@ -768,7 +771,7 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
     }],
   },
   { event: 'nda/analysis.ocr-complete' },
-  async ({ event, step }) => {
+  async ({ event, step, publish }) => {
     const { documentId, analysisId, tenantId, ocrText, quality } = event.data
 
     const budgetTracker = new BudgetTracker()
@@ -778,6 +781,7 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
       // Helper to emit progress events AND persist to DB
       // Monotonic counter for unique progress step IDs (prevents duplicate step names)
       let progressCounter = 0
+      let lastPublishTime = 0
 
       const emitProgress = async (
         stage: ProgressStage,
@@ -799,17 +803,19 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
             .where(eq(analyses.id, analysisId))
         })
 
-        await step.sendEvent(`emit-progress-${stepSuffix}`, {
-          name: 'nda/analysis.progress',
-          data: {
-            documentId,
-            analysisId,
-            tenantId,
-            stage,
-            progress: clampedProgress,
-            message,
-          },
-        })
+        // Publish to Inngest Realtime (throttled to max 1/sec per CONTEXT.md decision)
+        const now = Date.now()
+        const isTerminal = stage === 'complete' || stage === 'failed' || stage === 'cancelled'
+        if (isTerminal || now - lastPublishTime >= 1000) {
+          await publish(
+            analysisChannel(analysisId).progress({
+              stage,
+              percent: clampedProgress,
+              message,
+            })
+          )
+          lastPublishTime = now
+        }
       }
 
       // Step 1: Run parser on OCR text
