@@ -4,15 +4,27 @@ import { SAMPLE_GOVERNING_LAW_CLAUSE } from './testing/fixtures'
 import { BudgetTracker } from '@/lib/ai/budget'
 
 // Mock AI SDK generateText with Output.object pattern
+// Now returns batch classification format (multiLabelClassificationSchema)
 vi.mock('ai', () => ({
-  generateText: vi.fn().mockResolvedValue({
-    output: {
-      category: 'Governing Law',
-      secondaryCategories: [],
-      confidence: 0.95,
-      reasoning: 'Explicit jurisdiction designation.',
-    },
-    usage: { inputTokens: 500, outputTokens: 100 },
+  generateText: vi.fn().mockImplementation(({ prompt }: { prompt: string }) => {
+    // Parse chunk indices from the prompt to build matching classifications
+    const chunkMatches = [...prompt.matchAll(/### Chunk \d+ \(index (\d+)\)/g)]
+    const chunkIndices = chunkMatches.map((m) => parseInt(m[1], 10))
+
+    return Promise.resolve({
+      output: {
+        classifications: chunkIndices.map((idx) => ({
+          chunkIndex: idx,
+          primary: {
+            category: 'Governing Law',
+            confidence: 0.95,
+            rationale: 'Explicit jurisdiction designation.',
+          },
+          secondary: [],
+        })),
+      },
+      usage: { inputTokens: 500, outputTokens: 100 },
+    })
   }),
   Output: {
     object: vi.fn().mockReturnValue({}),
@@ -34,7 +46,8 @@ vi.mock('./tools/vector-search', () => ({
     },
     {
       id: 'ref-1',
-      content: 'The validity and interpretation of this Agreement shall be governed by Delaware law.',
+      content:
+        'The validity and interpretation of this Agreement shall be governed by Delaware law.',
       category: 'Governing Law',
       similarity: 0.89,
       source: 'Mock CUAD Document',
@@ -88,6 +101,36 @@ describe('Classifier Agent', () => {
     expect(result.clauses[0].endPosition).toBe(SAMPLE_GOVERNING_LAW_CLAUSE.length)
   })
 
+  it('returns rawClassifications alongside filtered clauses', async () => {
+    const input: ClassifierInput = {
+      parsedDocument: {
+        documentId: 'doc-123',
+        title: 'Test NDA',
+        rawText: SAMPLE_GOVERNING_LAW_CLAUSE,
+        chunks: [
+          {
+            id: 'chunk-0',
+            index: 0,
+            content: SAMPLE_GOVERNING_LAW_CLAUSE,
+            sectionPath: ['ARTICLE V'],
+            tokenCount: 50,
+            startPosition: 0,
+            endPosition: SAMPLE_GOVERNING_LAW_CLAUSE.length,
+            embedding: [0.1, 0.2, 0.3],
+          },
+        ],
+      },
+      budgetTracker,
+    }
+
+    const result = await runClassifierAgent(input)
+
+    expect(result.rawClassifications).toBeDefined()
+    expect(result.rawClassifications.length).toBe(1)
+    expect(result.rawClassifications[0].primary.category).toBe('Governing Law')
+    expect(result.rawClassifications[0].chunkIndex).toBe(0)
+  })
+
   it('records token usage in budget tracker', async () => {
     const input: ClassifierInput = {
       parsedDocument: {
@@ -118,15 +161,22 @@ describe('Classifier Agent', () => {
     expect(usage.byAgent['classifier'].output).toBe(100)
   })
 
-  it('skips low-confidence Unknown classifications', async () => {
-    // Override mock to return low-confidence Unknown
+  it('filters Uncategorized from clauses but keeps in rawClassifications', async () => {
+    // Override mock to return Uncategorized classification
     const { generateText } = await import('ai')
     vi.mocked(generateText).mockResolvedValueOnce({
       output: {
-        category: 'Unknown',
-        secondaryCategories: [],
-        confidence: 0.3,
-        reasoning: 'Unable to classify',
+        classifications: [
+          {
+            chunkIndex: 0,
+            primary: {
+              category: 'Uncategorized',
+              confidence: 0.4,
+              rationale: 'No CUAD category fits this content.',
+            },
+            secondary: [],
+          },
+        ],
       },
       usage: { inputTokens: 500, outputTokens: 100 },
     } as unknown as Awaited<ReturnType<typeof generateText>>)
@@ -154,11 +204,66 @@ describe('Classifier Agent', () => {
 
     const result = await runClassifierAgent(input)
 
-    // Should filter out low-confidence Unknown
+    // Should filter out Uncategorized from clauses
     expect(result.clauses.length).toBe(0)
+    // But keep in rawClassifications
+    expect(result.rawClassifications.length).toBe(1)
+    expect(result.rawClassifications[0].primary.category).toBe('Uncategorized')
   })
 
-  it('processes multiple chunks and preserves positions', async () => {
+  it('applies minimum confidence floor and sets category to Uncategorized', async () => {
+    // Override mock to return below-threshold confidence
+    const { generateText } = await import('ai')
+    vi.mocked(generateText).mockResolvedValueOnce({
+      output: {
+        classifications: [
+          {
+            chunkIndex: 0,
+            primary: {
+              category: 'Governing Law',
+              confidence: 0.2,
+              rationale: 'Very uncertain classification.',
+            },
+            secondary: [{ category: 'Governing Law', confidence: 0.15 }],
+          },
+        ],
+      },
+      usage: { inputTokens: 500, outputTokens: 100 },
+    } as unknown as Awaited<ReturnType<typeof generateText>>)
+
+    const input: ClassifierInput = {
+      parsedDocument: {
+        documentId: 'doc-123',
+        title: 'Test',
+        rawText: 'Borderline text',
+        chunks: [
+          {
+            id: 'chunk-0',
+            index: 0,
+            content: 'Borderline text',
+            sectionPath: [],
+            tokenCount: 5,
+            startPosition: 0,
+            endPosition: 15,
+            embedding: [],
+          },
+        ],
+      },
+      budgetTracker,
+    }
+
+    const result = await runClassifierAgent(input)
+
+    // Below 0.3 threshold -> Uncategorized in raw, filtered from clauses
+    expect(result.clauses.length).toBe(0)
+    expect(result.rawClassifications.length).toBe(1)
+    expect(result.rawClassifications[0].primary.category).toBe('Uncategorized')
+    expect(result.rawClassifications[0].primary.confidence).toBe(0.2)
+    // Secondary below threshold should be filtered out
+    expect(result.rawClassifications[0].secondary.length).toBe(0)
+  })
+
+  it('processes multiple chunks in batches and preserves positions', async () => {
     const input: ClassifierInput = {
       parsedDocument: {
         documentId: 'doc-multi',
@@ -197,5 +302,79 @@ describe('Classifier Agent', () => {
     expect(result.clauses[1].chunkId).toBe('chunk-1')
     expect(result.clauses[0].startPosition).toBe(0)
     expect(result.clauses[1].startPosition).toBe(15)
+  })
+
+  it('batches chunks into groups of 4 (BATCH_SIZE)', async () => {
+    const { generateText } = await import('ai')
+
+    // Create 6 chunks -> should produce 2 batches (4 + 2)
+    const chunks = Array.from({ length: 6 }, (_, i) => ({
+      id: `chunk-${i}`,
+      index: i,
+      content: `Clause ${i} governing law text.`,
+      sectionPath: [`Section ${i}`],
+      tokenCount: 10,
+      startPosition: i * 30,
+      endPosition: (i + 1) * 30,
+      embedding: [0.1 * i],
+    }))
+
+    const input: ClassifierInput = {
+      parsedDocument: {
+        documentId: 'doc-batch',
+        title: 'Batch Test NDA',
+        rawText: chunks.map((c) => c.content).join(' '),
+        chunks,
+      },
+      budgetTracker,
+    }
+
+    await runClassifierAgent(input)
+
+    // Should have been called twice (2 batches: 4 + 2)
+    expect(vi.mocked(generateText)).toHaveBeenCalledTimes(2)
+  })
+
+  it('uses two-stage RAG with vector search per chunk', async () => {
+    const { findSimilarClauses: mockFindSimilar } = await import('./tools/vector-search')
+
+    const input: ClassifierInput = {
+      parsedDocument: {
+        documentId: 'doc-rag',
+        title: 'RAG Test',
+        rawText: 'Clause 1. Clause 2.',
+        chunks: [
+          {
+            id: 'chunk-0',
+            index: 0,
+            content: 'Clause 1.',
+            sectionPath: [],
+            tokenCount: 5,
+            startPosition: 0,
+            endPosition: 9,
+            embedding: [0.1],
+          },
+          {
+            id: 'chunk-1',
+            index: 1,
+            content: 'Clause 2.',
+            sectionPath: [],
+            tokenCount: 5,
+            startPosition: 10,
+            endPosition: 19,
+            embedding: [0.2],
+          },
+        ],
+      },
+      budgetTracker,
+    }
+
+    await runClassifierAgent(input)
+
+    // Should call findSimilarClauses once per chunk (2 chunks in same batch)
+    expect(vi.mocked(mockFindSimilar)).toHaveBeenCalledTimes(2)
+    // Each call should request 7 results
+    expect(vi.mocked(mockFindSimilar)).toHaveBeenCalledWith('Clause 1.', { limit: 7 })
+    expect(vi.mocked(mockFindSimilar)).toHaveBeenCalledWith('Clause 2.', { limit: 7 })
   })
 })
