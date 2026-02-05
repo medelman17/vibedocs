@@ -30,6 +30,8 @@ import {
   getRiskAssessments as queryRiskAssessments,
   type ClauseExtractionRow,
 } from "@/db/queries/risk-scoring";
+import { getGapAnalysis } from "@/db/queries/gap-analysis";
+import type { EnhancedGapResult } from "@/agents/types";
 
 // ============================================================================
 // Types
@@ -96,8 +98,9 @@ export interface AnalysisWithDocument extends Analysis {
 /** Assessment perspective for risk scoring */
 export type Perspective = "receiving" | "disclosing" | "balanced";
 
-// Re-export classification types for UI consumption
+// Re-export classification and gap types for UI consumption
 export type { ChunkClassificationRow, ClassificationsByCategory, ClauseExtractionRow };
+export type { EnhancedGapResult };
 
 // ============================================================================
 // Input Schemas
@@ -386,13 +389,16 @@ export async function getAnalysisClauses(
 }
 
 /**
- * Get gap analysis results.
+ * Get gap analysis results (legacy format).
  *
  * Returns the gap analysis data including missing clauses, weak clauses,
  * and prioritized recommendations.
  *
+ * @deprecated Use {@link fetchGapAnalysis} instead, which returns the enhanced
+ * EnhancedGapResult with two-tier gaps, coverage summary, and hypothesis coverage.
+ *
  * @param analysisId - UUID of the analysis
- * @returns Gap analysis results
+ * @returns Gap analysis results (legacy format)
  */
 export async function getAnalysisGaps(
   analysisId: string
@@ -438,6 +444,47 @@ export async function getAnalysisGaps(
   }
 
   return ok(gapAnalysis);
+}
+
+/**
+ * Fetch enhanced gap analysis results.
+ *
+ * Returns the full enhanced gap analysis including two-tier gaps,
+ * coverage summary, recommended language, and hypothesis coverage.
+ *
+ * @param analysisId - UUID of the analysis
+ * @returns Enhanced gap analysis results
+ */
+export async function fetchGapAnalysis(
+  analysisId: string
+): Promise<ApiResponse<EnhancedGapResult>> {
+  if (!z.string().uuid().safeParse(analysisId).success) {
+    return err("VALIDATION_ERROR", "Invalid analysis ID");
+  }
+
+  const { tenantId } = await withTenant();
+
+  const gapData = await getGapAnalysis(analysisId, tenantId);
+
+  if (!gapData) {
+    // Return empty result if gap analysis not available
+    return ok({
+      gaps: [],
+      coverageSummary: {
+        totalCategories: 0,
+        presentCount: 0,
+        missingCount: 0,
+        incompleteCount: 0,
+        coveragePercent: 0,
+      },
+      presentCategories: [],
+      weakClauses: [],
+      hypothesisCoverage: [],
+      gapScore: 0,
+    });
+  }
+
+  return ok(gapData);
 }
 
 /**
