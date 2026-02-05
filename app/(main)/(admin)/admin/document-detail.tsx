@@ -80,9 +80,12 @@ export function DocumentDetail({
       return
     }
 
+    let cancelled = false
+
     async function fetchDetail() {
       setLoading(true)
       const result = await adminGetDocumentDetail({ documentId: documentId! })
+      if (cancelled) return
       setLoading(false)
 
       if (!result.success) {
@@ -97,6 +100,10 @@ export function DocumentDetail({
     }
 
     fetchDetail()
+
+    return () => {
+      cancelled = true
+    }
   }, [documentId, onClose])
 
   const handleStartEditTitle = () => {

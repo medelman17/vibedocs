@@ -72,12 +72,16 @@ export function AdminPageClient({
 
   // Handlers
   const handleRowClick = (documentId: string) => {
-    setSelectedDocumentId(documentId)
+    // Defer to next frame so the originating click event finishes
+    // before the Sheet mounts and starts listening for outside clicks
+    requestAnimationFrame(() => {
+      setSelectedDocumentId(documentId)
+    })
   }
 
-  const handleCloseDetailPanel = () => {
+  const handleCloseDetailPanel = React.useCallback(() => {
     setSelectedDocumentId(null)
-  }
+  }, [])
 
   const handleOpenSingleDeleteDialog = (documentId: string, title: string) => {
     setSingleDeleteDocumentId(documentId)
