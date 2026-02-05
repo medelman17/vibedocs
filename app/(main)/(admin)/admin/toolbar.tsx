@@ -14,7 +14,7 @@
 
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { SearchIcon, Trash2Icon } from "lucide-react"
+import { SearchIcon, Trash2Icon, UploadIcon, Loader2Icon } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -24,6 +24,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { uploadDocument } from "@/app/(main)/(dashboard)/documents/actions"
+import { adminTriggerAnalysis } from "./actions"
+import { toast } from "sonner"
 
 // ============================================================================
 // Types
@@ -41,6 +44,8 @@ interface ToolbarProps {
 export function Toolbar({ selectedCount, onBulkDelete }: ToolbarProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = React.useState(false)
 
   // Local search input state for debouncing
   const [searchInput, setSearchInput] = React.useState(
@@ -78,6 +83,40 @@ export function Toolbar({ selectedCount, onBulkDelete }: ToolbarProps) {
     }
     params.set("page", "1") // Reset to page 1 on filter change
     router.replace(`?${params.toString()}`, { scroll: false })
+  }
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const uploadResult = await uploadDocument(formData)
+      if (!uploadResult.success) {
+        toast.error(uploadResult.error.message ?? "Upload failed")
+        return
+      }
+
+      const analysisResult = await adminTriggerAnalysis({
+        documentId: uploadResult.data.id,
+      })
+      if (!analysisResult.success) {
+        toast.error(analysisResult.error.message ?? "Failed to trigger analysis")
+      } else {
+        toast.success("Document uploaded and analysis started")
+      }
+
+      router.refresh()
+    } catch {
+      toast.error("Upload failed")
+    } finally {
+      setUploading(false)
+      // Reset input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
   }
 
   return (
@@ -142,13 +181,34 @@ export function Toolbar({ selectedCount, onBulkDelete }: ToolbarProps) {
         </SelectContent>
       </Select>
 
+      {/* Upload button */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.docx"
+        onChange={handleUpload}
+        className="hidden"
+      />
+      <Button
+        size="sm"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className={selectedCount > 0 ? "" : "ml-auto"}
+      >
+        {uploading ? (
+          <Loader2Icon className="size-4 mr-1 animate-spin" />
+        ) : (
+          <UploadIcon className="size-4 mr-1" />
+        )}
+        {uploading ? "Uploading..." : "Upload"}
+      </Button>
+
       {/* Bulk delete button */}
       {selectedCount > 0 && (
         <Button
           variant="destructive"
           size="sm"
           onClick={onBulkDelete}
-          className="ml-auto"
         >
           <Trash2Icon className="size-4 mr-1" />
           Delete ({selectedCount})
