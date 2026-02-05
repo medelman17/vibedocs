@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 12 of 12 (Admin Document CRUD)
-Plan: 1 of TBD in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 12-01-PLAN.md
+Last activity: 2026-02-05 - Completed 12-02-PLAN.md
 
-Progress: [██████████████████████████████████████████████████░] 98% (52 plans of 53 total)
-**Next Phase:** Phase 12 Plan 02 - Admin Data Table UI
+Progress: [██████████████████████████████████████████████████░] 98% (53 plans of 54 total)
+**Next Phase:** Phase 12 Plan 03 - Admin Detail Panel & Bulk Delete
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 52
+- Total plans completed: 53
 - Average duration: 5.0 min
-- Total execution time: 258.4 min
+- Total execution time: 261.9 min
 
 **By Phase:**
 
@@ -39,11 +39,11 @@ Progress: [███████████████████████
 | 09 | 7 | 20.6 min | 2.9 min |
 | 10 | 4 | 24.2 min | 6.1 min |
 | 11 | 8 | 56.0 min | 7.0 min |
-| 12 | 1 | 10.0 min | 10.0 min |
+| 12 | 2 | 13.5 min | 6.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 11-06 (6.7 min), 11-07 (3.9 min), 11-08 (4.0 min), 12-01 (10.0 min)
-- Trend: Phase 12 started - admin server actions foundation complete
+- Last 5 plans: 11-07 (3.9 min), 11-08 (4.0 min), 12-01 (10.0 min), 12-02 (3.5 min)
+- Trend: Phase 12 progressing - admin data table UI complete
 
 *Updated after each plan completion*
 
@@ -196,6 +196,10 @@ Recent decisions affecting current work:
 - [12-01]: Blob file deleted before DB row to avoid orphaned files
 - [12-01]: Admin can delete last analysis (no guard unlike dashboard)
 - [12-01]: Inngest source field uses "web" for admin-triggered analyses (enum constraint)
+- [12-02]: TanStack Table in manual mode for server-side pagination/sorting (large datasets)
+- [12-02]: URL search params for all table state (page, size, search, filters, sort)
+- [12-02]: Empty state differentiation based on active filter params (no-docs vs no-matches)
+- [12-02]: Selection state via onSelectionChange callback (DocumentsTable to parent)
 
 ### Pending Todos
 
@@ -211,6 +215,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-05T23:11:01Z
-Stopped at: Completed 12-01-PLAN.md
+Last session: 2026-02-05T23:18:49Z
+Stopped at: Completed 12-02-PLAN.md
 Resume file: None
