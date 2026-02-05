@@ -31,7 +31,7 @@ import {
   OcrRequiredError,
 } from '@/lib/errors'
 import { BudgetTracker } from '@/lib/ai/budget'
-import { analyses } from '@/db/schema/analyses'
+import { analyses, chunkClassifications } from '@/db/schema/analyses'
 import { documentChunks } from '@/db/schema/documents'
 import { chunkLegalDocument } from '@/lib/document-chunking/legal-chunker'
 import { generateChunkMap, computeChunkStats } from '@/lib/document-chunking/chunk-map'
@@ -485,10 +485,78 @@ export const analyzeNda = inngest.createFunction(
         throw new NonRetriableError(classifierValidation.error!.userMessage)
       }
 
+      // Step: Persist multi-label classifications to chunkClassifications table
+      await step.run('persist-classifications', async () => {
+        const chunks = classifierDocument.chunks
+        const values: Array<{
+          tenantId: string
+          analysisId: string
+          chunkId: string
+          documentId: string
+          category: string
+          confidence: number
+          isPrimary: boolean
+          rationale: string | null
+          chunkIndex: number
+          startPosition: number | undefined
+          endPosition: number | undefined
+        }> = []
+
+        for (const result of classifierResult.rawClassifications) {
+          // rawClassifications[i].chunkIndex is the global chunk index
+          const chunk = chunks.find(c => c.index === result.chunkIndex)
+          if (!chunk) continue
+
+          // Primary classification (always included)
+          values.push({
+            tenantId,
+            analysisId,
+            chunkId: chunk.id,
+            documentId,
+            category: result.primary.category,
+            confidence: result.primary.confidence,
+            isPrimary: true,
+            rationale: result.primary.rationale,
+            chunkIndex: chunk.index,
+            startPosition: chunk.startPosition,
+            endPosition: chunk.endPosition,
+          })
+
+          // Secondary classifications (only if confidence >= 0.3)
+          for (const sec of result.secondary) {
+            if (sec.confidence >= 0.3) {
+              values.push({
+                tenantId,
+                analysisId,
+                chunkId: chunk.id,
+                documentId,
+                category: sec.category,
+                confidence: sec.confidence,
+                isPrimary: false,
+                rationale: null,
+                chunkIndex: chunk.index,
+                startPosition: chunk.startPosition,
+                endPosition: chunk.endPosition,
+              })
+            }
+          }
+        }
+
+        // Batch insert with conflict handling (idempotent)
+        const PERSIST_BATCH = 100
+        for (let i = 0; i < values.length; i += PERSIST_BATCH) {
+          const batch = values.slice(i, i + PERSIST_BATCH)
+          await ctx.db
+            .insert(chunkClassifications)
+            .values(batch)
+            .onConflictDoNothing()
+        }
+      })
+
       await emitProgress(
         'classifying',
         50,
-        `Classified ${classifierResult.clauses.length} clauses`
+        `Classified ${classifierResult.clauses.length} clauses (${classifierResult.rawClassifications.length} total classifications)`
       )
 
       // Rate limit delay after Claude API calls
@@ -698,10 +766,78 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
         throw new NonRetriableError(classifierValidation.error!.userMessage)
       }
 
+      // Step: Persist multi-label classifications to chunkClassifications table
+      await step.run('persist-classifications', async () => {
+        const chunks = classifierDocument.chunks
+        const values: Array<{
+          tenantId: string
+          analysisId: string
+          chunkId: string
+          documentId: string
+          category: string
+          confidence: number
+          isPrimary: boolean
+          rationale: string | null
+          chunkIndex: number
+          startPosition: number | undefined
+          endPosition: number | undefined
+        }> = []
+
+        for (const result of classifierResult.rawClassifications) {
+          // rawClassifications[i].chunkIndex is the global chunk index
+          const chunk = chunks.find(c => c.index === result.chunkIndex)
+          if (!chunk) continue
+
+          // Primary classification (always included)
+          values.push({
+            tenantId,
+            analysisId,
+            chunkId: chunk.id,
+            documentId,
+            category: result.primary.category,
+            confidence: result.primary.confidence,
+            isPrimary: true,
+            rationale: result.primary.rationale,
+            chunkIndex: chunk.index,
+            startPosition: chunk.startPosition,
+            endPosition: chunk.endPosition,
+          })
+
+          // Secondary classifications (only if confidence >= 0.3)
+          for (const sec of result.secondary) {
+            if (sec.confidence >= 0.3) {
+              values.push({
+                tenantId,
+                analysisId,
+                chunkId: chunk.id,
+                documentId,
+                category: sec.category,
+                confidence: sec.confidence,
+                isPrimary: false,
+                rationale: null,
+                chunkIndex: chunk.index,
+                startPosition: chunk.startPosition,
+                endPosition: chunk.endPosition,
+              })
+            }
+          }
+        }
+
+        // Batch insert with conflict handling (idempotent)
+        const PERSIST_BATCH = 100
+        for (let i = 0; i < values.length; i += PERSIST_BATCH) {
+          const batch = values.slice(i, i + PERSIST_BATCH)
+          await ctx.db
+            .insert(chunkClassifications)
+            .values(batch)
+            .onConflictDoNothing()
+        }
+      })
+
       await emitProgress(
         'classifying',
         50,
-        `Classified ${classifierResult.clauses.length} clauses`
+        `Classified ${classifierResult.clauses.length} clauses (${classifierResult.rawClassifications.length} total classifications)`
       )
 
       await step.sleep('rate-limit-classifier', getRateLimitDelay('claude'))
