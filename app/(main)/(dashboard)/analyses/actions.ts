@@ -17,7 +17,7 @@ import { z } from "zod";
 import { withTenant } from "@/lib/dal";
 import { ok, err, type ApiResponse } from "@/lib/api-response";
 import { analyses, clauseExtractions, documents } from "@/db/schema";
-import { eq, and, desc, gte, count } from "drizzle-orm";
+import { eq, and, desc, gte, count, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { inngest } from "@/inngest";
 import {
@@ -83,6 +83,10 @@ export interface AnalysisStatusResponse {
     step: string;
     percent: number;
   };
+  /** Detailed progress message from the pipeline (e.g. "Classifying clause 7 of 15...") */
+  message?: string;
+  /** Queue position when analysis is pending (0 = next in line) */
+  queuePosition?: number;
 }
 
 /**
@@ -284,6 +288,7 @@ export async function getAnalysisStatus(
       status: true,
       progressStage: true,
       progressPercent: true,
+      progressMessage: true,
     },
   });
 
@@ -291,9 +296,11 @@ export async function getAnalysisStatus(
     return err("NOT_FOUND", "Analysis not found");
   }
 
-  // Map progress stage to human-readable message
+  // Map progress stage to human-readable fallback message
   const stageMessages: Record<string, string> = {
     parsing: "Parsing document...",
+    chunking: "Splitting into chunks...",
+    ocr_processing: "Running OCR on scanned pages...",
     classifying: "Classifying clauses...",
     scoring: "Assessing risk levels...",
     analyzing_gaps: "Analyzing gaps...",
@@ -305,7 +312,7 @@ export async function getAnalysisStatus(
   const progress: AnalysisStatusResponse["progress"] = {
     step: analysis.progressStage
       ? stageMessages[analysis.progressStage] || analysis.progressStage
-      : analysis.status === "pending"
+      : analysis.status === "pending" || analysis.status === "pending_ocr"
         ? "Queued for analysis..."
         : analysis.status === "completed"
           ? "Complete"
@@ -315,9 +322,27 @@ export async function getAnalysisStatus(
       : analysis.progressPercent ?? 0,
   };
 
+  // Use detailed progressMessage from DB if available, fall back to stage message
+  const message = analysis.progressMessage || progress.step;
+
+  // Calculate queue position for pending analyses
+  let queuePosition: number | undefined;
+  if (analysis.status === "pending" || analysis.status === "pending_ocr") {
+    const [countResult] = await db
+      .select({ count: count() })
+      .from(analyses)
+      .where(and(
+        eq(analyses.tenantId, tenantId),
+        inArray(analyses.status, ["pending", "processing", "pending_ocr"]),
+      ));
+    queuePosition = countResult?.count ?? 0;
+  }
+
   return ok({
     status: analysis.status as AnalysisStatus,
     progress,
+    message,
+    queuePosition,
   });
 }
 
