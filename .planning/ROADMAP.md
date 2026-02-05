@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Risk Scoring** - Assign risk levels with evidence-grounded explanations and citations
 - [x] **Phase 8: Gap Analysis** - Identify missing clauses, explain importance, suggest language
 - [x] **Phase 9: Pipeline Orchestration** - Wrap agents in Inngest steps, emit progress events, support cancellation
-- [ ] **Phase 10: Progress Streaming** - SSE endpoint for real-time UI updates, Word Add-in consumption
+- [x] **Phase 10: Progress Streaming** - Inngest Realtime for real-time UI updates, Word Add-in consumption
 - [ ] **Phase 11: Document Rendering** - Display extracted documents with clause highlighting in UI
 
 ## Phase Details
