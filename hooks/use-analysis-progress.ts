@@ -62,7 +62,8 @@ export function useAnalysisProgress(
           // Stop polling if we've reached a terminal state
           if (
             result.data.status === "completed" ||
-            result.data.status === "failed"
+            result.data.status === "failed" ||
+            result.data.status === "cancelled"
           ) {
             if (intervalRef.current) {
               clearInterval(intervalRef.current)

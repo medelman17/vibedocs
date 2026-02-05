@@ -40,7 +40,7 @@ import type { EnhancedGapResult } from "@/agents/types";
 /**
  * Analysis status values matching the database schema.
  */
-export type AnalysisStatus = "pending" | "processing" | "completed" | "failed";
+export type AnalysisStatus = "pending" | "pending_ocr" | "processing" | "completed" | "failed" | "cancelled";
 
 /**
  * Risk level classification for clauses (PRD-aligned taxonomy).
@@ -124,7 +124,7 @@ const getAnalysisClausesSchema = z.object({
 const paginationSchema = z.object({
   limit: z.number().int().min(1).max(100).default(20),
   offset: z.number().int().min(0).default(0),
-  status: z.enum(["pending", "processing", "completed", "failed"]).optional(),
+  status: z.enum(["pending", "pending_ocr", "processing", "completed", "failed", "cancelled"]).optional(),
 });
 
 // ============================================================================
@@ -299,6 +299,7 @@ export async function getAnalysisStatus(
     analyzing_gaps: "Analyzing gaps...",
     complete: "Analysis complete",
     failed: "Analysis failed",
+    cancelled: "Analysis cancelled",
   };
 
   const progress: AnalysisStatusResponse["progress"] = {

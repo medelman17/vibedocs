@@ -67,7 +67,7 @@ import { documents, documentChunks } from "./documents"
 /**
  * Analysis processing status values.
  *
- * @typedef {'pending' | 'pending_ocr' | 'processing' | 'completed' | 'failed'} AnalysisStatus
+ * @typedef {'pending' | 'pending_ocr' | 'processing' | 'completed' | 'failed' | 'cancelled'} AnalysisStatus
  *
  * Status progression:
  * - **pending**: Analysis queued, awaiting processing
@@ -75,6 +75,7 @@ import { documents, documentChunks } from "./documents"
  * - **processing**: Inngest workflow actively running agents
  * - **completed**: All agents finished successfully
  * - **failed**: Pipeline encountered unrecoverable error
+ * - **cancelled**: Analysis was cancelled by user or system (distinct from failed)
  */
 
 /**
@@ -339,6 +340,13 @@ export const analyses = pgTable(
      * @default 0
      */
     progressPercent: integer("progress_percent").default(0),
+
+    /**
+     * Human-readable progress message for UI display.
+     * Updated alongside progressStage/progressPercent by emitProgress.
+     * Examples: "Parsed document", "Classified 12 clauses", "Analysis cancelled"
+     */
+    progressMessage: text("progress_message"),
 
     /**
      * Summary of all chunks produced for this analysis.

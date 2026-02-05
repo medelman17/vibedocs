@@ -100,6 +100,7 @@ export const analysisProgressPayload = z.object({
     "analyzing_gaps",
     "complete",
     "failed",
+    "cancelled",
   ]),
   /** Progress percentage (0-100) */
   progress: z.number().min(0).max(100),
