@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 Phase: 11 of 11 (Document Rendering)
 Plan: 7 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 11-07-PLAN.md
+Last activity: 2026-02-05 - Completed 11-06-PLAN.md
 
 Progress: [█████████████████████████████████████████████████] 98% (50 plans of 51 total)
 
@@ -20,8 +20,8 @@ Progress: [███████████████████████
 
 **Velocity:**
 - Total plans completed: 50
-- Average duration: 4.8 min
-- Total execution time: 237.7 min
+- Average duration: 4.9 min
+- Total execution time: 244.4 min
 
 **By Phase:**
 
@@ -39,11 +39,11 @@ Progress: [███████████████████████
 
 | 10 | 4 | 24.2 min | 6.1 min |
 
-| 11 | 7 | 45.3 min | 6.5 min |
+| 11 | 7 | 52.0 min | 7.4 min |
 
 **Recent Trend:**
-- Last 5 plans: 11-03 (8.0 min), 11-04 (15.0 min), 11-05 (7.0 min), 11-07 (3.9 min)
-- Trend: Phase 11 in progress - 7 of 8 plans executed
+- Last 5 plans: 11-04 (15.0 min), 11-05 (7.0 min), 11-07 (3.9 min), 11-06 (6.7 min)
+- Trend: Phase 11 in progress - 7 of 8 plans executed (11-08 remaining)
 
 *Updated after each plan completion*
 
@@ -180,6 +180,9 @@ Recent decisions affecting current work:
 - [11-05]: Reuse ChatLayoutClient for analysis route layout (generic sidebar/header shell)
 - [11-05]: orientation prop (not direction) for ResizablePanelGroup (react-resizable-panels v3)
 - [11-05]: Analysis mentions and showArtifact navigate to /analysis/[id] (not artifact panel)
+- [11-06]: useState for conversationId instead of useRef (react-hooks/refs ESLint v7 rule)
+- [11-06]: clauseText as optional prop on ClauseHighlight (backward compatible)
+- [11-06]: ChatTab lazy-mounted only when Chat tab active (avoids useChat overhead)
 - [11-07]: Individual Zustand selectors instead of destructured object for fine-grained re-render control
 - [11-07]: nextClause/prevClause set selectionSource to 'document' to trigger analysis-side scroll
 - [11-07]: No changes needed for analysis tabs (already correct from 11-04)
@@ -194,6 +197,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T19:43:00Z
-Stopped at: Completed 11-07-PLAN.md
+Last session: 2026-02-05T19:45:00Z
+Stopped at: Completed 11-06-PLAN.md
 Resume file: None
