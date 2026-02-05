@@ -30,6 +30,10 @@ interface ClauseInput {
   riskExplanation: string | null
 }
 
+interface TokenUsageData {
+  total?: { input?: number; output?: number; estimatedCost?: number }
+}
+
 interface DocumentRendererProps {
   rawText: string
   sections: PositionedSection[]
@@ -41,6 +45,8 @@ interface DocumentRendererProps {
   metadata?: Record<string, unknown>
   /** Analysis status */
   status?: string
+  /** Token usage data (shown only when analysis is complete) */
+  tokenUsage?: TokenUsageData | null
 }
 
 // ============================================================================
@@ -237,6 +243,7 @@ export function DocumentRenderer({
   title,
   metadata,
   status,
+  tokenUsage,
 }: DocumentRendererProps) {
   const parentRef = React.useRef<HTMLDivElement>(null)
   const [searchOpen, setSearchOpen] = React.useState(false)
@@ -452,6 +459,11 @@ export function DocumentRenderer({
           >
             {status}
           </Badge>
+        )}
+        {tokenUsage?.total?.estimatedCost != null && (
+          <span className="text-xs text-muted-foreground">
+            ${tokenUsage.total.estimatedCost.toFixed(2)}
+          </span>
         )}
       </div>
 
