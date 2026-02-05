@@ -14,6 +14,7 @@ import { generateText, Output, NoObjectGeneratedError } from 'ai'
 import { getAgentModel } from '@/lib/ai/config'
 import { AnalysisFailedError } from '@/lib/errors'
 import { riskAssessmentSchema, type RiskLevel } from './types'
+import type { Perspective } from './types'
 import { findSimilarClauses } from './tools/vector-search'
 import { createRiskScorerPrompt, RISK_SCORER_SYSTEM_PROMPT } from './prompts'
 import type { BudgetTracker } from '@/lib/ai/budget'
@@ -26,6 +27,8 @@ import type { ClassifiedClause } from './classifier'
 export interface RiskScorerInput {
   clauses: ClassifiedClause[]
   budgetTracker: BudgetTracker
+  /** Assessment perspective. Default: 'balanced' */
+  perspective?: Perspective
 }
 
 export interface RiskAssessmentResult {
@@ -34,10 +37,22 @@ export interface RiskAssessmentResult {
   riskLevel: RiskLevel
   confidence: number
   explanation: string
+  negotiationSuggestion?: string
+  atypicalLanguage: boolean
+  atypicalLanguageNote?: string
   evidence: {
-    citations: string[]
-    comparisons: string[]
-    statistic?: string
+    citations: Array<{
+      text: string
+      sourceType: 'clause' | 'reference' | 'template'
+    }>
+    references: Array<{
+      sourceId: string
+      source: 'cuad' | 'contract_nli' | 'bonterms' | 'commonaccord'
+      section?: string
+      similarity: number
+      summary: string
+    }>
+    baselineComparison?: string
   }
   startPosition: number
   endPosition: number
@@ -47,6 +62,9 @@ export interface RiskScorerOutput {
   assessments: RiskAssessmentResult[]
   overallRiskScore: number
   overallRiskLevel: RiskLevel
+  perspective: Perspective
+  executiveSummary: string
+  riskDistribution: Record<RiskLevel, number>
   tokenUsage: { inputTokens: number; outputTokens: number }
 }
 
@@ -69,6 +87,7 @@ export async function runRiskScorerAgent(
   input: RiskScorerInput
 ): Promise<RiskScorerOutput> {
   const { clauses, budgetTracker } = input
+  const perspective = input.perspective ?? 'balanced'
   const assessments: RiskAssessmentResult[] = []
   let totalInputTokens = 0
   let totalOutputTokens = 0
@@ -88,6 +107,7 @@ export async function runRiskScorerAgent(
     )
 
     // Generate risk assessment
+    // TODO(07-02): Switch to enhancedRiskAssessmentSchema and perspective-aware prompt
     let result
     try {
       result = await generateText({
@@ -116,13 +136,27 @@ export async function runRiskScorerAgent(
     totalInputTokens += usage?.inputTokens ?? 0
     totalOutputTokens += usage?.outputTokens ?? 0
 
+    // Transform legacy evidence shape to enhanced structure
+    // TODO(07-02): Remove transformation when switching to enhancedRiskAssessmentSchema
     assessments.push({
       clauseId: clause.chunkId,
       clause,
       riskLevel: output.riskLevel,
       confidence: output.confidence,
       explanation: output.explanation,
-      evidence: output.evidence,
+      atypicalLanguage: false,
+      evidence: {
+        citations: output.evidence.citations.map((c: string) => ({
+          text: c,
+          sourceType: 'clause' as const,
+        })),
+        references: references.map((ref) => ({
+          sourceId: ref.id,
+          source: 'cuad' as const,
+          similarity: ref.similarity,
+          summary: ref.content.slice(0, 200),
+        })),
+      },
       startPosition: clause.startPosition,
       endPosition: clause.endPosition,
     })
@@ -131,6 +165,9 @@ export async function runRiskScorerAgent(
   // Calculate overall risk
   const { score, level } = calculateOverallRisk(assessments)
 
+  // Compute risk distribution
+  const riskDistribution = computeRiskDistribution(assessments)
+
   // Record budget
   budgetTracker.record('riskScorer', totalInputTokens, totalOutputTokens)
 
@@ -138,7 +175,13 @@ export async function runRiskScorerAgent(
     assessments,
     overallRiskScore: score,
     overallRiskLevel: level,
-    tokenUsage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+    perspective,
+    executiveSummary: '', // Placeholder -- populated in Plan 03
+    riskDistribution,
+    tokenUsage: {
+      inputTokens: totalInputTokens,
+      outputTokens: totalOutputTokens,
+    },
   }
 }
 
@@ -178,4 +221,22 @@ function calculateOverallRisk(
     score >= 60 ? 'aggressive' : score >= 30 ? 'cautious' : 'standard'
 
   return { score, level }
+}
+
+/**
+ * Computes the count of assessments per risk level.
+ */
+function computeRiskDistribution(
+  assessments: RiskAssessmentResult[]
+): Record<RiskLevel, number> {
+  const distribution: Record<RiskLevel, number> = {
+    standard: 0,
+    cautious: 0,
+    aggressive: 0,
+    unknown: 0,
+  }
+  for (const a of assessments) {
+    distribution[a.riskLevel]++
+  }
+  return distribution
 }

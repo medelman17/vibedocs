@@ -73,7 +73,22 @@ describe('Risk Scorer Agent', () => {
     expect(result.assessments.length).toBe(1)
     expect(result.assessments[0].riskLevel).toBe('standard')
     expect(result.assessments[0].evidence.citations.length).toBeGreaterThan(0)
+    expect(result.assessments[0].evidence.citations[0]).toEqual({
+      text: 'governed by Delaware law',
+      sourceType: 'clause',
+    })
+    expect(result.assessments[0].atypicalLanguage).toBe(false)
     expect(result.assessments[0].startPosition).toBe(0)
+
+    // Verify new output fields
+    expect(result.perspective).toBe('balanced')
+    expect(result.executiveSummary).toBe('')
+    expect(result.riskDistribution).toEqual({
+      standard: 1,
+      cautious: 0,
+      aggressive: 0,
+      unknown: 0,
+    })
   })
 
   it('calculates overall risk score correctly', async () => {
@@ -123,6 +138,8 @@ describe('Risk Scorer Agent', () => {
 
     expect(result.overallRiskLevel).toBe('aggressive')
     expect(result.overallRiskScore).toBeGreaterThanOrEqual(60)
+    expect(result.riskDistribution.aggressive).toBe(2)
+    expect(result.perspective).toBe('balanced')
   })
 
   it('records token usage in budget tracker', async () => {
@@ -196,5 +213,64 @@ describe('Risk Scorer Agent', () => {
     expect(result.assessments.length).toBe(0)
     expect(result.overallRiskLevel).toBe('unknown')
     expect(result.overallRiskScore).toBe(0)
+    expect(result.perspective).toBe('balanced')
+    expect(result.riskDistribution).toEqual({
+      standard: 0,
+      cautious: 0,
+      aggressive: 0,
+      unknown: 0,
+    })
+  })
+
+  it('accepts perspective parameter', async () => {
+    const input: RiskScorerInput = {
+      clauses: [
+        {
+          chunkId: 'chunk-0',
+          clauseText: 'Sample clause',
+          category: 'Governing Law',
+          secondaryCategories: [],
+          confidence: 0.9,
+          reasoning: '',
+          startPosition: 0,
+          endPosition: 13,
+        },
+      ],
+      budgetTracker,
+      perspective: 'receiving',
+    }
+
+    const result = await runRiskScorerAgent(input)
+
+    expect(result.perspective).toBe('receiving')
+  })
+
+  it('populates structured evidence references from vector search', async () => {
+    const input: RiskScorerInput = {
+      clauses: [
+        {
+          chunkId: 'chunk-0',
+          clauseText: 'Governed by Delaware law.',
+          category: 'Governing Law',
+          secondaryCategories: [],
+          confidence: 0.95,
+          reasoning: 'Jurisdiction clause',
+          startPosition: 0,
+          endPosition: 26,
+        },
+      ],
+      budgetTracker,
+    }
+
+    const result = await runRiskScorerAgent(input)
+
+    // References should be populated from mock findSimilarClauses
+    expect(result.assessments[0].evidence.references).toHaveLength(1)
+    expect(result.assessments[0].evidence.references[0]).toEqual({
+      sourceId: 'ref-0',
+      source: 'cuad',
+      similarity: 0.88,
+      summary: 'Standard governing law clause from reference corpus.',
+    })
   })
 })
