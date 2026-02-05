@@ -7,6 +7,13 @@
  * @module app/api/word-addin/status/[id]
  */
 
+/**
+ * @deprecated Use Inngest Realtime subscription via /api/word-addin/realtime-token/[id] instead.
+ * This endpoint uses SSE-wrapped DB polling (2s interval) which is replaced by
+ * Inngest Realtime publish/subscribe in Phase 10.
+ * Kept temporarily for backward compatibility during transition.
+ */
+
 import { db } from "@/db"
 import { analyses } from "@/db/schema"
 import { eq, and } from "drizzle-orm"

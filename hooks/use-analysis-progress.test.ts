@@ -3,15 +3,35 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { renderHook, waitFor } from "@testing-library/react"
 import { useAnalysisProgress } from "./use-analysis-progress"
 
-// Mock the server action
+// Mock the server actions
 const mockGetAnalysisStatus = vi.fn()
+const mockFetchRealtimeToken = vi.fn()
 vi.mock("@/app/(main)/(dashboard)/analyses/actions", () => ({
   getAnalysisStatus: (...args: unknown[]) => mockGetAnalysisStatus(...args),
+  fetchRealtimeToken: (...args: unknown[]) => mockFetchRealtimeToken(...args),
+}))
+
+// Mock Inngest Realtime hook - default to no-op (no realtime data, no error)
+const mockSubscription = {
+  data: [],
+  latestData: null,
+  freshData: [],
+  error: null,
+  state: "closed" as const,
+}
+vi.mock("@inngest/realtime/hooks", () => ({
+  useInngestSubscription: () => mockSubscription,
 }))
 
 describe("useAnalysisProgress", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset subscription to defaults
+    mockSubscription.data = []
+    mockSubscription.latestData = null
+    mockSubscription.freshData = []
+    mockSubscription.error = null
+    mockSubscription.state = "closed" as const
   })
 
   afterEach(() => {

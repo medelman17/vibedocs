@@ -1,21 +1,19 @@
 /**
- * @fileoverview Analysis Progress SSE Hook
+ * @fileoverview Analysis Progress Realtime Hook
  *
- * Subscribes to Server-Sent Events for real-time analysis progress updates.
+ * Subscribes to Inngest Realtime for real-time analysis progress updates.
+ * Replaces the previous SSE-based fetch + ReadableStream approach with
+ * useInngestSubscription for automatic reconnection and typed channels.
  */
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useMemo, useCallback } from "react"
+import {
+  useInngestSubscription,
+  InngestSubscriptionState,
+} from "@inngest/realtime/hooks"
+import type { AnalysisToken } from "@/lib/realtime/tokens"
 import { useAuthStore } from "../store/auth"
 import type { ProgressState, AnalysisStage } from "@/types/word-addin"
-
-/**
- * Raw SSE event format (from the API)
- */
-interface RawSSEEvent {
-  stage: string
-  progress: number
-  message: string
-}
 
 /**
  * Hook state
@@ -34,7 +32,12 @@ interface UseAnalysisProgressReturn extends UseAnalysisProgressState {
 }
 
 /**
- * Subscribe to analysis progress updates via SSE.
+ * Terminal stages that should trigger auto-disconnect.
+ */
+const TERMINAL_STAGES = new Set<string>(["completed", "failed", "cancelled"])
+
+/**
+ * Subscribe to analysis progress updates via Inngest Realtime.
  *
  * @param analysisId - The analysis ID to track (null to disable)
  * @param enabled - Whether to enable the subscription
@@ -45,7 +48,7 @@ interface UseAnalysisProgressReturn extends UseAnalysisProgressState {
  * const { progress, isConnected, error } = useAnalysisProgress(analysisId, true)
  *
  * if (progress) {
- *   console.log(`${progress.stage}: ${progress.progress}% - ${progress.message}`)
+ *   console.log(`${progress.stage}: ${progress.percent}% - ${progress.message}`)
  * }
  * ```
  */
@@ -54,126 +57,101 @@ export function useAnalysisProgress(
   enabled: boolean = true
 ): UseAnalysisProgressReturn {
   const token = useAuthStore((state) => state.token)
-  const [state, setState] = useState<UseAnalysisProgressState>({
-    progress: null,
-    isConnected: false,
-    error: null,
-  })
 
-  const [eventSource, setEventSource] = useState<EventSource | null>(null)
+  // Track which analysisId triggered manual disconnect so switching
+  // analysisId automatically re-enables the subscription.
+  const [disconnectedFor, setDisconnectedFor] = useState<string | null>(null)
+  const disconnected = disconnectedFor === analysisId
 
   /**
-   * Disconnect from the SSE stream
+   * Fetch a fresh Inngest Realtime subscription token from the API.
+   * Called on initial subscribe and on automatic reconnection.
+   */
+  const refreshToken = useCallback(async (): Promise<AnalysisToken> => {
+    if (!analysisId || !token) {
+      throw new Error("Missing analysisId or auth token")
+    }
+
+    const response = await fetch(
+      `/api/word-addin/realtime-token/${analysisId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(
+        (errorData as { error?: { message?: string } }).error?.message ||
+          `HTTP ${response.status}`
+      )
+    }
+
+    const data = (await response.json()) as { token: AnalysisToken }
+    return data.token
+  }, [analysisId, token])
+
+  /**
+   * Subscribe to the analysis progress channel via Inngest Realtime.
+   * The `key` ensures subscription resets when analysisId changes.
+   * useInngestSubscription handles reconnection internally by re-calling
+   * refreshToken on connection loss.
+   */
+  const subscription = useInngestSubscription({
+    refreshToken,
+    key: analysisId ?? undefined,
+    enabled: enabled && !!analysisId && !!token && !disconnected,
+  })
+
+  /**
+   * Derive progress from latest subscription data.
+   * Also checks for terminal states to trigger auto-disconnect.
+   */
+  const progress = useMemo<ProgressState | null>(() => {
+    if (!subscription.latestData) return null
+
+    const { data } = subscription.latestData
+    const mapped: ProgressState = {
+      stage: data.stage as AnalysisStage,
+      percent: data.percent,
+      message: data.message,
+    }
+
+    // Schedule auto-disconnect on terminal states (via setTimeout to avoid
+    // setState during render)
+    if (TERMINAL_STAGES.has(data.stage) && !disconnected) {
+      setTimeout(() => setDisconnectedFor(analysisId), 0)
+    }
+
+    return mapped
+  }, [subscription.latestData, disconnected, analysisId])
+
+  /**
+   * Disconnect from the realtime subscription.
+   * Stores which analysisId was disconnected so switching to a new
+   * analysis automatically re-enables subscription.
    */
   const disconnect = useCallback(() => {
-    if (eventSource) {
-      eventSource.close()
-      setEventSource(null)
-      setState((prev) => ({ ...prev, isConnected: false }))
-    }
-  }, [eventSource])
+    setDisconnectedFor(analysisId)
+  }, [analysisId])
 
-  useEffect(() => {
-    // Skip if disabled or missing dependencies
-    if (!analysisId || !enabled || !token) {
-      return
-    }
+  /**
+   * Derive connection state from subscription state.
+   */
+  const isConnected =
+    !disconnected &&
+    subscription.state === InngestSubscriptionState.Active
 
-    // Note: EventSource doesn't support custom headers natively.
-    // We need to use a polyfill or pass token as query param.
-    // For security, we'll use the fetch-event-source approach.
-    let controller: AbortController | null = new AbortController()
-
-    async function connectSSE() {
-      try {
-        setState((prev) => ({ ...prev, error: null, isConnected: true }))
-
-        const response = await fetch(`/api/word-addin/status/${analysisId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "text/event-stream",
-          },
-          signal: controller!.signal,
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error?.message || `HTTP ${response.status}`)
-        }
-
-        const reader = response.body?.getReader()
-        if (!reader) {
-          throw new Error("Response body is not readable")
-        }
-
-        const decoder = new TextDecoder()
-        let buffer = ""
-
-        while (true) {
-          const { done, value } = await reader.read()
-
-          if (done) {
-            setState((prev) => ({ ...prev, isConnected: false }))
-            break
-          }
-
-          buffer += decoder.decode(value, { stream: true })
-
-          // Parse SSE events from buffer
-          const lines = buffer.split("\n")
-          buffer = lines.pop() || "" // Keep incomplete line in buffer
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const rawData = JSON.parse(line.slice(6)) as RawSSEEvent
-                // Transform SSE 'progress' field to 'percent' for consistency with store
-                const data: ProgressState = {
-                  stage: rawData.stage as AnalysisStage,
-                  percent: rawData.progress,
-                  message: rawData.message,
-                }
-                setState((prev) => ({
-                  ...prev,
-                  progress: data,
-                }))
-
-                // Auto-disconnect on terminal states
-                if (data.stage === "completed" || data.stage === "failed") {
-                  setState((prev) => ({ ...prev, isConnected: false }))
-                }
-              } catch (e) {
-                console.warn("[useAnalysisProgress] Malformed SSE data:", e)
-              }
-            }
-          }
-        }
-      } catch (error) {
-        if ((error as Error).name === "AbortError") {
-          // Expected when disconnecting
-          return
-        }
-
-        console.error("[useAnalysisProgress] SSE error:", error)
-        setState((prev) => ({
-          ...prev,
-          isConnected: false,
-          error: (error as Error).message,
-        }))
-      }
-    }
-
-    connectSSE()
-
-    // Cleanup on unmount or dependency change
-    return () => {
-      controller?.abort()
-      controller = null
-    }
-  }, [analysisId, enabled, token])
+  /**
+   * Extract error message from subscription error.
+   */
+  const errorMessage =
+    subscription.error && !disconnected ? subscription.error.message : null
 
   return {
-    ...state,
+    progress,
+    isConnected,
+    error: errorMessage,
     disconnect,
   }
 }
