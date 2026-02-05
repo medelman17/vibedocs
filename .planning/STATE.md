@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 6 of 11 (CUAD Classification)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 06-01-PLAN.md (Schema & Types Foundation)
+Last activity: 2026-02-05 - Completed 06-02-PLAN.md (Enhanced Batch Classifier)
 
-Progress: [██████████████░] ~68% (21 plans of ~31 total)
+Progress: [███████████████░] ~71% (22 plans of ~31 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
-- Average duration: 4.5 min
-- Total execution time: 94.5 min
+- Total plans completed: 22
+- Average duration: 4.6 min
+- Total execution time: 101.8 min
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [██████████████░] ~68% (21 plans of ~31 
 | 03 | 5 | 28.5 min | 5.7 min |
 | 04 | 5 | 15.5 min | 3.1 min |
 | 05 | 3 | 18.3 min | 6.1 min |
-| 06 | 1 | 4.2 min | 4.2 min |
+| 06 | 2 | 11.5 min | 5.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (3.2 min), 05-02 (6.1 min), 05-03 (9.0 min), 06-01 (4.2 min)
-- Trend: Schema/types plan was straightforward; no new dependencies or complex integrations
+- Last 5 plans: 05-02 (6.1 min), 05-03 (9.0 min), 06-01 (4.2 min), 06-02 (7.3 min)
+- Trend: Classifier rewrite required prompt + agent + test updates; moderate complexity
 
 *Updated after each plan completion*
 
@@ -104,6 +104,9 @@ Recent decisions affecting current work:
 - [05-03]: Shared runChunkingPipeline helper with InngestStep type alias for step parameter
 - [05-03]: validateParserOutput chunks parameter made optional (parser no longer produces chunks)
 - [06-01]: z.enum() with EXTENDED_CATEGORIES uses `as unknown as [string, ...]` cast for spread array compatibility
+- [06-02]: Batch size 4 chunks per LLM call (3-5 range), configurable constant
+- [06-02]: 7 references per chunk via findSimilarClauses, deduplicated to top 10 per batch
+- [06-02]: Both Uncategorized and Unknown filtered from clauses output; rawClassifications preserves all
 
 ### Pending Todos
 
@@ -116,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T05:57:00Z
-Stopped at: Completed 06-01-PLAN.md (Schema & Types Foundation)
+Last session: 2026-02-05T06:12:00Z
+Stopped at: Completed 06-02-PLAN.md (Enhanced Batch Classifier)
 Resume file: None
