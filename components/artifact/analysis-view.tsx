@@ -26,10 +26,13 @@ import {
   getAnalysis,
   getAnalysisClauses,
   getAnalysisClassifications,
+  getAnalysisStatus,
+  triggerRescore,
   type Analysis,
   type ClauseExtraction,
   type ChunkClassificationRow,
   type ClassificationsByCategory,
+  type Perspective,
 } from "@/app/(main)/(dashboard)/analyses/actions"
 import { CLASSIFICATION_THRESHOLDS } from "@/agents/types"
 
@@ -352,6 +355,166 @@ function ClassificationView({ analysisId }: { analysisId: string }) {
 }
 
 // ============================================================================
+// Perspective Toggle
+// ============================================================================
+
+const PERSPECTIVES: { value: Perspective; label: string }[] = [
+  { value: "receiving", label: "Receiving" },
+  { value: "balanced", label: "Balanced" },
+  { value: "disclosing", label: "Disclosing" },
+]
+
+function PerspectiveToggle({
+  analysisId,
+  currentPerspective,
+  onRescoreTriggered,
+}: {
+  analysisId: string
+  currentPerspective: Perspective
+  onRescoreTriggered: () => void
+}) {
+  const [selected, setSelected] = React.useState<Perspective>(currentPerspective)
+  const [isRescoring, setIsRescoring] = React.useState(false)
+  const [disabled, setDisabled] = React.useState(false)
+
+  // Sync local state when analysis refreshes with new perspective
+  React.useEffect(() => {
+    setSelected(currentPerspective)
+  }, [currentPerspective])
+
+  const handleToggle = async (perspective: Perspective) => {
+    if (perspective === selected || disabled || isRescoring) return
+
+    // Optimistic UI: move toggle immediately
+    setSelected(perspective)
+    setDisabled(true)
+    setIsRescoring(true)
+
+    const result = await triggerRescore(analysisId, perspective)
+
+    if (!result.success) {
+      // Revert on error (e.g. same perspective)
+      setSelected(currentPerspective)
+      setIsRescoring(false)
+      setDisabled(false)
+      return
+    }
+
+    // Notify parent to start polling for completion
+    onRescoreTriggered()
+
+    // Debounce: re-enable after 2 seconds
+    setTimeout(() => setDisabled(false), 2000)
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-xs font-medium text-muted-foreground">Perspective:</span>
+      <div className="flex gap-1 rounded-md border p-0.5">
+        {PERSPECTIVES.map((p) => (
+          <button
+            key={p.value}
+            className={cn(
+              "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+              selected === p.value
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted",
+              (disabled || isRescoring) && "cursor-not-allowed opacity-50"
+            )}
+            onClick={() => handleToggle(p.value)}
+            disabled={disabled || isRescoring}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      {isRescoring && (
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2Icon className="size-3 animate-spin" />
+          Re-scoring from {selected} perspective...
+        </span>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Executive Summary
+// ============================================================================
+
+function ExecutiveSummaryCard({
+  analysis,
+  riskDistribution,
+}: {
+  analysis: Analysis
+  riskDistribution: Record<RiskLevel, number> | null
+}) {
+  const overallLevel = (analysis.overallRiskLevel as RiskLevel) || "unknown"
+  const overallConfig = riskConfig[overallLevel] || riskConfig.unknown
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Executive Summary</CardTitle>
+          {analysis.overallRiskScore !== null && (
+            <Badge
+              variant="outline"
+              className="gap-1 text-xs font-semibold"
+              style={{
+                background: overallConfig.bgColor,
+                color: overallConfig.textColor,
+                borderColor: overallConfig.borderColor,
+              }}
+            >
+              {Math.round(analysis.overallRiskScore)}/100 - {overallConfig.label}
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Risk distribution badges */}
+        {riskDistribution && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {(["standard", "cautious", "aggressive", "unknown"] as RiskLevel[]).map(
+              (level) => {
+                const count = riskDistribution[level] ?? 0
+                if (count === 0) return null
+                const config = riskConfig[level]
+                return (
+                  <Badge
+                    key={level}
+                    variant="outline"
+                    className="gap-1 text-xs"
+                    style={{
+                      background: config.bgColor,
+                      color: config.textColor,
+                      borderColor: config.borderColor,
+                    }}
+                  >
+                    {config.label}: {count}
+                  </Badge>
+                )
+              }
+            )}
+          </div>
+        )}
+        {/* Summary text */}
+        {analysis.summary ? (
+          <p className="whitespace-pre-line text-sm text-muted-foreground">
+            {analysis.summary}
+          </p>
+        ) : (
+          <p className="text-sm italic text-muted-foreground">
+            No executive summary available yet.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ============================================================================
 // Progress & Error Views
 // ============================================================================
 
@@ -389,8 +552,10 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
   const [analysis, setAnalysis] = React.useState<Analysis | null>(null)
   const [clauses, setClauses] = React.useState<ClauseExtraction[]>([])
   const [fetchError, setFetchError] = React.useState<string | null>(null)
+  const [rescoreVersion, setRescoreVersion] = React.useState(0)
+  const rescorePollRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Fetch full data once complete
+  // Fetch full data once complete (or after re-score)
   React.useEffect(() => {
     if (status === "completed") {
       Promise.all([getAnalysis(analysisId), getAnalysisClauses(analysisId)])
@@ -404,11 +569,44 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
             setClauses(clausesResult.data)
           }
         })
-        .catch((err) => {
-          setFetchError(err.message)
+        .catch((e) => {
+          setFetchError(e instanceof Error ? e.message : "Failed to load results")
         })
     }
-  }, [status, analysisId])
+  }, [status, analysisId, rescoreVersion])
+
+  // Cleanup re-score poll on unmount
+  React.useEffect(() => {
+    return () => {
+      if (rescorePollRef.current) {
+        clearInterval(rescorePollRef.current)
+      }
+    }
+  }, [])
+
+  // Handle re-score triggered: poll until progressStage returns to 'complete'
+  const handleRescoreTriggered = React.useCallback(() => {
+    // Clear any existing poll
+    if (rescorePollRef.current) {
+      clearInterval(rescorePollRef.current)
+    }
+
+    rescorePollRef.current = setInterval(async () => {
+      const result = await getAnalysisStatus(analysisId)
+      if (result.success) {
+        const statusData = result.data
+        // When re-scoring is complete, refresh data
+        if (statusData.status === "completed" && statusData.progress?.percent === 100) {
+          if (rescorePollRef.current) {
+            clearInterval(rescorePollRef.current)
+            rescorePollRef.current = null
+          }
+          // Bump version to trigger re-fetch
+          setRescoreVersion((v) => v + 1)
+        }
+      }
+    }, 3000)
+  }, [analysisId])
 
   // Progress state
   if (status === "pending" || status === "processing") {
@@ -437,7 +635,12 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
     )
   }
 
-  // Calculate risk summary
+  // Parse metadata for perspective and risk distribution
+  const metadata = analysis.metadata as Record<string, unknown> | null
+  const currentPerspective = (metadata?.perspective as Perspective) || "balanced"
+  const riskDistribution = (metadata?.riskDistribution as Record<RiskLevel, number>) || null
+
+  // Calculate risk summary from clauses
   const riskCounts = clauses.reduce(
     (acc, clause) => {
       const level = (clause.riskLevel as RiskLevel) || "unknown"
@@ -449,7 +652,7 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
 
   return (
     <div className={cn("flex h-full min-w-0 flex-col", className)}>
-      {/* Summary bar */}
+      {/* Summary bar with perspective toggle */}
       <div className="border-b bg-muted/50 px-4 py-3">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="truncate font-medium">Analysis Results</h3>
@@ -457,7 +660,16 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
             <RiskBadge level={analysis.overallRiskLevel as RiskLevel} />
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
+
+        {/* Perspective toggle */}
+        <PerspectiveToggle
+          analysisId={analysisId}
+          currentPerspective={currentPerspective}
+          onRescoreTriggered={handleRescoreTriggered}
+        />
+
+        {/* Risk distribution counts */}
+        <div className="mt-2 flex flex-wrap gap-2">
           {(["standard", "cautious", "aggressive", "unknown"] as RiskLevel[]).map(
             (level) =>
               riskCounts[level] > 0 && (
@@ -471,11 +683,14 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
               )
           )}
         </div>
-        {analysis.overallRiskScore !== null && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Overall Risk Score: {analysis.overallRiskScore.toFixed(1)}%
-          </p>
-        )}
+      </div>
+
+      {/* Executive Summary */}
+      <div className="border-b px-4 py-3">
+        <ExecutiveSummaryCard
+          analysis={analysis}
+          riskDistribution={riskDistribution}
+        />
       </div>
 
       {/* Classification results */}
