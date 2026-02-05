@@ -619,19 +619,54 @@ export const analyzeNda = inngest.createFunction(
       // Rate limit delay after classifier batches before risk scorer
       await step.sleep('rate-limit-classifier', getRateLimitDelay('claude'))
 
-      // Step 9: Risk Scorer Agent
-      const riskResult = await step.run('risk-scorer-agent', () =>
-        runRiskScorerAgent({
-          clauses: classifierResult.clauses,
-          budgetTracker,
-          perspective: 'balanced', // Default perspective per user decision
-        })
-      )
-      await emitProgress(
-        'scoring',
-        70,
-        `Scored ${riskResult.assessments.length} clauses`
-      )
+      // Step 9: Risk Scorer Agent (per-batch for clause-level progress and independent retry)
+      const SCORER_BATCH_SIZE = 3
+      const clausesToScore = classifierResult.clauses
+      const totalScorerBatches = Math.ceil(clausesToScore.length / SCORER_BATCH_SIZE)
+
+      type RiskScorerResultType = Awaited<ReturnType<typeof runRiskScorerAgent>>
+      const allAssessments: RiskScorerResultType['assessments'] = []
+      let lastRiskResult: RiskScorerResultType | null = null
+
+      for (let batch = 0; batch < totalScorerBatches; batch++) {
+        const batchStart = batch * SCORER_BATCH_SIZE
+        const batchEnd = Math.min(batchStart + SCORER_BATCH_SIZE, clausesToScore.length)
+        const batchClauses = clausesToScore.slice(batchStart, batchEnd)
+
+        const batchResult = await step.run(`score-batch-${batch}`, () =>
+          runRiskScorerAgent({
+            clauses: batchClauses,
+            budgetTracker,
+            perspective: 'balanced',
+          })
+        ) as RiskScorerResultType
+
+        allAssessments.push(...batchResult.assessments)
+        lastRiskResult = batchResult
+
+        // Clause-level progress (60-80% range)
+        const scored = Math.min(batchEnd, clausesToScore.length)
+        await emitProgress(
+          'scoring',
+          60 + Math.round((scored / clausesToScore.length) * 20),
+          `Scoring clause ${scored} of ${clausesToScore.length}...`
+        )
+
+        // Rate limit between batches (Claude 60 RPM)
+        if (batch < totalScorerBatches - 1) {
+          await step.sleep(`rate-limit-score-${batch}`, getRateLimitDelay('claude'))
+        }
+      }
+
+      // Assemble final risk result using all accumulated assessments
+      const riskResult = {
+        assessments: allAssessments,
+        overallRiskScore: lastRiskResult!.overallRiskScore,
+        overallRiskLevel: lastRiskResult!.overallRiskLevel,
+        executiveSummary: lastRiskResult!.executiveSummary,
+        perspective: lastRiskResult!.perspective,
+        riskDistribution: lastRiskResult!.riskDistribution,
+      }
 
       // Step: Persist per-clause risk assessments to clauseExtractions
       await step.run('persist-risk-assessments', async () => {
@@ -645,7 +680,7 @@ export const analyzeNda = inngest.createFunction(
         )
       })
 
-      // Rate limit delay after Claude API calls
+      // Rate limit delay after risk scorer batches
       await step.sleep('rate-limit-risk', getRateLimitDelay('claude'))
 
       // Step 10: Gap Analyst Agent
@@ -973,19 +1008,54 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
 
       await step.sleep('rate-limit-classifier', getRateLimitDelay('claude'))
 
-      // Step 8: Risk Scorer Agent
-      const riskResult = await step.run('risk-scorer-agent', () =>
-        runRiskScorerAgent({
-          clauses: classifierResult.clauses,
-          budgetTracker,
-          perspective: 'balanced', // Default perspective per user decision
-        })
-      )
-      await emitProgress(
-        'scoring',
-        75,
-        `Scored ${riskResult.assessments.length} clauses`
-      )
+      // Step 8: Risk Scorer Agent (per-batch for clause-level progress and independent retry)
+      const SCORER_BATCH_SIZE = 3
+      const clausesToScore = classifierResult.clauses
+      const totalScorerBatches = Math.ceil(clausesToScore.length / SCORER_BATCH_SIZE)
+
+      type RiskScorerResultType = Awaited<ReturnType<typeof runRiskScorerAgent>>
+      const allAssessments: RiskScorerResultType['assessments'] = []
+      let lastRiskResult: RiskScorerResultType | null = null
+
+      for (let batch = 0; batch < totalScorerBatches; batch++) {
+        const batchStart = batch * SCORER_BATCH_SIZE
+        const batchEnd = Math.min(batchStart + SCORER_BATCH_SIZE, clausesToScore.length)
+        const batchClauses = clausesToScore.slice(batchStart, batchEnd)
+
+        const batchResult = await step.run(`score-batch-${batch}`, () =>
+          runRiskScorerAgent({
+            clauses: batchClauses,
+            budgetTracker,
+            perspective: 'balanced',
+          })
+        ) as RiskScorerResultType
+
+        allAssessments.push(...batchResult.assessments)
+        lastRiskResult = batchResult
+
+        // Clause-level progress (60-80% range)
+        const scored = Math.min(batchEnd, clausesToScore.length)
+        await emitProgress(
+          'scoring',
+          60 + Math.round((scored / clausesToScore.length) * 20),
+          `Scoring clause ${scored} of ${clausesToScore.length}...`
+        )
+
+        // Rate limit between batches (Claude 60 RPM)
+        if (batch < totalScorerBatches - 1) {
+          await step.sleep(`rate-limit-score-${batch}`, getRateLimitDelay('claude'))
+        }
+      }
+
+      // Assemble final risk result using all accumulated assessments
+      const riskResult = {
+        assessments: allAssessments,
+        overallRiskScore: lastRiskResult!.overallRiskScore,
+        overallRiskLevel: lastRiskResult!.overallRiskLevel,
+        executiveSummary: lastRiskResult!.executiveSummary,
+        perspective: lastRiskResult!.perspective,
+        riskDistribution: lastRiskResult!.riskDistribution,
+      }
 
       // Step: Persist per-clause risk assessments to clauseExtractions
       await step.run('persist-risk-assessments', async () => {
