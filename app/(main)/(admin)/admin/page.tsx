@@ -13,11 +13,9 @@
 import * as React from "react"
 import { Badge } from "@/components/ui/badge"
 import { adminGetDocuments } from "./actions"
-import { DocumentsTable } from "./documents-table"
-import { Toolbar } from "./toolbar"
+import { AdminPageClient } from "./admin-page-client"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircleIcon } from "lucide-react"
-import type { AdminDocument } from "./columns"
 
 // ============================================================================
 // Types
@@ -42,8 +40,23 @@ export default async function AdminDocumentsPage({
   const search = params.search ? String(params.search) : undefined
   const status = params.status ? String(params.status) : undefined
   const fileType = params.fileType ? String(params.fileType) : undefined
-  const dateRange = params.dateRange ? String(params.dateRange) : undefined
-  const sortBy = params.sortBy ? String(params.sortBy) : undefined
+  const dateRangeParam = params.dateRange ? String(params.dateRange) : undefined
+  const dateRange =
+    dateRangeParam === "7d" ||
+    dateRangeParam === "30d" ||
+    dateRangeParam === "90d" ||
+    dateRangeParam === "all"
+      ? dateRangeParam
+      : undefined
+  const sortByParam = params.sortBy ? String(params.sortBy) : undefined
+  const sortBy =
+    sortByParam === "title" ||
+    sortByParam === "status" ||
+    sortByParam === "fileType" ||
+    sortByParam === "fileSize" ||
+    sortByParam === "createdAt"
+      ? sortByParam
+      : undefined
   const sortOrder =
     params.sortOrder === "asc" ? "asc" : ("desc" as "asc" | "desc")
 
@@ -85,8 +98,8 @@ export default async function AdminDocumentsPage({
         <Badge variant="secondary">{total}</Badge>
       </div>
 
-      {/* Toolbar and table wrapped in client component boundary */}
-      <AdminDocumentsView
+      {/* Client wrapper manages all interactive state */}
+      <AdminPageClient
         documents={documents}
         total={total}
         page={page}
@@ -95,66 +108,5 @@ export default async function AdminDocumentsPage({
         sortOrder={sortOrder}
       />
     </div>
-  )
-}
-
-// ============================================================================
-// Client Component Boundary
-// ============================================================================
-
-/**
- * Client component that wraps the interactive parts (toolbar, table, dialog).
- * Separated to keep the main page as an RSC.
- */
-function AdminDocumentsView({
-  documents,
-  total,
-  page,
-  pageSize,
-  sortBy,
-  sortOrder,
-}: {
-  documents: AdminDocument[]
-  total: number
-  page: number
-  pageSize: number
-  sortBy?: string
-  sortOrder?: "asc" | "desc"
-}) {
-  "use client"
-
-  const [selectedIds, setSelectedIds] = React.useState<string[]>([])
-
-  const handleRowClick = (documentId: string) => {
-    // Navigate to document detail (future implementation - plan 03)
-    console.log("Navigate to document:", documentId)
-  }
-
-  const handleBulkDeleteClick = () => {
-    // Bulk delete implementation (future - plan 03)
-    console.log("Bulk delete:", selectedIds)
-  }
-
-  const handleSelectionChange = React.useCallback((ids: string[]) => {
-    setSelectedIds(ids)
-  }, [])
-
-  return (
-    <>
-      <Toolbar
-        selectedCount={selectedIds.length}
-        onBulkDelete={handleBulkDeleteClick}
-      />
-      <DocumentsTable
-        data={documents}
-        total={total}
-        page={page}
-        pageSize={pageSize}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        onRowClick={handleRowClick}
-        onSelectionChange={handleSelectionChange}
-      />
-    </>
   )
 }
