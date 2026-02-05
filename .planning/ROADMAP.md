@@ -230,17 +230,19 @@ Plans:
 ### Phase 12: Admin Document CRUD
 **Goal**: Admin users can create, read, update, and delete documents through a dedicated admin interface
 **Depends on**: Phase 11
-**Requirements**: TBD
+**Requirements**: ADM-01, ADM-02, ADM-03, ADM-04, ADM-05
 **Success Criteria** (what must be TRUE):
   1. Admin page lists all documents with filtering and pagination
   2. Admin can view document details and associated analyses
   3. Admin can delete documents (with cascade to related records)
   4. Admin can update document metadata
   5. Access restricted to admin/owner roles
-**Plans**: 0 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 12 to break down)
+- [ ] 12-01-PLAN.md — Admin server actions (CRUD, cascade delete, bulk operations) and layout
+- [ ] 12-02-PLAN.md — Data table with TanStack Table, server-side pagination, toolbar, filters
+- [ ] 12-03-PLAN.md — Document detail panel, delete dialogs, sidebar admin link
 
 ## Progress
 
@@ -260,7 +262,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 9. Pipeline Orchestration | 7/7 | Complete | 2026-02-05 |
 | 10. Progress Streaming | 4/4 | Complete | 2026-02-05 |
 | 11. Document Rendering | 8/8 | Complete | 2026-02-05 |
-| 12. Admin Document CRUD | 0/0 | Not Started | — |
+| 12. Admin Document CRUD | 0/3 | Not Started | — |
 
 ---
 *Roadmap created: 2026-02-04*
