@@ -4,7 +4,10 @@
  * Orchestrates the full NDA analysis pipeline via Inngest:
  * Parser Agent → Classifier Agent → Risk Scorer Agent → Gap Analyst Agent
  *
- * Supports both web uploads (blob storage) and Word Add-in (inline content).
+ * Supports three paths:
+ * - Web uploads: Downloads from blob storage, extracts text
+ * - Word Add-in: Uses inline content from Word
+ * - Post-OCR: Continues pipeline after OCR extraction
  *
  * @module inngest/functions/analyze-nda
  */
@@ -353,6 +356,245 @@ export const analyzeNda = inngest.createFunction(
       })
 
       return { analysisId, success: true }
+    })
+  }
+)
+
+/**
+ * Continue analysis pipeline after OCR processing completes.
+ *
+ * This function handles documents that went through OCR and continues
+ * from the parser stage using the OCR-extracted text.
+ *
+ * Triggered by 'nda/analysis.ocr-complete' events from the OCR document function.
+ */
+export const analyzeNdaAfterOcr = inngest.createFunction(
+  {
+    id: 'analyze-nda-after-ocr',
+    name: 'NDA Analysis Pipeline (Post-OCR)',
+    concurrency: CONCURRENCY.analysis,
+    retries: RETRY_CONFIG.default.retries,
+  },
+  { event: 'nda/analysis.ocr-complete' },
+  async ({ event, step }) => {
+    const { documentId, analysisId, tenantId, ocrText, quality } = event.data
+
+    const budgetTracker = new BudgetTracker()
+    const startTime = Date.now()
+
+    return await withTenantContext(tenantId, async (ctx) => {
+      // Helper to emit progress events AND persist to DB
+      const emitProgress = async (
+        stage: ProgressStage,
+        progress: number,
+        message: string
+      ) => {
+        const clampedProgress = Math.max(0, Math.min(100, progress))
+
+        await step.run(`update-progress-${stage}`, async () => {
+          await ctx.db
+            .update(analyses)
+            .set({
+              progressStage: stage,
+              progressPercent: clampedProgress,
+              updatedAt: new Date(),
+            })
+            .where(eq(analyses.id, analysisId))
+        })
+
+        await step.sendEvent(`emit-progress-${stage}`, {
+          name: 'nda/analysis.progress',
+          data: {
+            documentId,
+            analysisId,
+            tenantId,
+            stage,
+            progress: clampedProgress,
+            message,
+          },
+        })
+      }
+
+      // Step 1: Run parser on OCR text
+      // Use 'ocr' source type to skip extraction and use provided text
+      const parserResult = await step.run('parser-agent-ocr', () =>
+        runParserAgent({
+          documentId,
+          tenantId,
+          source: 'ocr',
+          ocrText,
+          ocrConfidence: quality.confidence,
+        })
+      )
+
+      // Parser validation gate
+      const parserValidation = validateParserOutput(
+        parserResult.document.rawText,
+        parserResult.document.chunks
+      )
+      if (!parserValidation.valid) {
+        await step.run('mark-parser-failed', async () => {
+          await ctx.db
+            .update(analyses)
+            .set({
+              status: 'failed',
+              progressStage: 'failed',
+              metadata: {
+                failedAt: 'parsing',
+                errorCode: parserValidation.error!.code,
+                errorMessage: parserValidation.error!.userMessage,
+                wasOcr: true,
+              },
+            })
+            .where(eq(analyses.id, analysisId))
+        })
+        throw new NonRetriableError(parserValidation.error!.userMessage)
+      }
+
+      // Token budget validation
+      const budgetValidation = validateTokenBudget(
+        parserResult.document.rawText,
+        parserResult.document.chunks.map(c => ({
+          id: c.id,
+          index: c.index,
+          content: c.content,
+          tokenCount: c.tokenCount ?? 0,
+          sectionPath: c.sectionPath,
+          startPosition: c.startPosition,
+          endPosition: c.endPosition,
+        }))
+      )
+
+      let workingDocument = parserResult.document
+      let wasTruncated = false
+
+      if (budgetValidation.truncation) {
+        workingDocument = {
+          ...parserResult.document,
+          rawText: budgetValidation.truncation.text,
+          chunks: budgetValidation.truncation.chunks.map((c, i) => ({
+            ...parserResult.document.chunks.find(orig => orig.id === c.id) ?? parserResult.document.chunks[i],
+            content: c.content,
+          })),
+        }
+        wasTruncated = true
+      }
+
+      await step.run('record-budget-estimate', async () => {
+        await ctx.db
+          .update(analyses)
+          .set({
+            estimatedTokens: budgetValidation.estimate.tokenCount,
+            wasTruncated,
+          })
+          .where(eq(analyses.id, analysisId))
+      })
+
+      await emitProgress(
+        'parsing',
+        25,
+        `Parsed ${workingDocument.chunks.length} chunks from OCR text`
+      )
+
+      await step.sleep('rate-limit-parser', getRateLimitDelay('claude'))
+
+      // Step 2: Classifier Agent
+      const classifierResult = await step.run('classifier-agent', () =>
+        runClassifierAgent({
+          parsedDocument: workingDocument,
+          budgetTracker,
+        })
+      )
+
+      const classifierValidation = validateClassifierOutput(classifierResult.clauses)
+      if (!classifierValidation.valid) {
+        await step.run('mark-classifier-failed', async () => {
+          await ctx.db
+            .update(analyses)
+            .set({
+              status: 'failed',
+              progressStage: 'failed',
+              metadata: {
+                failedAt: 'classifying',
+                errorCode: classifierValidation.error!.code,
+                errorMessage: classifierValidation.error!.userMessage,
+                wasOcr: true,
+              },
+            })
+            .where(eq(analyses.id, analysisId))
+        })
+        throw new NonRetriableError(classifierValidation.error!.userMessage)
+      }
+
+      await emitProgress(
+        'classifying',
+        50,
+        `Classified ${classifierResult.clauses.length} clauses`
+      )
+
+      await step.sleep('rate-limit-classifier', getRateLimitDelay('claude'))
+
+      // Step 3: Risk Scorer Agent
+      const riskResult = await step.run('risk-scorer-agent', () =>
+        runRiskScorerAgent({
+          clauses: classifierResult.clauses,
+          budgetTracker,
+        })
+      )
+      await emitProgress(
+        'scoring',
+        75,
+        `Scored ${riskResult.assessments.length} clauses`
+      )
+
+      await step.sleep('rate-limit-risk', getRateLimitDelay('claude'))
+
+      // Step 4: Gap Analyst Agent
+      const documentSummary = `${parserResult.document.title}: ${classifierResult.clauses.length} clauses identified (via OCR).`
+      const gapResult = await step.run('gap-analyst-agent', () =>
+        runGapAnalystAgent({
+          clauses: classifierResult.clauses,
+          assessments: riskResult.assessments,
+          documentSummary,
+          budgetTracker,
+        })
+      )
+      await emitProgress('analyzing_gaps', 90, 'Gap analysis complete')
+
+      // Step 5: Persist final results
+      await step.run('persist-final', async () => {
+        const usage = budgetTracker.getUsage()
+
+        await ctx.db
+          .update(analyses)
+          .set({
+            status: 'completed',
+            overallRiskScore: riskResult.overallRiskScore,
+            overallRiskLevel: riskResult.overallRiskLevel,
+            gapAnalysis: gapResult.gapAnalysis,
+            tokenUsage: usage,
+            actualTokens: usage.total.total,
+            estimatedCost: usage.total.estimatedCost,
+            processingTimeMs: Date.now() - startTime,
+            completedAt: new Date(),
+          })
+          .where(eq(analyses.id, analysisId))
+      })
+
+      await emitProgress('complete', 100, 'Analysis complete')
+
+      await step.sendEvent('analysis-completed', {
+        name: 'nda/analysis.completed',
+        data: {
+          documentId,
+          analysisId,
+          tenantId,
+          overallRiskScore: riskResult.overallRiskScore,
+          overallRiskLevel: riskResult.overallRiskLevel,
+        },
+      })
+
+      return { analysisId, success: true, wasOcr: true }
     })
   }
 )

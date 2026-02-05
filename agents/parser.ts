@@ -4,9 +4,10 @@
  * First stage of the NDA analysis pipeline. Extracts text from documents,
  * chunks the content with section detection, and generates embeddings.
  *
- * Supports two source types:
+ * Supports three source types:
  * - `web`: Downloads document from Vercel Blob storage
  * - `word-addin`: Uses text content provided directly from Word Add-in
+ * - `ocr`: Uses text that was extracted via OCR processing
  *
  * @module agents/parser
  */
@@ -30,7 +31,7 @@ import { NotFoundError, ValidationError, InternalError } from '@/lib/errors'
 export interface ParserInput {
   documentId: string
   tenantId: string
-  source: 'web' | 'web-upload' | 'word-addin'
+  source: 'web' | 'web-upload' | 'word-addin' | 'ocr'
   content?: {
     rawText: string
     paragraphs: Array<{
@@ -43,6 +44,10 @@ export interface ParserInput {
     title: string
     author?: string
   }
+  /** OCR-extracted text (required when source='ocr') */
+  ocrText?: string
+  /** OCR confidence score 0-100 (optional, for quality tracking) */
+  ocrConfidence?: number
 }
 
 export interface ParsedChunk extends DocumentChunk {
@@ -78,19 +83,49 @@ export interface ParserOutput {
  *
  * For web sources, downloads from Vercel Blob and extracts text.
  * For word-addin sources, uses the provided content directly.
+ * For ocr sources, uses text that was extracted via OCR processing.
  *
  * @param input - Parser input configuration
  * @returns Parsed document with embedded chunks
  */
 export async function runParserAgent(input: ParserInput): Promise<ParserOutput> {
-  const { documentId, source, content, metadata } = input
+  const { documentId, source, content, metadata, ocrText, ocrConfidence } = input
 
   let rawText: string
   let title: string
   let structure: DocumentStructure
   let quality: ParserOutput['quality']
 
-  if (source === 'web' || source === 'web-upload') {
+  if (source === 'ocr') {
+    // OCR: use provided OCR text directly
+    if (!ocrText) {
+      throw new ValidationError('OCR source requires ocrText')
+    }
+    rawText = ocrText.normalize('NFC')
+
+    // Get document title from database
+    const doc = await db.query.documents.findFirst({
+      where: eq(documents.id, documentId),
+    })
+    title = doc?.title ?? metadata?.title ?? 'Untitled'
+
+    // Run structure detection on OCR text
+    structure = await detectStructure(rawText)
+
+    // Safely access metadata.pageCount (JSONB type is Record<string, unknown>)
+    const docMetadata = doc?.metadata as Record<string, unknown> | undefined
+    const pageCount = typeof docMetadata?.pageCount === 'number' ? docMetadata.pageCount : 1
+
+    quality = {
+      charCount: rawText.length,
+      wordCount: rawText.split(/\s+/).filter(Boolean).length,
+      pageCount,
+      confidence: ocrConfidence ?? 0.7, // Default to 70% if not provided
+      warnings: ocrConfidence && ocrConfidence < 85
+        ? ['Document was processed via OCR. Accuracy may vary.']
+        : [],
+    }
+  } else if (source === 'web' || source === 'web-upload') {
     // Fetch document from database to get blob URL
     const doc = await db.query.documents.findFirst({
       where: eq(documents.id, documentId),
