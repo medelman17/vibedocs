@@ -15,6 +15,7 @@ import {
   FileText,
   Trash2Icon,
   MoreHorizontalIcon,
+  ShieldIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -65,6 +66,7 @@ interface AppSidebarProps {
   organizations?: Organization[]
   currentOrg?: Organization
   user?: User
+  userRole?: string
   onSelectItem?: (item: HistoryItem) => void
   onDeleteItem?: (item: HistoryItem) => void
   onNewChat?: () => void
@@ -79,6 +81,7 @@ export function AppSidebar({
   organizations = [],
   currentOrg,
   user,
+  userRole,
   onSelectItem,
   onDeleteItem,
   onNewChat,
@@ -237,6 +240,31 @@ export function AppSidebar({
                 No history yet
               </div>
             )}
+          </>
+        )}
+
+        {/* Admin section - only visible to admin/owner */}
+        {(userRole === "admin" || userRole === "owner") && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip="Admin"
+                      className="gap-2"
+                    >
+                      <a href="/admin">
+                        <ShieldIcon className="size-4 shrink-0" />
+                        <span>Admin</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           </>
         )}
       </SidebarContent>

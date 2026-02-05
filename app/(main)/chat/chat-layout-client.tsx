@@ -24,9 +24,10 @@ import { getConversations, deleteConversation } from "./actions"
 interface ChatLayoutClientProps {
   children: React.ReactNode
   user: User
+  userRole: string
 }
 
-export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
+export function ChatLayoutClient({ children, user, userRole }: ChatLayoutClientProps) {
   const router = useRouter()
   const {
     togglePalette,
@@ -149,6 +150,7 @@ export function ChatLayoutClient({ children, user }: ChatLayoutClientProps) {
           window.location.href = "/chat"
         }}
         user={user}
+        userRole={userRole}
         onSignOut={handleSignOut}
         // TODO: Wire up remaining data and handlers
         // organizations={userOrgs}
