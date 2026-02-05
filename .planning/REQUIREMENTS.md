@@ -44,12 +44,12 @@ Requirements for the analysis pipeline milestone. Each maps to roadmap phases.
 
 ### Classification
 
-- [ ] **CLS-01**: Retrieve top-5 similar CUAD examples via vector search for each chunk
-- [ ] **CLS-02**: Classify each chunk into CUAD 41-category taxonomy
-- [ ] **CLS-03**: Provide confidence score (0.0-1.0) for each classification
-- [ ] **CLS-04**: Support multi-category clauses (primary + secondary labels)
-- [ ] **CLS-05**: Flag low-confidence classifications (< 0.7) for potential review
-- [ ] **CLS-06**: Aggregate chunk-level classifications into document-level clause list
+- [x] **CLS-01**: Retrieve top-5 similar CUAD examples via vector search for each chunk
+- [x] **CLS-02**: Classify each chunk into CUAD 41-category taxonomy
+- [x] **CLS-03**: Provide confidence score (0.0-1.0) for each classification
+- [x] **CLS-04**: Support multi-category clauses (primary + secondary labels)
+- [x] **CLS-05**: Flag low-confidence classifications (< 0.7) for potential review
+- [x] **CLS-06**: Aggregate chunk-level classifications into document-level clause list
 
 ### Risk Scoring
 
@@ -161,12 +161,12 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | CHK-05 | Phase 5 | Complete |
 | CHK-06 | Phase 5 | Complete |
 | CHK-07 | Phase 5 | Complete |
-| CLS-01 | Phase 6 | Pending |
-| CLS-02 | Phase 6 | Pending |
-| CLS-03 | Phase 6 | Pending |
-| CLS-04 | Phase 6 | Pending |
-| CLS-05 | Phase 6 | Pending |
-| CLS-06 | Phase 6 | Pending |
+| CLS-01 | Phase 6 | Complete |
+| CLS-02 | Phase 6 | Complete |
+| CLS-03 | Phase 6 | Complete |
+| CLS-04 | Phase 6 | Complete |
+| CLS-05 | Phase 6 | Complete |
+| CLS-06 | Phase 6 | Complete |
 | RSK-01 | Phase 7 | Pending |
 | RSK-02 | Phase 7 | Pending |
 | RSK-03 | Phase 7 | Pending |
