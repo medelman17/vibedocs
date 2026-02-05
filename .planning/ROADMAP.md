@@ -23,6 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 9: Pipeline Orchestration** - Wrap agents in Inngest steps, emit progress events, support cancellation
 - [x] **Phase 10: Progress Streaming** - Inngest Realtime for real-time UI updates, Word Add-in consumption
 - [x] **Phase 11: Document Rendering** - Display extracted documents with clause highlighting in UI
+- [ ] **Phase 12: Admin Document CRUD** - Admin page for creating, reading, updating, and deleting documents
 
 ## Phase Details
 
@@ -226,10 +227,25 @@ Plans:
 - [x] 11-07-PLAN.md -- Bidirectional scroll navigation and keyboard controls
 - [x] 11-08-PLAN.md -- Progressive reveal, URL state, responsive layout, visual verification
 
+### Phase 12: Admin Document CRUD
+**Goal**: Admin users can create, read, update, and delete documents through a dedicated admin interface
+**Depends on**: Phase 11
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+  1. Admin page lists all documents with filtering and pagination
+  2. Admin can view document details and associated analyses
+  3. Admin can delete documents (with cascade to related records)
+  4. Admin can update document metadata
+  5. Access restricted to admin/owner roles
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 12 to break down)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -244,7 +260,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 9. Pipeline Orchestration | 7/7 | Complete | 2026-02-05 |
 | 10. Progress Streaming | 4/4 | Complete | 2026-02-05 |
 | 11. Document Rendering | 8/8 | Complete | 2026-02-05 |
+| 12. Admin Document CRUD | 0/0 | Not Started | — |
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-05 (All phases complete - milestone finished)*
+*Last updated: 2026-02-05*

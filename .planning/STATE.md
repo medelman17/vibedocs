@@ -5,16 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Milestone complete - all 11 phases delivered
+**Current focus:** Phase 12 - Admin Document CRUD
 
 ## Current Position
 
-Phase: 11 of 11 (Document Rendering)
-Plan: 8 of 8 in current phase
-Status: Complete (verified 5/5 success criteria)
-Last activity: 2026-02-05 - Phase 11 complete, milestone finished
+Phase: 12 of 12 (Admin Document CRUD)
+Plan: 0 of 0 in current phase
+Status: Not started - needs planning
+Last activity: 2026-02-05 - Phase 12 added to roadmap
 
 Progress: [██████████████████████████████████████████████████] 100% (51 plans of 51 total)
+**Next Phase:** Phase 12 - Admin Document CRUD (not yet planned)
 
 ## Performance Metrics
 
@@ -195,6 +196,10 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 None.
+
+### Roadmap Evolution
+
+- Phase 12 added: Admin Document CRUD
 
 ### Blockers/Concerns
 
