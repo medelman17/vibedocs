@@ -24,10 +24,10 @@ import { Progress } from "@/components/ui/progress"
 import { useAnalysisProgress } from "@/hooks/use-analysis-progress"
 import {
   getAnalysis,
-  getAnalysisClauses,
   getAnalysisClassifications,
   getAnalysisStatus,
   triggerRescore,
+  fetchRiskAssessments,
   type Analysis,
   type ClauseExtraction,
   type ChunkClassificationRow,
@@ -88,6 +88,87 @@ const riskConfig: Record<
   },
 }
 
+// ============================================================================
+// Evidence Types (parsed from JSONB)
+// ============================================================================
+
+interface EvidenceCitation {
+  text: string
+  sourceType: "clause" | "reference" | "template"
+}
+
+interface EvidenceReference {
+  sourceId: string
+  source: "cuad" | "contract_nli" | "bonterms" | "commonaccord"
+  section?: string
+  similarity: number
+  summary: string
+}
+
+interface ClauseEvidence {
+  citations?: EvidenceCitation[]
+  references?: EvidenceReference[]
+  baselineComparison?: string
+}
+
+interface ClauseMetadata {
+  perspective?: string
+  riskConfidence?: number
+  atypicalLanguage?: boolean
+  atypicalLanguageNote?: string
+  negotiationSuggestion?: string
+}
+
+/** Source label display config: CUAD=blue, ContractNLI=purple, Bonterms=green */
+const sourceConfig: Record<string, { label: string; bgColor: string; textColor: string; borderColor: string }> = {
+  cuad: {
+    label: "CUAD",
+    bgColor: "oklch(0.90 0.10 250)",
+    textColor: "oklch(0.45 0.15 250)",
+    borderColor: "oklch(0.85 0.12 250)",
+  },
+  contract_nli: {
+    label: "ContractNLI",
+    bgColor: "oklch(0.90 0.10 300)",
+    textColor: "oklch(0.45 0.15 300)",
+    borderColor: "oklch(0.85 0.12 300)",
+  },
+  bonterms: {
+    label: "Bonterms",
+    bgColor: "oklch(0.90 0.10 150)",
+    textColor: "oklch(0.45 0.15 150)",
+    borderColor: "oklch(0.85 0.12 150)",
+  },
+  commonaccord: {
+    label: "CommonAccord",
+    bgColor: "oklch(0.90 0.10 150)",
+    textColor: "oklch(0.45 0.15 150)",
+    borderColor: "oklch(0.85 0.12 150)",
+  },
+}
+
+function SourceBadge({ source }: { source: string }) {
+  const config = sourceConfig[source] || {
+    label: source,
+    bgColor: "oklch(0.92 0.01 0)",
+    textColor: "oklch(0.45 0.01 0)",
+    borderColor: "oklch(0.88 0.02 0)",
+  }
+  return (
+    <Badge
+      variant="outline"
+      className="text-xs"
+      style={{
+        background: config.bgColor,
+        color: config.textColor,
+        borderColor: config.borderColor,
+      }}
+    >
+      {config.label}
+    </Badge>
+  )
+}
+
 function RiskBadge({ level }: { level: RiskLevel }) {
   const config = riskConfig[level] || riskConfig.unknown
   const Icon = config.icon
@@ -109,21 +190,61 @@ function RiskBadge({ level }: { level: RiskLevel }) {
 
 function ClauseCard({ clause }: { clause: ClauseExtraction }) {
   const [open, setOpen] = React.useState(false)
+  const [evidenceOpen, setEvidenceOpen] = React.useState(false)
   const riskLevel = (clause.riskLevel as RiskLevel) || "unknown"
+
+  // Parse evidence and metadata from JSONB
+  const evidence = (clause.evidence as ClauseEvidence) || null
+  const meta = (clause.metadata as ClauseMetadata) || null
+  const hasEvidence =
+    evidence &&
+    ((evidence.citations && evidence.citations.length > 0) ||
+      (evidence.references && evidence.references.length > 0) ||
+      evidence.baselineComparison)
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <Card className="min-w-0">
         <CardHeader className="pb-2">
           <div className="flex min-w-0 items-start justify-between gap-2">
-            <CardTitle className="min-w-0 truncate text-sm font-medium">
-              {clause.category}
-            </CardTitle>
-            <RiskBadge level={riskLevel} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <CardTitle className="min-w-0 truncate text-sm font-medium">
+                  {clause.category}
+                </CardTitle>
+                {meta?.riskConfidence != null && (
+                  <Badge variant="outline" className="text-xs">
+                    {Math.round(meta.riskConfidence * 100)}%
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              {meta?.atypicalLanguage && (
+                <Badge
+                  variant="outline"
+                  className="gap-1 text-xs"
+                  style={{
+                    background: "oklch(0.90 0.08 65)",
+                    color: "oklch(0.50 0.14 65)",
+                    borderColor: "oklch(0.85 0.10 65)",
+                  }}
+                >
+                  <AlertTriangleIcon className="size-3" />
+                  Atypical
+                </Badge>
+              )}
+              <RiskBadge level={riskLevel} />
+            </div>
           </div>
           <p className="line-clamp-2 text-sm text-muted-foreground">
             {clause.riskExplanation || clause.clauseText.slice(0, 100)}
           </p>
+          {meta?.negotiationSuggestion && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              <span className="font-semibold">Tip:</span> {meta.negotiationSuggestion}
+            </p>
+          )}
         </CardHeader>
         <CardContent className="pt-0">
           <CollapsibleTrigger className="flex w-full items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
@@ -136,12 +257,15 @@ function ClauseCard({ clause }: { clause: ClauseExtraction }) {
           </CollapsibleTrigger>
           <CollapsibleContent className="pt-3">
             <div className="space-y-3 text-sm">
+              {/* Clause Text */}
               <div>
                 <p className="mb-1 font-medium text-muted-foreground">Clause Text</p>
                 <blockquote className="border-l-2 border-muted pl-3 italic text-muted-foreground">
                   {clause.clauseText}
                 </blockquote>
               </div>
+
+              {/* Risk Assessment */}
               {clause.riskExplanation && (
                 <div>
                   <p className="mb-1 font-medium text-muted-foreground">
@@ -149,6 +273,101 @@ function ClauseCard({ clause }: { clause: ClauseExtraction }) {
                   </p>
                   <p>{clause.riskExplanation}</p>
                 </div>
+              )}
+
+              {/* Atypical Language Note */}
+              {meta?.atypicalLanguage && meta.atypicalLanguageNote && (
+                <div
+                  className="rounded-md p-2 text-xs"
+                  style={{
+                    background: "oklch(0.95 0.04 65)",
+                    borderLeft: "3px solid oklch(0.70 0.12 65)",
+                  }}
+                >
+                  <span className="font-semibold">Atypical Language: </span>
+                  {meta.atypicalLanguageNote}
+                </div>
+              )}
+
+              {/* Evidence Expandable */}
+              {hasEvidence && (
+                <Collapsible open={evidenceOpen} onOpenChange={setEvidenceOpen}>
+                  <CollapsibleTrigger className="flex w-full items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+                    {evidenceOpen ? (
+                      <ChevronDownIcon className="size-3" />
+                    ) : (
+                      <ChevronRightIcon className="size-3" />
+                    )}
+                    {evidenceOpen ? "Hide evidence" : "See evidence"}
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 space-y-3">
+                    {/* Citations */}
+                    {evidence?.citations && evidence.citations.length > 0 && (
+                      <div>
+                        <p className="mb-1 text-xs font-medium text-muted-foreground">
+                          Citations
+                        </p>
+                        <div className="space-y-1.5">
+                          {evidence.citations.map((citation, i) => (
+                            <blockquote
+                              key={i}
+                              className="border-l-2 pl-2 text-xs italic text-muted-foreground"
+                              style={{ borderColor: "oklch(0.70 0.12 250)" }}
+                            >
+                              &ldquo;{citation.text}&rdquo;
+                            </blockquote>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* References with source labels */}
+                    {evidence?.references && evidence.references.length > 0 && (
+                      <div>
+                        <p className="mb-1 text-xs font-medium text-muted-foreground">
+                          References
+                        </p>
+                        <div className="space-y-2">
+                          {evidence.references.map((ref, i) => (
+                            <div
+                              key={i}
+                              className="flex items-start gap-2 rounded-md border p-2"
+                            >
+                              <SourceBadge source={ref.source} />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs text-muted-foreground">
+                                    {Math.round(ref.similarity * 100)}% match
+                                  </span>
+                                  {ref.section && (
+                                    <span className="text-xs text-muted-foreground">
+                                      - {ref.section}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="mt-0.5 text-xs">{ref.summary}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Baseline Comparison */}
+                    {evidence?.baselineComparison && (
+                      <div
+                        className="rounded-md p-2 text-xs"
+                        style={{
+                          background: "oklch(0.95 0.04 250)",
+                          borderLeft: "3px solid oklch(0.70 0.12 250)",
+                        }}
+                      >
+                        <span className="font-semibold">Baseline Comparison: </span>
+                        {evidence.baselineComparison}
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
               )}
             </div>
           </CollapsibleContent>
@@ -558,15 +777,18 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
   // Fetch full data once complete (or after re-score)
   React.useEffect(() => {
     if (status === "completed") {
-      Promise.all([getAnalysis(analysisId), getAnalysisClauses(analysisId)])
-        .then(([analysisResult, clausesResult]) => {
+      Promise.all([
+        getAnalysis(analysisId),
+        fetchRiskAssessments(analysisId),
+      ])
+        .then(([analysisResult, assessmentsResult]) => {
           if (analysisResult.success) {
             setAnalysis(analysisResult.data)
           } else {
             setFetchError(analysisResult.error.message)
           }
-          if (clausesResult.success) {
-            setClauses(clausesResult.data)
+          if (assessmentsResult.success) {
+            setClauses(assessmentsResult.data as unknown as ClauseExtraction[])
           }
         })
         .catch((e) => {
