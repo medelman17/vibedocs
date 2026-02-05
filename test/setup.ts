@@ -24,10 +24,23 @@ vi.mock("bcryptjs", async () => {
 const client = new PGlite()
 export const testDb = drizzle(client, { schema })
 
-// Mock the db module
+// Mock the db module - both direct import and barrel export
 vi.mock("@/db/client", () => ({
   db: testDb,
 }))
+
+// Also mock the barrel export @/db to use testDb
+// This is needed because some files import from @/db instead of @/db/client
+// Note: We import schema directly to avoid async factory issues with testDb reference
+vi.mock("@/db", async () => {
+  const schemaModule = await import("@/db/schema")
+  const queriesModule = await import("@/db/queries")
+  return {
+    db: testDb,
+    ...schemaModule,
+    queries: queriesModule,
+  }
+})
 
 // Track transaction state
 let inTransaction = false
@@ -82,6 +95,19 @@ const SCHEMA_SQL = `
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(organization_id, user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS organization_invitations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'member',
+    token TEXT NOT NULL UNIQUE,
+    invited_by UUID NOT NULL REFERENCES users(id),
+    status TEXT NOT NULL DEFAULT 'pending',
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
 
   CREATE TABLE IF NOT EXISTS sessions (
@@ -311,6 +337,28 @@ const SCHEMA_SQL = `
     completed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+
+  CREATE TABLE IF NOT EXISTS conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    document_id UUID REFERENCES documents(id) ON DELETE SET NULL,
+    title TEXT,
+    last_message_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ
+  );
+
+  CREATE TABLE IF NOT EXISTS messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    attachments JSONB,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   );
 `
 
