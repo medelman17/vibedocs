@@ -2,7 +2,7 @@
  * @fileoverview NDA Analysis Pipeline Function
  *
  * Orchestrates the full NDA analysis pipeline via Inngest:
- * Parser Agent → Classifier Agent → Risk Scorer Agent → Gap Analyst Agent
+ * Parser Agent → Chunk → Embed → Persist → Classifier Agent → Risk Scorer Agent → Gap Analyst Agent
  *
  * Supports three paths:
  * - Web uploads: Downloads from blob storage, extracts text
@@ -32,17 +32,264 @@ import {
 } from '@/lib/errors'
 import { BudgetTracker } from '@/lib/ai/budget'
 import { analyses } from '@/db/schema/analyses'
+import { documentChunks } from '@/db/schema/documents'
+import { chunkLegalDocument } from '@/lib/document-chunking/legal-chunker'
+import { generateChunkMap, computeChunkStats } from '@/lib/document-chunking/chunk-map'
+import { getVoyageAIClient, VOYAGE_CONFIG } from '@/lib/embeddings'
+import type { LegalChunk } from '@/lib/document-chunking/types'
+import type { EmbeddedChunk } from '@/lib/document-chunking/types'
 import type { ParserOutput } from '@/agents/parser'
-import { eq } from 'drizzle-orm'
+import type { ParsedChunk } from '@/agents/classifier'
+import { eq, and } from 'drizzle-orm'
 import type { AnalysisProgressPayload } from '../types'
 
 type ProgressStage = AnalysisProgressPayload['stage']
 
+// ============================================================================
+// Shared Chunking Pipeline
+// ============================================================================
+
+/**
+ * DB insert batch size for chunk persistence.
+ * Keeps individual INSERT statements reasonably sized.
+ */
+const DB_INSERT_BATCH_SIZE = 100
+
+/**
+ * Runs the legal chunking, embedding, and persistence pipeline.
+ *
+ * This is extracted as a shared helper so both the main pipeline and the
+ * post-OCR pipeline use identical chunking logic.
+ *
+ * Steps:
+ * 1. Initialize tokenizer
+ * 2. Chunk document using legal-aware chunker
+ * 3. Generate chunk map and stats, persist to analysis
+ * 4. Embed non-boilerplate chunks in batches of 128
+ * 5. Delete old chunks for this document+analysis, then bulk insert new ones
+ *
+ * @returns Object with embedded chunks and compatibility shim for downstream agents
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type InngestStep = any
+
+async function runChunkingPipeline(params: {
+  step: InngestStep
+  ctx: { db: typeof import('@/db/client').db }
+  parserResult: ParserOutput
+  analysisId: string
+  documentId: string
+  tenantId: string
+  emitProgress: (stage: ProgressStage, progress: number, message: string) => Promise<void>
+  isOcr?: boolean
+}): Promise<{
+  embeddedChunks: EmbeddedChunk[]
+  classifierDocument: { documentId: string; title: string; rawText: string; chunks: ParsedChunk[] }
+  wasTruncated: boolean
+}> {
+  const { step, ctx, parserResult, analysisId, documentId, tenantId, emitProgress, isOcr } = params
+
+  // Step: Initialize tokenizer for accurate Voyage AI token counting
+  await step.run('init-tokenizer', async () => {
+    const { initVoyageTokenizer } = await import('@/lib/document-chunking/token-counter')
+    await initVoyageTokenizer()
+  })
+
+  // Step: Token budget estimation (pre-chunking, rawText only)
+  const budgetValidation = validateTokenBudget(
+    parserResult.document.rawText,
+    [] // No chunks yet - estimation only
+  )
+
+  let workingRawText = parserResult.document.rawText
+  let wasTruncated = false
+
+  if (budgetValidation.truncation && budgetValidation.truncation.truncated) {
+    // Simple raw text truncation by character estimate
+    // The budget validation with empty chunks returns truncated text
+    workingRawText = budgetValidation.truncation.text
+    wasTruncated = true
+
+    console.log('[Budget] Document truncated before chunking', {
+      analysisId,
+      originalTokens: budgetValidation.estimate.tokenCount,
+      truncatedTokens: budgetValidation.truncation.truncatedTokens,
+    })
+  }
+
+  // Persist budget estimate
+  await step.run('record-budget-estimate', async () => {
+    await ctx.db
+      .update(analyses)
+      .set({
+        estimatedTokens: budgetValidation.estimate.tokenCount,
+        wasTruncated,
+        ...(wasTruncated && {
+          metadata: {
+            truncationWarning: budgetValidation.warning?.message,
+            removedSections: budgetValidation.truncation?.removedSections,
+          },
+        }),
+      })
+      .where(eq(analyses.id, analysisId))
+  })
+
+  await emitProgress(
+    'parsing',
+    15,
+    wasTruncated
+      ? 'Parsed and truncated document'
+      : 'Parsed document'
+  )
+
+  // Step: Chunk document using legal-aware chunker
+  const chunks = await step.run('chunk-document', async () => {
+    return await chunkLegalDocument(
+      workingRawText,
+      parserResult.document.structure,
+      { maxTokens: 512, targetTokens: 400, overlapTokens: 50, minChunkTokens: 50 }
+    )
+  }) as LegalChunk[]
+
+  // Step: Generate and persist chunk map + stats
+  await step.run('persist-chunk-metadata', async () => {
+    const chunkMap = generateChunkMap(chunks, documentId)
+    const chunkStats = computeChunkStats(chunks)
+
+    await ctx.db
+      .update(analyses)
+      .set({
+        chunkMap,
+        chunkStats,
+      })
+      .where(eq(analyses.id, analysisId))
+  })
+
+  await emitProgress('chunking', 25, `Chunked into ${chunks.length} legal segments`)
+
+  // Step: Embed non-boilerplate chunks in batches of 128
+  // Boilerplate chunks (signature blocks, notices) get null embedding
+  const embeddableChunks = chunks.filter(c => c.chunkType !== 'boilerplate')
+  const boilerplateChunks = chunks.filter(c => c.chunkType === 'boilerplate')
+
+  const totalBatches = Math.ceil(embeddableChunks.length / VOYAGE_CONFIG.batchLimit)
+  const allEmbeddings: (number[] | null)[] = new Array(chunks.length).fill(null)
+
+  // Create a map from chunk index to position in embeddableChunks
+  const embeddableIndexMap = new Map<number, number>()
+  embeddableChunks.forEach((c, i) => embeddableIndexMap.set(c.index, i))
+
+  for (let batch = 0; batch < totalBatches; batch++) {
+    const batchStart = batch * VOYAGE_CONFIG.batchLimit
+    const batchEnd = Math.min(batchStart + VOYAGE_CONFIG.batchLimit, embeddableChunks.length)
+    const batchChunks = embeddableChunks.slice(batchStart, batchEnd)
+
+    const batchEmbeddings = await step.run(`embed-batch-${batch}`, async () => {
+      const voyageClient = getVoyageAIClient()
+      const texts = batchChunks.map(c => c.content)
+      const result = await voyageClient.embedBatch(texts, 'document')
+      return result.embeddings
+    }) as number[][]
+
+    // Map embeddings back to original chunk indices
+    for (let i = 0; i < batchChunks.length; i++) {
+      allEmbeddings[batchChunks[i].index] = batchEmbeddings[i]
+    }
+
+    // Rate limit between batches (Voyage AI: 300 RPM)
+    if (batch < totalBatches - 1) {
+      await step.sleep(`rate-limit-embed-${batch}`, getRateLimitDelay('voyageAi'))
+    }
+  }
+
+  // Build embedded chunks array
+  const embeddedChunks: EmbeddedChunk[] = chunks.map(chunk => ({
+    ...chunk,
+    embedding: allEmbeddings[chunk.index],
+  }))
+
+  await emitProgress(
+    'chunking',
+    35,
+    `Embedded ${embeddableChunks.length} chunks (${boilerplateChunks.length} boilerplate skipped)`
+  )
+
+  // Step: Persist chunks to database (delete old, then bulk insert)
+  await step.run('persist-chunks', async () => {
+    // Delete old chunks for this document+analysis (replace strategy)
+    await ctx.db
+      .delete(documentChunks)
+      .where(
+        and(
+          eq(documentChunks.documentId, documentId),
+          eq(documentChunks.analysisId, analysisId)
+        )
+      )
+
+    // Bulk insert new chunks in batches
+    for (let i = 0; i < embeddedChunks.length; i += DB_INSERT_BATCH_SIZE) {
+      const batch = embeddedChunks.slice(i, i + DB_INSERT_BATCH_SIZE)
+
+      await ctx.db.insert(documentChunks).values(
+        batch.map(chunk => ({
+          tenantId,
+          documentId,
+          analysisId,
+          chunkIndex: chunk.index,
+          content: chunk.content,
+          sectionPath: chunk.sectionPath,
+          embedding: chunk.embedding,
+          tokenCount: chunk.tokenCount,
+          startPosition: chunk.startPosition,
+          endPosition: chunk.endPosition,
+          chunkType: chunk.chunkType,
+          overlapTokens: chunk.metadata.overlapTokens,
+          metadata: {
+            references: chunk.metadata.references,
+            structureSource: chunk.metadata.structureSource,
+            isOcr: isOcr ?? chunk.metadata.isOcr,
+            parentClauseIntro: chunk.metadata.parentClauseIntro,
+          },
+        }))
+      )
+    }
+  })
+
+  // Build compatibility shim for downstream agents (classifier expects ParsedChunk[])
+  // Filter out boilerplate chunks with null embeddings since classifier needs embeddings
+  const classifierChunks: ParsedChunk[] = embeddedChunks
+    .filter(c => c.embedding !== null)
+    .map(c => ({
+      id: c.id,
+      index: c.index,
+      content: c.content,
+      sectionPath: c.sectionPath,
+      tokenCount: c.tokenCount,
+      startPosition: c.startPosition,
+      endPosition: c.endPosition,
+      embedding: c.embedding!,
+    }))
+
+  const classifierDocument = {
+    documentId,
+    title: parserResult.document.title,
+    rawText: workingRawText,
+    chunks: classifierChunks,
+  }
+
+  return { embeddedChunks, classifierDocument, wasTruncated }
+}
+
+// ============================================================================
+// Main Pipeline
+// ============================================================================
+
 /**
  * Main NDA analysis pipeline function.
  *
- * Triggered by 'nda/analysis.requested' events. Runs all four agents
- * in sequence with durable step execution and progress tracking.
+ * Triggered by 'nda/analysis.requested' events. Runs extraction, chunking,
+ * embedding, classification, risk scoring, and gap analysis in sequence
+ * with durable step execution and progress tracking.
  */
 export const analyzeNda = inngest.createFunction(
   {
@@ -174,8 +421,7 @@ export const analyzeNda = inngest.createFunction(
       // Parser validation gate - runs AFTER step completes, OUTSIDE step.run()
       // Validation is fast and deterministic, so no durability needed
       const parserValidation = validateParserOutput(
-        parserResult.document.rawText,
-        parserResult.document.chunks
+        parserResult.document.rawText
       )
       if (!parserValidation.valid) {
         // Persist failure state (durable step for DB write)
@@ -197,77 +443,24 @@ export const analyzeNda = inngest.createFunction(
         throw new NonRetriableError(parserValidation.error!.userMessage)
       }
 
-      // Token budget validation gate - runs AFTER parser validation
-      // This gate always passes but may truncate the document
-      const budgetValidation = validateTokenBudget(
-        parserResult.document.rawText,
-        parserResult.document.chunks.map(c => ({
-          id: c.id,
-          index: c.index,
-          content: c.content,
-          tokenCount: c.tokenCount ?? 0,
-          sectionPath: c.sectionPath,
-          startPosition: c.startPosition,
-          endPosition: c.endPosition,
-        }))
-      )
-
-      // Track working document - may be truncated
-      let workingDocument = parserResult.document
-      let wasTruncated = false
-
-      if (budgetValidation.truncation) {
-        // Document was truncated to fit budget
-        workingDocument = {
-          ...parserResult.document,
-          rawText: budgetValidation.truncation.text,
-          chunks: budgetValidation.truncation.chunks.map((c, i) => ({
-            ...parserResult.document.chunks.find(orig => orig.id === c.id) ?? parserResult.document.chunks[i],
-            content: c.content,
-          })),
-        }
-        wasTruncated = true
-
-        console.log('[Budget] Document truncated', {
-          analysisId,
-          originalTokens: budgetValidation.estimate.tokenCount,
-          truncatedTokens: budgetValidation.truncation.truncatedTokens,
-          removedSections: budgetValidation.truncation.removedSections,
-        })
-      }
-
-      // Store estimate and truncation status in a durable step
-      await step.run('record-budget-estimate', async () => {
-        await ctx.db
-          .update(analyses)
-          .set({
-            estimatedTokens: budgetValidation.estimate.tokenCount,
-            wasTruncated,
-            ...(wasTruncated && {
-              metadata: {
-                truncationWarning: budgetValidation.warning?.message,
-                removedSections: budgetValidation.truncation?.removedSections,
-              },
-            }),
-          })
-          .where(eq(analyses.id, analysisId))
+      // Steps 3-7: Chunking, embedding, and persistence pipeline
+      const { classifierDocument } = await runChunkingPipeline({
+        step,
+        ctx,
+        parserResult,
+        analysisId,
+        documentId,
+        tenantId,
+        emitProgress,
       })
 
-      await emitProgress(
-        'parsing',
-        20,
-        wasTruncated
-          ? `Parsed and truncated to ${workingDocument.chunks.length} chunks`
-          : `Parsed ${parserResult.document.chunks.length} chunks`
-      )
-
-      // Rate limit delay after Claude API call
+      // Rate limit delay before Claude API calls
       await step.sleep('rate-limit-parser', getRateLimitDelay('claude'))
 
-      // Step 3: Classifier Agent
+      // Step 8: Classifier Agent
       const classifierResult = await step.run('classifier-agent', () =>
         runClassifierAgent({
-          parsedDocument: workingDocument,  // Use truncated version if applicable
+          parsedDocument: classifierDocument,
           budgetTracker,
         })
       )
@@ -294,14 +487,14 @@ export const analyzeNda = inngest.createFunction(
 
       await emitProgress(
         'classifying',
-        45,
+        50,
         `Classified ${classifierResult.clauses.length} clauses`
       )
 
       // Rate limit delay after Claude API calls
       await step.sleep('rate-limit-classifier', getRateLimitDelay('claude'))
 
-      // Step 4: Risk Scorer Agent
+      // Step 9: Risk Scorer Agent
       const riskResult = await step.run('risk-scorer-agent', () =>
         runRiskScorerAgent({
           clauses: classifierResult.clauses,
@@ -317,7 +510,7 @@ export const analyzeNda = inngest.createFunction(
       // Rate limit delay after Claude API calls
       await step.sleep('rate-limit-risk', getRateLimitDelay('claude'))
 
-      // Step 5: Gap Analyst Agent
+      // Step 10: Gap Analyst Agent
       const documentSummary = `${parserResult.document.title}: ${classifierResult.clauses.length} clauses identified.`
       const gapResult = await step.run('gap-analyst-agent', () =>
         runGapAnalystAgent({
@@ -329,7 +522,7 @@ export const analyzeNda = inngest.createFunction(
       )
       await emitProgress('analyzing_gaps', 90, 'Gap analysis complete')
 
-      // Step 6: Persist final results
+      // Step 11: Persist final results
       await step.run('persist-final', async () => {
         const usage = budgetTracker.getUsage()
 
@@ -352,7 +545,7 @@ export const analyzeNda = inngest.createFunction(
 
       await emitProgress('complete', 100, 'Analysis complete')
 
-      // Step 7: Emit completion event
+      // Step 12: Emit completion event
       await step.sendEvent('analysis-completed', {
         name: 'nda/analysis.completed',
         data: {
@@ -368,6 +561,10 @@ export const analyzeNda = inngest.createFunction(
     })
   }
 )
+
+// ============================================================================
+// Post-OCR Pipeline
+// ============================================================================
 
 /**
  * Continue analysis pipeline after OCR processing completes.
@@ -438,8 +635,7 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
 
       // Parser validation gate
       const parserValidation = validateParserOutput(
-        parserResult.document.rawText,
-        parserResult.document.chunks
+        parserResult.document.rawText
       )
       if (!parserValidation.valid) {
         await step.run('mark-parser-failed', async () => {
@@ -460,57 +656,24 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
         throw new NonRetriableError(parserValidation.error!.userMessage)
       }
 
-      // Token budget validation
-      const budgetValidation = validateTokenBudget(
-        parserResult.document.rawText,
-        parserResult.document.chunks.map(c => ({
-          id: c.id,
-          index: c.index,
-          content: c.content,
-          tokenCount: c.tokenCount ?? 0,
-          sectionPath: c.sectionPath,
-          startPosition: c.startPosition,
-          endPosition: c.endPosition,
-        }))
-      )
-
-      let workingDocument = parserResult.document
-      let wasTruncated = false
-
-      if (budgetValidation.truncation) {
-        workingDocument = {
-          ...parserResult.document,
-          rawText: budgetValidation.truncation.text,
-          chunks: budgetValidation.truncation.chunks.map((c, i) => ({
-            ...parserResult.document.chunks.find(orig => orig.id === c.id) ?? parserResult.document.chunks[i],
-            content: c.content,
-          })),
-        }
-        wasTruncated = true
-      }
-
-      await step.run('record-budget-estimate', async () => {
-        await ctx.db
-          .update(analyses)
-          .set({
-            estimatedTokens: budgetValidation.estimate.tokenCount,
-            wasTruncated,
-          })
-          .where(eq(analyses.id, analysisId))
+      // Steps 2-6: Chunking, embedding, and persistence pipeline
+      const { classifierDocument } = await runChunkingPipeline({
+        step,
+        ctx,
+        parserResult,
+        analysisId,
+        documentId,
+        tenantId,
+        emitProgress,
+        isOcr: true,
       })
-
-      await emitProgress(
-        'parsing',
-        25,
-        `Parsed ${workingDocument.chunks.length} chunks from OCR text`
-      )
 
       await step.sleep('rate-limit-parser', getRateLimitDelay('claude'))
 
-      // Step 2: Classifier Agent
+      // Step 7: Classifier Agent
       const classifierResult = await step.run('classifier-agent', () =>
         runClassifierAgent({
-          parsedDocument: workingDocument,
+          parsedDocument: classifierDocument,
           budgetTracker,
         })
       )
@@ -543,7 +706,7 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
 
       await step.sleep('rate-limit-classifier', getRateLimitDelay('claude'))
 
-      // Step 3: Risk Scorer Agent
+      // Step 8: Risk Scorer Agent
       const riskResult = await step.run('risk-scorer-agent', () =>
         runRiskScorerAgent({
           clauses: classifierResult.clauses,
@@ -558,7 +721,7 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
 
       await step.sleep('rate-limit-risk', getRateLimitDelay('claude'))
 
-      // Step 4: Gap Analyst Agent
+      // Step 9: Gap Analyst Agent
       const documentSummary = `${parserResult.document.title}: ${classifierResult.clauses.length} clauses identified (via OCR).`
       const gapResult = await step.run('gap-analyst-agent', () =>
         runGapAnalystAgent({
@@ -570,7 +733,7 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
       )
       await emitProgress('analyzing_gaps', 90, 'Gap analysis complete')
 
-      // Step 5: Persist final results
+      // Step 10: Persist final results
       await step.run('persist-final', async () => {
         const usage = budgetTracker.getUsage()
 
