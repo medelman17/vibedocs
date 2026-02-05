@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 4 - OCR Processing (IN PROGRESS)
+**Current focus:** Phase 4 - OCR Processing (COMPLETE)
 
 ## Current Position
 
 Phase: 4 of 11 (OCR Processing)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-05 - Completed 04-02-PLAN.md (OCR Core Processing)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-05 - Completed 04-03-PLAN.md (OCR Pipeline Integration)
 
-Progress: [████████░░] ~47% (14 plans of ~30+ total)
+Progress: [████████░░] ~50% (15 plans of ~30+ total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: 4.4 min
-- Total execution time: 61 min
+- Total execution time: 66 min
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [████████░░] ~47% (14 plans of ~30+ total)
 | 01 | 3 | 8.5 min | 2.8 min |
 | 02 | 4 | 19.5 min | 4.9 min |
 | 03 | 5 | 28.5 min | 5.7 min |
-| 04 | 2 | 4.5 min | 2.3 min |
+| 04 | 3 | 9.5 min | 3.2 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-04 (8 min), 03-05 (8 min), 04-01 (1.5 min), 04-02 (3 min)
-- Trend: Phase 04 continues fast - core OCR processing complete
+- Last 5 plans: 03-05 (8 min), 04-01 (1.5 min), 04-02 (3 min), 04-03 (5 min)
+- Trend: Phase 04 complete - OCR pipeline fully integrated
 
 *Updated after each plan completion*
 
@@ -84,6 +84,8 @@ Recent decisions affecting current work:
 - [04-01]: Scale factor 2.0 for better OCR quality
 - [04-01]: Dynamic import for pdf-to-img to avoid barrel export issues
 - [04-02]: Uint8Array to Buffer conversion for Tesseract.js compatibility
+- [04-03]: Combined download+OCR in single Inngest step (Buffer serialization issue)
+- [04-03]: OCR completion triggers nda/analysis.ocr-complete event for pipeline resume
 
 ### Pending Todos
 
@@ -96,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T02:30:22Z
-Stopped at: Completed 04-02-PLAN.md (OCR Core Processing)
+Last session: 2026-02-05T02:40:00Z
+Stopped at: Completed 04-03-PLAN.md (OCR Pipeline Integration) - Phase 4 COMPLETE
 Resume file: None
