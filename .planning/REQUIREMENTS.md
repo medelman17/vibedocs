@@ -12,18 +12,18 @@ Requirements for the analysis pipeline milestone. Each maps to roadmap phases.
 - [x] **FND-01**: Migrate all agents from deprecated `generateObject` to `generateText` + `Output.object()`
 - [x] **FND-02**: Add validation gates between pipeline stages to catch errors early
 - [x] **FND-03**: Convert database INSERT operations to upsert patterns for idempotency
-- [ ] **FND-04**: Implement pre-flight token estimation before analysis starts
-- [ ] **FND-05**: Enforce hard budget limits that abort analysis if exceeded
-- [ ] **FND-06**: Add document size caps (page count, file size) with clear error messages
+- [x] **FND-04**: Implement pre-flight token estimation before analysis starts
+- [x] **FND-05**: Enforce hard budget limits that abort analysis if exceeded
+- [x] **FND-06**: Add document size caps (page count, file size) with clear error messages
 
 ### Extraction
 
-- [ ] **EXT-01**: Extract raw text from PDF documents using pdf-parse
-- [ ] **EXT-02**: Extract raw text from DOCX documents using mammoth
-- [ ] **EXT-03**: Preserve document structure (headings, sections, paragraphs)
-- [ ] **EXT-04**: Validate extraction quality before proceeding (non-empty, reasonable length)
-- [ ] **EXT-05**: Handle extraction failures gracefully (corrupt files, encrypted)
-- [ ] **EXT-06**: Support raw text input for Word Add-in (bypass extraction)
+- [x] **EXT-01**: Extract raw text from PDF documents using pdf-parse
+- [x] **EXT-02**: Extract raw text from DOCX documents using mammoth
+- [x] **EXT-03**: Preserve document structure (headings, sections, paragraphs)
+- [x] **EXT-04**: Validate extraction quality before proceeding (non-empty, reasonable length)
+- [x] **EXT-05**: Handle extraction failures gracefully (corrupt files, encrypted)
+- [x] **EXT-06**: Support raw text input for Word Add-in (bypass extraction)
 
 ### OCR
 
@@ -141,15 +141,15 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | FND-01 | Phase 1 | Complete |
 | FND-02 | Phase 1 | Complete |
 | FND-03 | Phase 1 | Complete |
-| FND-04 | Phase 2 | Pending |
-| FND-05 | Phase 2 | Pending |
-| FND-06 | Phase 2 | Pending |
-| EXT-01 | Phase 3 | Pending |
-| EXT-02 | Phase 3 | Pending |
-| EXT-03 | Phase 3 | Pending |
-| EXT-04 | Phase 3 | Pending |
-| EXT-05 | Phase 3 | Pending |
-| EXT-06 | Phase 3 | Pending |
+| FND-04 | Phase 2 | Complete |
+| FND-05 | Phase 2 | Complete |
+| FND-06 | Phase 2 | Complete |
+| EXT-01 | Phase 3 | Complete |
+| EXT-02 | Phase 3 | Complete |
+| EXT-03 | Phase 3 | Complete |
+| EXT-04 | Phase 3 | Complete |
+| EXT-05 | Phase 3 | Complete |
+| EXT-06 | Phase 3 | Complete |
 | OCR-01 | Phase 4 | Pending |
 | OCR-02 | Phase 4 | Pending |
 | OCR-03 | Phase 4 | Pending |
@@ -207,4 +207,4 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 (Phase 1 requirements complete)*
+*Last updated: 2026-02-04 (Phase 3 requirements complete)*
