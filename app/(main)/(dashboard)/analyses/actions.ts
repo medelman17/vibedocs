@@ -17,7 +17,7 @@ import { z } from "zod";
 import { withTenant } from "@/lib/dal";
 import { ok, err, type ApiResponse } from "@/lib/api-response";
 import { analyses, clauseExtractions, documents } from "@/db/schema";
-import { eq, and, desc, gte, count, inArray } from "drizzle-orm";
+import { eq, and, desc, asc, gte, count, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { inngest } from "@/inngest";
 import {
@@ -33,6 +33,8 @@ import {
 import { getGapAnalysis } from "@/db/queries/gap-analysis";
 import type { EnhancedGapResult } from "@/agents/types";
 import { generateAnalysisToken, type AnalysisToken } from "@/lib/realtime/tokens";
+import type { DocumentRenderingData, RiskLevelInfo } from "@/lib/document-rendering/types";
+import type { DocumentStructure } from "@/lib/document-extraction/types";
 
 // ============================================================================
 // Types
@@ -134,6 +136,7 @@ export type Perspective = "receiving" | "disclosing" | "balanced";
 export type { ChunkClassificationRow, ClassificationsByCategory, ClauseExtractionRow };
 export type { EnhancedGapResult };
 export type { AnalysisToken };
+export type { DocumentRenderingData, RiskLevelInfo };
 
 // ============================================================================
 // Input Schemas
@@ -1245,4 +1248,170 @@ export async function fetchRealtimeToken(
   }
 
   return generateAnalysisToken(analysisId);
+}
+
+// ============================================================================
+// Document Rendering Actions
+// ============================================================================
+
+/**
+ * Risk level visual configuration for document rendering.
+ * Maps risk levels to display labels and Tailwind CSS color classes.
+ */
+export const riskLevelConfig: Record<RiskLevel | "unknown", RiskLevelInfo> = {
+  standard: {
+    level: "standard",
+    label: "Standard",
+    color: "text-green-700 dark:text-green-400",
+    bgColor: "bg-green-100/60 dark:bg-green-900/30",
+    borderColor: "border-green-300 dark:border-green-700",
+  },
+  cautious: {
+    level: "cautious",
+    label: "Cautious",
+    color: "text-amber-700 dark:text-amber-400",
+    bgColor: "bg-amber-100/60 dark:bg-amber-900/30",
+    borderColor: "border-amber-300 dark:border-amber-700",
+  },
+  aggressive: {
+    level: "aggressive",
+    label: "Aggressive",
+    color: "text-red-700 dark:text-red-400",
+    bgColor: "bg-red-100/60 dark:bg-red-900/30",
+    borderColor: "border-red-300 dark:border-red-700",
+  },
+  unknown: {
+    level: "unknown",
+    label: "Unknown",
+    color: "text-gray-600 dark:text-gray-400",
+    bgColor: "bg-gray-100/60 dark:bg-gray-900/30",
+    borderColor: "border-gray-300 dark:border-gray-700",
+  },
+};
+
+/**
+ * Fetch all data needed to render a document with clause overlays.
+ *
+ * Returns the raw document text, document structure (sections), and
+ * clause extraction positions. The markdown conversion and clause
+ * position mapping happen client-side in the document viewer component.
+ *
+ * @param analysisId - UUID of the analysis to render
+ * @returns Raw document data, structure, clauses, and analysis metadata
+ */
+export async function getDocumentForRendering(
+  analysisId: string
+): Promise<ApiResponse<DocumentRenderingData>> {
+  if (!z.string().uuid().safeParse(analysisId).success) {
+    return err("VALIDATION_ERROR", "Invalid analysis ID");
+  }
+
+  const { db, tenantId } = await withTenant();
+
+  // Fetch analysis record
+  const analysis = await db.query.analyses.findFirst({
+    where: and(
+      eq(analyses.id, analysisId),
+      eq(analyses.tenantId, tenantId)
+    ),
+    columns: {
+      id: true,
+      documentId: true,
+      status: true,
+      tokenUsage: true,
+    },
+  });
+
+  if (!analysis) {
+    return err("NOT_FOUND", "Analysis not found");
+  }
+
+  // Fetch the source document
+  const document = await db.query.documents.findFirst({
+    where: and(
+      eq(documents.id, analysis.documentId),
+      eq(documents.tenantId, tenantId)
+    ),
+    columns: {
+      rawText: true,
+      title: true,
+      metadata: true,
+    },
+  });
+
+  if (!document) {
+    return err("NOT_FOUND", "Document not found");
+  }
+
+  if (!document.rawText) {
+    return err("CONFLICT", "Document text not available. Document may still be processing.");
+  }
+
+  // Fetch clause extractions ordered by position
+  const clauses = await db
+    .select({
+      id: clauseExtractions.id,
+      category: clauseExtractions.category,
+      riskLevel: clauseExtractions.riskLevel,
+      startPosition: clauseExtractions.startPosition,
+      endPosition: clauseExtractions.endPosition,
+      confidence: clauseExtractions.confidence,
+      clauseText: clauseExtractions.clauseText,
+      riskExplanation: clauseExtractions.riskExplanation,
+    })
+    .from(clauseExtractions)
+    .where(
+      and(
+        eq(clauseExtractions.analysisId, analysisId),
+        eq(clauseExtractions.tenantId, tenantId)
+      )
+    )
+    .orderBy(asc(clauseExtractions.startPosition));
+
+  // Parse DocumentStructure from document metadata (safe fallback)
+  const metadata = (document.metadata ?? {}) as Record<string, unknown>;
+  const structure = parseDocumentStructure(metadata);
+
+  // Parse token usage from JSONB
+  const tokenUsage = analysis.tokenUsage as {
+    total?: { input?: number; output?: number; estimatedCost?: number };
+  } | null;
+
+  return ok({
+    document: {
+      rawText: document.rawText,
+      title: document.title,
+      metadata,
+    },
+    structure,
+    clauses,
+    status: analysis.status,
+    tokenUsage: tokenUsage ?? null,
+  });
+}
+
+/**
+ * Safely parse DocumentStructure from document metadata JSONB.
+ * Returns an empty structure if parsing fails or data is missing.
+ */
+function parseDocumentStructure(
+  metadata: Record<string, unknown>
+): DocumentStructure {
+  const emptyStructure: DocumentStructure = {
+    sections: [],
+    parties: {},
+    hasExhibits: false,
+    hasSignatureBlock: false,
+    hasRedactedText: false,
+  };
+
+  try {
+    const structure = metadata.structure as DocumentStructure | undefined;
+    if (!structure || !Array.isArray(structure.sections)) {
+      return emptyStructure;
+    }
+    return structure;
+  } catch {
+    return emptyStructure;
+  }
 }
