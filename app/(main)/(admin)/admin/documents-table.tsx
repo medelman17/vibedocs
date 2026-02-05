@@ -64,6 +64,7 @@ interface DocumentsTableProps {
   sortBy?: string
   sortOrder?: "asc" | "desc"
   onRowClick: (documentId: string) => void
+  onSelectionChange?: (selectedIds: string[]) => void
 }
 
 // ============================================================================
@@ -78,6 +79,7 @@ export function DocumentsTable({
   sortBy,
   sortOrder = "desc",
   onRowClick,
+  onSelectionChange,
 }: DocumentsTableProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -109,6 +111,7 @@ export function DocumentsTable({
   const pageCount = Math.ceil(total / pageSize)
 
   // TanStack Table instance
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -168,13 +171,18 @@ export function DocumentsTable({
     router.replace("/admin", { scroll: false })
   }
 
-  // Get selected row IDs
+  // Get selected row IDs and notify parent
   const selectedRowIds = React.useMemo(() => {
     return Object.keys(rowSelection)
       .filter((key) => rowSelection[key])
       .map((key) => data[Number(key)]?.id)
       .filter(Boolean) as string[]
   }, [rowSelection, data])
+
+  // Notify parent of selection changes
+  React.useEffect(() => {
+    onSelectionChange?.(selectedRowIds)
+  }, [selectedRowIds, onSelectionChange])
 
   // Generate page numbers for pagination
   const pageNumbers = React.useMemo(() => {
