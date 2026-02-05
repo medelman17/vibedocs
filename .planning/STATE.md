@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 9 of 11 (Pipeline Orchestration)
-Plan: 3 of 7 in current phase
+Plan: 5 of 7 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 09-03-PLAN.md
+Last activity: 2026-02-05 - Completed 09-05-PLAN.md
 
-Progress: [███████████████████████████░░░░░░░░░░░░░] 90% (35 plans of 39 total)
+Progress: [████████████████████████████░░░░░░░░░░░░] 92% (36 plans of 39 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 35
-- Average duration: 4.5 min
-- Total execution time: 157.3 min
+- Total plans completed: 36
+- Average duration: 4.4 min
+- Total execution time: 160.0 min
 
 **By Phase:**
 
@@ -35,10 +35,10 @@ Progress: [███████████████████████
 | 06 | 4 | 18.2 min | 4.6 min |
 | 07 | 4 | 22.9 min | 5.7 min |
 | 08 | 4 | 16.2 min | 4.1 min |
-| 09 | 3 | 9.7 min | 3.2 min |
+| 09 | 4 | 12.4 min | 3.1 min |
 
 **Recent Trend:**
-- Last 5 plans: 08-04 (3.0 min), 09-01 (2.7 min), 09-02 (5.0 min), 09-03 (2.0 min)
+- Last 5 plans: 09-01 (2.7 min), 09-02 (5.0 min), 09-03 (2.0 min), 09-05 (2.7 min)
 - Trend: Pipeline orchestration plans consistently fast (~2-5 min)
 
 *Updated after each plan completion*
@@ -143,6 +143,8 @@ Recent decisions affecting current work:
 - [09-03]: Per-batch classifier steps with const accumulator arrays (push mutates content, not reference)
 - [09-03]: Progress range 40-60% allocated to classifier stage in pipeline progress
 - [09-03]: ClassifierResultType via Awaited<ReturnType<>> to stay in sync with classifier agent
+- [09-05]: Queue position counts all pending+processing+pending_ocr analyses for the tenant
+- [09-05]: CancelledView uses window.location.reload() after resume/start-fresh for clean state reset
 
 ### Pending Todos
 
@@ -155,5 +157,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 09-03-PLAN.md (per-batch classifier steps)
+Stopped at: Completed 09-05-PLAN.md (progress messages & cancelled state UI)
 Resume file: None
