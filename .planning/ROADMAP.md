@@ -123,10 +123,13 @@ Plans:
   3. Multi-category clauses show primary and secondary labels
   4. Document-level clause list aggregates chunk classifications
   5. Classification uses RAG retrieval of similar CUAD examples
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md -- Schema + types: chunkClassifications table and multi-label classification schemas
+- [ ] 06-02-PLAN.md -- Classifier agent: batch classification, two-stage RAG, neighbor context
+- [ ] 06-03-PLAN.md -- Pipeline integration: wire classifier into Inngest, persist classifications
+- [ ] 06-04-PLAN.md -- Queries + UI: classification queries, server actions, dual-view toggle
 
 ### Phase 7: Risk Scoring
 **Goal**: Every clause has risk assessment with evidence-grounded explanation and verified citations
@@ -213,7 +216,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 3. Document Extraction | 5/5 | Complete | 2026-02-04 |
 | 4. OCR Processing | 5/5 | Complete | 2026-02-04 |
 | 5. Legal Chunking | 3/3 | Complete | 2026-02-05 |
-| 6. CUAD Classification | 0/TBD | Not started | - |
+| 6. CUAD Classification | 0/4 | Not started | - |
 | 7. Risk Scoring | 0/TBD | Not started | - |
 | 8. Gap Analysis | 0/TBD | Not started | - |
 | 9. Pipeline Orchestration | 0/TBD | Not started | - |
