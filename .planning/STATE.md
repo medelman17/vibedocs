@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 7 - Risk Scoring (in progress)
+**Current focus:** Phase 7 - Risk Scoring (complete)
 
 ## Current Position
 
 Phase: 7 of 11 (Risk Scoring)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-05 - Completed 07-03-PLAN.md (Risk Scoring Persistence & Weighted Scoring)
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-05 - Completed 07-04-PLAN.md (Risk Scoring UI & Re-Scoring)
 
-Progress: [████████████████████░] ~87% (27 plans of ~31 total)
+Progress: [█████████████████████] ~90% (28 plans of ~31 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
-- Average duration: 4.5 min
-- Total execution time: 121.4 min
+- Total plans completed: 28
+- Average duration: 4.7 min
+- Total execution time: 131.4 min
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [████████████████████░] ~87%
 | 04 | 5 | 15.5 min | 3.1 min |
 | 05 | 3 | 18.3 min | 6.1 min |
 | 06 | 4 | 18.2 min | 4.6 min |
-| 07 | 3 | 12.9 min | 4.3 min |
+| 07 | 4 | 22.9 min | 5.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-03 (2.1 min), 06-04 (4.6 min), 07-01 (7.9 min), 07-03 (5.0 min)
-- Trend: Pipeline integration plans running at expected pace
+- Last 5 plans: 06-04 (4.6 min), 07-01 (7.9 min), 07-03 (5.0 min), 07-04 (10.0 min)
+- Trend: UI-heavy plans take slightly longer due to component complexity
 
 *Updated after each plan completion*
 
@@ -124,6 +124,10 @@ Recent decisions affecting current work:
 - [07-03]: JSONB merge preserves existing metadata while adding perspective/riskDistribution
 - [07-03]: Fallback to uniform weight 1.0 when cuadCategories empty (bootstrap not run)
 - [07-03]: updateAnalysisWithRiskResults exported but not used in pipeline (available for standalone use)
+- [07-04]: Re-score via Inngest to avoid serverless timeout; no-op check via metadata.perspective
+- [07-04]: Poll-based refresh (3s) for re-score completion; bumps rescoreVersion state
+- [07-04]: fetchRiskAssessments replaces getAnalysisClauses for document-order display
+- [07-04]: Evidence and metadata parsed from JSONB with typed interfaces
 
 ### Pending Todos
 
@@ -132,10 +136,9 @@ None yet.
 ### Blockers/Concerns
 
 - [Research]: Phase 10 (SSE) may need Inngest Realtime vs custom SSE evaluation
-- [Research]: Phase 7 (Risk Scoring) citation verification patterns need validation
 
 ## Session Continuity
 
-Last session: 2026-02-05T07:57:00Z
-Stopped at: Completed 07-03-PLAN.md (Risk Scoring Persistence & Weighted Scoring)
+Last session: 2026-02-05T08:11:00Z
+Stopped at: Completed 07-04-PLAN.md (Risk Scoring UI & Re-Scoring) - Phase 7 complete
 Resume file: None
