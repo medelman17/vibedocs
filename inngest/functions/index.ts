@@ -18,6 +18,7 @@ import { ingestSource } from "./bootstrap/ingest-source"
 import { analyzeNda, analyzeNdaAfterOcr } from "./analyze-nda"
 import { rescoreAnalysis } from "./rescore-analysis"
 import { ocrDocument } from "./ocr-document"
+import { cleanupCancelledAnalysis } from "./cleanup-cancelled"
 
 // Production functions - will be populated as functions are created
 // import { processDocument } from "./process-document"
@@ -43,6 +44,7 @@ export const functions = [
   analyzeNdaAfterOcr,
   rescoreAnalysis,
   ocrDocument,
+  cleanupCancelledAnalysis,
 
   // Production functions - TBD
   // processDocument,
