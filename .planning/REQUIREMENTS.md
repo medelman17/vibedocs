@@ -53,12 +53,12 @@ Requirements for the analysis pipeline milestone. Each maps to roadmap phases.
 
 ### Risk Scoring
 
-- [ ] **RSK-01**: Retrieve ContractNLI evidence and template baselines for each clause
-- [ ] **RSK-02**: Assign risk level: standard | cautious | aggressive | unknown
-- [ ] **RSK-03**: Generate plain-language explanation (2-3 sentences) per clause
-- [ ] **RSK-04**: Cite evidence from reference corpus (CUAD statistics, ContractNLI spans)
-- [ ] **RSK-05**: Verify citations exist in reference database (no hallucinated evidence)
-- [ ] **RSK-06**: Calculate overall document risk score as weighted average
+- [x] **RSK-01**: Retrieve ContractNLI evidence and template baselines for each clause
+- [x] **RSK-02**: Assign risk level: standard | cautious | aggressive | unknown
+- [x] **RSK-03**: Generate plain-language explanation (2-3 sentences) per clause
+- [x] **RSK-04**: Cite evidence from reference corpus (CUAD statistics, ContractNLI spans)
+- [x] **RSK-05**: Verify citations exist in reference database (no hallucinated evidence)
+- [x] **RSK-06**: Calculate overall document risk score as weighted average
 
 ### Gap Analysis
 
@@ -70,12 +70,12 @@ Requirements for the analysis pipeline milestone. Each maps to roadmap phases.
 
 ### Pipeline Orchestration
 
-- [ ] **PIP-01**: Wrap each agent in Inngest `step.run()` for durability
-- [ ] **PIP-02**: Add `step.sleep()` delays for rate limit compliance (Claude 60 RPM, Voyage 300 RPM)
-- [ ] **PIP-03**: Emit stage-level progress events via `step.sendEvent()`
-- [ ] **PIP-04**: Emit chunk-level progress within long stages (Classifier, Risk Scorer)
-- [ ] **PIP-05**: Support analysis cancellation via Inngest `cancelOn` events
-- [ ] **PIP-06**: Preserve partial results on cancellation where possible
+- [x] **PIP-01**: Wrap each agent in Inngest `step.run()` for durability
+- [x] **PIP-02**: Add `step.sleep()` delays for rate limit compliance (Claude 60 RPM, Voyage 300 RPM)
+- [x] **PIP-03**: Emit stage-level progress events via `step.sendEvent()`
+- [x] **PIP-04**: Emit chunk-level progress within long stages (Classifier, Risk Scorer)
+- [x] **PIP-05**: Support analysis cancellation via Inngest `cancelOn` events
+- [x] **PIP-06**: Preserve partial results on cancellation where possible
 
 ### Progress Streaming
 

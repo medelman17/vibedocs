@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: CUAD Classification** - Classify chunks against 41-category taxonomy with confidence scoring
 - [x] **Phase 7: Risk Scoring** - Assign risk levels with evidence-grounded explanations and citations
 - [x] **Phase 8: Gap Analysis** - Identify missing clauses, explain importance, suggest language
-- [ ] **Phase 9: Pipeline Orchestration** - Wrap agents in Inngest steps, emit progress events, support cancellation
+- [x] **Phase 9: Pipeline Orchestration** - Wrap agents in Inngest steps, emit progress events, support cancellation
 - [ ] **Phase 10: Progress Streaming** - SSE endpoint for real-time UI updates, Word Add-in consumption
 - [ ] **Phase 11: Document Rendering** - Display extracted documents with clause highlighting in UI
 
@@ -179,13 +179,13 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Schema changes (cancelled status, progressMessage), fix emitProgress IDs, add cancelOn
-- [ ] 09-02-PLAN.md — Cancellation cleanup handler, cancel/resume server actions, progress hook update
-- [ ] 09-03-PLAN.md — Split classifier into per-batch Inngest steps for chunk-level progress
-- [ ] 09-04-PLAN.md — Split risk scorer into per-batch Inngest steps for clause-level progress
-- [ ] 09-05-PLAN.md — Extend progress polling with detailed messages, queue position, cancelled UI state
-- [ ] 09-06-PLAN.md — Sample NDAs for one-click testing (short, standard, complex)
-- [ ] 09-07-PLAN.md — Debug panel with step timeline, token usage, and metadata inspection
+- [x] 09-01-PLAN.md — Schema changes (cancelled status, progressMessage), fix emitProgress IDs, add cancelOn
+- [x] 09-02-PLAN.md — Cancellation cleanup handler, cancel/resume server actions, progress hook update
+- [x] 09-03-PLAN.md — Split classifier into per-batch Inngest steps for chunk-level progress
+- [x] 09-04-PLAN.md — Split risk scorer into per-batch Inngest steps for clause-level progress
+- [x] 09-05-PLAN.md — Extend progress polling with detailed messages, queue position, cancelled UI state
+- [x] 09-06-PLAN.md — Sample NDAs for one-click testing (short, standard, complex)
+- [x] 09-07-PLAN.md — Debug panel with step timeline, token usage, and metadata inspection
 
 ### Phase 10: Progress Streaming
 **Goal**: Real-time progress updates available via SSE for web UI and Word Add-in
@@ -231,10 +231,10 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 6. CUAD Classification | 4/4 | Complete | 2026-02-05 |
 | 7. Risk Scoring | 4/4 | Complete | 2026-02-05 |
 | 8. Gap Analysis | 4/4 | Complete | 2026-02-05 |
-| 9. Pipeline Orchestration | 0/6 | Not started | - |
+| 9. Pipeline Orchestration | 7/7 | Complete | 2026-02-05 |
 | 10. Progress Streaming | 0/TBD | Not started | - |
 | 11. Document Rendering | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-05 (Phase 8 complete)*
+*Last updated: 2026-02-05 (Phase 9 complete)*
