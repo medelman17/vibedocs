@@ -87,10 +87,13 @@ Plans:
   2. OCR extracts readable text from scanned documents
   3. Low-confidence OCR shows warning to user about potential accuracy impact
   4. User can proceed with analysis despite OCR quality warnings
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md — OCR infrastructure (types, PDF-to-image conversion)
+- [ ] 04-02-PLAN.md — OCR processor (Tesseract worker, quality assessment)
+- [ ] 04-03-PLAN.md — Pipeline integration (Inngest function, schema updates)
+- [ ] 04-04-PLAN.md — UI warning display and pipeline continuation
 
 ### Phase 5: Legal Chunking
 **Goal**: Extracted text split into legal-aware chunks with embeddings ready for RAG retrieval
@@ -205,7 +208,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 1. Foundation Hardening | 3/3 | Complete | 2026-02-04 |
 | 2. Budget Protection | 4/4 | Complete | 2026-02-04 |
 | 3. Document Extraction | 5/5 | Complete | 2026-02-04 |
-| 4. OCR Processing | 0/TBD | Not started | - |
+| 4. OCR Processing | 0/4 | Planned | - |
 | 5. Legal Chunking | 0/TBD | Not started | - |
 | 6. CUAD Classification | 0/TBD | Not started | - |
 | 7. Risk Scoring | 0/TBD | Not started | - |
@@ -216,4 +219,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 (Phase 3 complete)*
+*Last updated: 2026-02-04 (Phase 4 planned)*
