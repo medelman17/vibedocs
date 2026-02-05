@@ -60,23 +60,40 @@ const REDACTED_PATTERNS = [
 // ============================================================================
 
 /**
+ * Options for structure detection behavior.
+ */
+export interface DetectStructureOptions {
+  /**
+   * When true, skip the regex check and go directly to LLM-based structure
+   * detection. Used by the legal chunker when regex-based structure is
+   * insufficient (e.g., low chunk/page ratio or empty sections).
+   */
+  forceLlm?: boolean
+}
+
+/**
  * Detects document structure with position tracking.
  *
  * Uses regex for obvious headings (ARTICLE, Section), falls back to LLM
  * for ambiguous documents. Always computes character positions.
  *
+ * When `options.forceLlm` is true, skips the regex check and goes directly
+ * to LLM-based detection. This is used for re-chunking when initial structure
+ * quality is poor.
+ *
  * Per CONTEXT.md: Signature blocks and exhibits are identified but excluded.
  */
 export async function detectStructure(
-  text: string
+  text: string,
+  options?: DetectStructureOptions
 ): Promise<DocumentStructure> {
-  // Check for obvious structure
-  const hasObviousHeadings = OBVIOUS_HEADING_PATTERNS.some((p) => p.test(text))
+  // Determine whether to use LLM: forced via options, or no obvious regex headings
+  const useLlm = options?.forceLlm || !OBVIOUS_HEADING_PATTERNS.some((p) => p.test(text))
 
   let sections: DocumentSection[]
   let parties: { disclosing?: string; receiving?: string }
 
-  if (hasObviousHeadings) {
+  if (!useLlm) {
     // Fast path: parse with regex
     const parsed = parseObviousStructure(text)
     sections = parsed.sections
