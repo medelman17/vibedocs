@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 9 - Pipeline Orchestration (not started)
+**Current focus:** Phase 9 - Pipeline Orchestration (in progress)
 
 ## Current Position
 
 Phase: 9 of 11 (Pipeline Orchestration)
-Plan: 0 of TBD in current phase
-Status: Phase not started
-Last activity: 2026-02-05 - Phase 8 (Gap Analysis) verified complete
+Plan: 1 of 7 in current phase
+Status: In progress
+Last activity: 2026-02-05 - Completed 09-01-PLAN.md
 
-Progress: [████████████████████████] 100% (32 plans of 32 total)
+Progress: [█████████████████████████░░░░░░░░░░░░░░] 85% (33 plans of 39 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 32
+- Total plans completed: 33
 - Average duration: 4.6 min
-- Total execution time: 147.6 min
+- Total execution time: 150.3 min
 
 **By Phase:**
 
@@ -35,10 +35,11 @@ Progress: [███████████████████████
 | 06 | 4 | 18.2 min | 4.6 min |
 | 07 | 4 | 22.9 min | 5.7 min |
 | 08 | 4 | 16.2 min | 4.1 min |
+| 09 | 1 | 2.7 min | 2.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 08-01 (2.4 min), 08-02 (7.8 min), 08-03 (3.0 min), 08-04 (3.0 min)
-- Trend: UI and wiring plans consistently fast (~3 min)
+- Last 5 plans: 08-02 (7.8 min), 08-03 (3.0 min), 08-04 (3.0 min), 09-01 (2.7 min)
+- Trend: Schema/wiring plans consistently fast (~3 min)
 
 *Updated after each plan completion*
 
@@ -133,6 +134,8 @@ Recent decisions affecting current work:
 - [08-02]: Tasks 2+3 combined into single commit (same file, inseparable helper + wiring changes)
 - [08-02]: Bare catch instead of catch (_error) for ESLint caughtErrorsIgnorePattern compatibility
 - [08-03]: fetchGapAnalysis returns empty EnhancedGapResult (not null) when data unavailable
+- [09-01]: Monotonic counter per function instance for unique emitProgress step IDs
+- [09-01]: progressMessage as dedicated text column (not metadata JSONB)
 
 ### Pending Todos
 
@@ -145,5 +148,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Phase 8 verified complete. Phase 9 (Pipeline Orchestration) ready to start.
+Stopped at: Completed 09-01-PLAN.md (cancellation foundation & progress fix)
 Resume file: None
