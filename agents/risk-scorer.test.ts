@@ -2,17 +2,29 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runRiskScorerAgent, type RiskScorerInput } from './risk-scorer'
 import { BudgetTracker } from '@/lib/ai/budget'
 
-// Mock AI SDK generateText with Output.object pattern
+// Mock AI SDK generateText with enhanced Output.object pattern
 vi.mock('ai', () => ({
   generateText: vi.fn().mockResolvedValue({
     output: {
       riskLevel: 'standard',
       confidence: 0.9,
       explanation: 'Delaware law is commonly used in commercial agreements.',
+      negotiationSuggestion: undefined,
+      atypicalLanguage: false,
+      atypicalLanguageNote: undefined,
       evidence: {
-        citations: ['governed by Delaware law'],
-        comparisons: ['Matches standard governing law clauses'],
-        statistic: 'Delaware is used in 34% of commercial NDAs.',
+        citations: [
+          { text: 'governed by Delaware law', sourceType: 'clause' },
+        ],
+        references: [
+          {
+            sourceId: 'ref-0',
+            source: 'cuad',
+            similarity: 0.88,
+            summary: 'Standard governing law clause from reference corpus.',
+          },
+        ],
+        baselineComparison: undefined,
       },
     },
     usage: { inputTokens: 800, outputTokens: 200 },
@@ -25,7 +37,7 @@ vi.mock('ai', () => ({
   },
 }))
 
-// Mock vector search
+// Mock vector search with all three evidence helpers
 vi.mock('./tools/vector-search', () => ({
   findSimilarClauses: vi.fn().mockResolvedValue([
     {
@@ -36,6 +48,8 @@ vi.mock('./tools/vector-search', () => ({
       source: 'CUAD Reference',
     },
   ]),
+  findTemplateBaselines: vi.fn().mockResolvedValue([]),
+  findNliSpans: vi.fn().mockResolvedValue([]),
 }))
 
 // Mock AI config
@@ -43,12 +57,62 @@ vi.mock('@/lib/ai/config', () => ({
   getAgentModel: vi.fn().mockReturnValue({}),
 }))
 
+// Mock drizzle-orm inArray (used by verifyCitations)
+vi.mock('drizzle-orm', () => ({
+  inArray: vi.fn(),
+}))
+
+// Mock db client (used by verifyCitations)
+vi.mock('@/db/client', () => ({
+  db: {
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockResolvedValue([]),
+      }),
+    }),
+  },
+}))
+
+// Mock reference schema
+vi.mock('@/db/schema/reference', () => ({
+  referenceDocuments: { id: 'id' },
+}))
+
 describe('Risk Scorer Agent', () => {
   let budgetTracker: BudgetTracker
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     budgetTracker = new BudgetTracker()
+
+    // Reset the default mock implementation (overrides from previous tests)
+    const { generateText } = await import('ai')
+    vi.mocked(generateText).mockResolvedValue({
+      output: {
+        riskLevel: 'standard',
+        confidence: 0.9,
+        explanation: 'Delaware law is commonly used in commercial agreements.',
+        negotiationSuggestion: undefined,
+        atypicalLanguage: false,
+        atypicalLanguageNote: undefined,
+        evidence: {
+          citations: [
+            { text: 'governed by Delaware law', sourceType: 'clause' },
+          ],
+          references: [
+            {
+              sourceId: 'ref-0',
+              source: 'cuad',
+              similarity: 0.88,
+              summary:
+                'Standard governing law clause from reference corpus.',
+            },
+          ],
+          baselineComparison: undefined,
+        },
+      },
+      usage: { inputTokens: 800, outputTokens: 200 },
+    } as unknown as Awaited<ReturnType<typeof generateText>>)
   })
 
   it('scores governing law clause as standard risk', async () => {
@@ -82,7 +146,7 @@ describe('Risk Scorer Agent', () => {
 
     // Verify new output fields
     expect(result.perspective).toBe('balanced')
-    expect(result.executiveSummary).toBe('')
+    expect(result.executiveSummary).toContain('Overall Risk:')
     expect(result.riskDistribution).toEqual({
       standard: 1,
       cautious: 0,
@@ -98,11 +162,15 @@ describe('Risk Scorer Agent', () => {
       output: {
         riskLevel: 'aggressive',
         confidence: 0.85,
-        explanation: 'Five-year worldwide non-compete significantly exceeds market standard.',
+        explanation:
+          'Five-year worldwide non-compete significantly exceeds market standard.',
+        atypicalLanguage: false,
         evidence: {
-          citations: ['five (5) years', 'anywhere in the world'],
-          comparisons: ['Exceeds 92% of CUAD non-compete clauses'],
-          statistic: 'Average non-compete duration is 2.1 years.',
+          citations: [
+            { text: 'five (5) years', sourceType: 'clause' },
+            { text: 'anywhere in the world', sourceType: 'clause' },
+          ],
+          references: [],
         },
       },
       usage: { inputTokens: 800, outputTokens: 200 },
@@ -214,6 +282,7 @@ describe('Risk Scorer Agent', () => {
     expect(result.overallRiskLevel).toBe('unknown')
     expect(result.overallRiskScore).toBe(0)
     expect(result.perspective).toBe('balanced')
+    expect(result.executiveSummary).toContain('No clauses analyzed')
     expect(result.riskDistribution).toEqual({
       standard: 0,
       cautious: 0,
@@ -245,7 +314,7 @@ describe('Risk Scorer Agent', () => {
     expect(result.perspective).toBe('receiving')
   })
 
-  it('populates structured evidence references from vector search', async () => {
+  it('populates structured evidence references from LLM output', async () => {
     const input: RiskScorerInput = {
       clauses: [
         {
@@ -264,13 +333,96 @@ describe('Risk Scorer Agent', () => {
 
     const result = await runRiskScorerAgent(input)
 
-    // References should be populated from mock findSimilarClauses
+    // References come from LLM output (verified against reference DB)
     expect(result.assessments[0].evidence.references).toHaveLength(1)
     expect(result.assessments[0].evidence.references[0]).toEqual({
       sourceId: 'ref-0',
       source: 'cuad',
       similarity: 0.88,
       summary: 'Standard governing law clause from reference corpus.',
+    })
+  })
+
+  it('generates executive summary with key findings', async () => {
+    const { generateText } = await import('ai')
+    vi.mocked(generateText).mockResolvedValue({
+      output: {
+        riskLevel: 'aggressive',
+        confidence: 0.85,
+        explanation: 'This clause is highly aggressive.',
+        atypicalLanguage: true,
+        atypicalLanguageNote: 'Uses archaic language.',
+        negotiationSuggestion: 'Consider capping duration at 2 years.',
+        evidence: {
+          citations: [{ text: 'five years', sourceType: 'clause' }],
+          references: [],
+        },
+      },
+      usage: { inputTokens: 800, outputTokens: 200 },
+    } as unknown as Awaited<ReturnType<typeof generateText>>)
+
+    const input: RiskScorerInput = {
+      clauses: [
+        {
+          chunkId: 'c1',
+          clauseText: 'Non-compete worldwide for five years',
+          category: 'Non-Compete',
+          secondaryCategories: [],
+          confidence: 0.9,
+          reasoning: '',
+          startPosition: 0,
+          endPosition: 36,
+        },
+      ],
+      budgetTracker,
+    }
+
+    const result = await runRiskScorerAgent(input)
+
+    expect(result.executiveSummary).toContain('Overall Risk:')
+    expect(result.executiveSummary).toContain('Key Findings:')
+    expect(result.executiveSummary).toContain('Non-Compete')
+    expect(result.assessments[0].atypicalLanguage).toBe(true)
+    expect(result.assessments[0].atypicalLanguageNote).toBe(
+      'Uses archaic language.'
+    )
+    expect(result.assessments[0].negotiationSuggestion).toBe(
+      'Consider capping duration at 2 years.'
+    )
+  })
+
+  it('calls all three evidence retrieval sources', async () => {
+    const { findSimilarClauses, findTemplateBaselines, findNliSpans } =
+      await import('./tools/vector-search')
+
+    const input: RiskScorerInput = {
+      clauses: [
+        {
+          chunkId: 'chunk-0',
+          clauseText: 'Sample clause text.',
+          category: 'Governing Law',
+          secondaryCategories: [],
+          confidence: 0.9,
+          reasoning: '',
+          startPosition: 0,
+          endPosition: 19,
+        },
+      ],
+      budgetTracker,
+    }
+
+    await runRiskScorerAgent(input)
+
+    expect(findSimilarClauses).toHaveBeenCalledWith('Sample clause text.', {
+      category: 'Governing Law',
+      limit: 3,
+    })
+    expect(findTemplateBaselines).toHaveBeenCalledWith('Sample clause text.', {
+      limit: 2,
+    })
+    expect(findNliSpans).toHaveBeenCalledWith('Sample clause text.', {
+      category: 'Governing Law',
+      limit: 2,
     })
   })
 })
