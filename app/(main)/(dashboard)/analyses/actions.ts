@@ -32,6 +32,7 @@ import {
 } from "@/db/queries/risk-scoring";
 import { getGapAnalysis } from "@/db/queries/gap-analysis";
 import type { EnhancedGapResult } from "@/agents/types";
+import { generateAnalysisToken, type AnalysisToken } from "@/lib/realtime/tokens";
 
 // ============================================================================
 // Types
@@ -129,9 +130,10 @@ export interface AnalysisWithDocument extends Analysis {
 /** Assessment perspective for risk scoring */
 export type Perspective = "receiving" | "disclosing" | "balanced";
 
-// Re-export classification and gap types for UI consumption
+// Re-export classification, gap, and realtime types for UI consumption
 export type { ChunkClassificationRow, ClassificationsByCategory, ClauseExtractionRow };
 export type { EnhancedGapResult };
+export type { AnalysisToken };
 
 // ============================================================================
 // Input Schemas
@@ -1209,4 +1211,38 @@ export async function getDebugInfo(
   };
 
   return ok(debugInfo);
+}
+
+// ============================================================================
+// Realtime Token Actions
+// ============================================================================
+
+/**
+ * Generate an Inngest Realtime subscription token for analysis progress.
+ *
+ * Validates tenant ownership before generating a scoped token.
+ * Used by the useAnalysisProgress hook for real-time streaming.
+ *
+ * @param analysisId - UUID of the analysis to subscribe to
+ * @returns Scoped subscription token for the analysis progress channel
+ */
+export async function fetchRealtimeToken(
+  analysisId: string
+): Promise<AnalysisToken> {
+  const { db, tenantId } = await withTenant();
+
+  // Verify analysis belongs to tenant
+  const analysis = await db.query.analyses.findFirst({
+    where: and(
+      eq(analyses.id, analysisId),
+      eq(analyses.tenantId, tenantId)
+    ),
+    columns: { id: true },
+  });
+
+  if (!analysis) {
+    throw new Error("Analysis not found");
+  }
+
+  return generateAnalysisToken(analysisId);
 }
