@@ -301,6 +301,10 @@ export const analyzeNda = inngest.createFunction(
     name: 'NDA Analysis Pipeline',
     concurrency: CONCURRENCY.analysis,
     retries: RETRY_CONFIG.default.retries,
+    cancelOn: [{
+      event: 'nda/analysis.cancelled',
+      if: 'async.data.analysisId == event.data.analysisId',
+    }],
   },
   { event: 'nda/analysis.requested' },
   async ({ event, step }) => {
@@ -338,6 +342,9 @@ export const analyzeNda = inngest.createFunction(
       })
 
       // Helper to emit progress events AND persist to DB
+      // Monotonic counter for unique progress step IDs (prevents duplicate step names)
+      let progressCounter = 0
+
       const emitProgress = async (
         stage: ProgressStage,
         progress: number,
@@ -345,21 +352,23 @@ export const analyzeNda = inngest.createFunction(
       ) => {
         // Clamp progress to valid range
         const clampedProgress = Math.max(0, Math.min(100, progress))
+        const stepSuffix = `${stage}-${progressCounter++}`
 
         // Persist progress to DB in a durable step
-        await step.run(`update-progress-${stage}`, async () => {
+        await step.run(`update-progress-${stepSuffix}`, async () => {
           await ctx.db
             .update(analyses)
             .set({
               progressStage: stage,
               progressPercent: clampedProgress,
+              progressMessage: message,
               updatedAt: new Date(),
             })
             .where(eq(analyses.id, analysisId))
         })
 
         // Also emit event for real-time consumers (future SSE)
-        await step.sendEvent(`emit-progress-${stage}`, {
+        await step.sendEvent(`emit-progress-${stepSuffix}`, {
           name: 'nda/analysis.progress',
           data: {
             documentId,
@@ -674,6 +683,10 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
     name: 'NDA Analysis Pipeline (Post-OCR)',
     concurrency: CONCURRENCY.analysis,
     retries: RETRY_CONFIG.default.retries,
+    cancelOn: [{
+      event: 'nda/analysis.cancelled',
+      if: 'async.data.analysisId == event.data.analysisId',
+    }],
   },
   { event: 'nda/analysis.ocr-complete' },
   async ({ event, step }) => {
@@ -684,25 +697,30 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
 
     return await withTenantContext(tenantId, async (ctx) => {
       // Helper to emit progress events AND persist to DB
+      // Monotonic counter for unique progress step IDs (prevents duplicate step names)
+      let progressCounter = 0
+
       const emitProgress = async (
         stage: ProgressStage,
         progress: number,
         message: string
       ) => {
         const clampedProgress = Math.max(0, Math.min(100, progress))
+        const stepSuffix = `${stage}-${progressCounter++}`
 
-        await step.run(`update-progress-${stage}`, async () => {
+        await step.run(`update-progress-${stepSuffix}`, async () => {
           await ctx.db
             .update(analyses)
             .set({
               progressStage: stage,
               progressPercent: clampedProgress,
+              progressMessage: message,
               updatedAt: new Date(),
             })
             .where(eq(analyses.id, analysisId))
         })
 
-        await step.sendEvent(`emit-progress-${stage}`, {
+        await step.sendEvent(`emit-progress-${stepSuffix}`, {
           name: 'nda/analysis.progress',
           data: {
             documentId,
