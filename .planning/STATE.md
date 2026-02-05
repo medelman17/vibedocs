@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 5 of 11 (Legal Chunking)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 05-01-PLAN.md (Foundation Types, Token Counter & Schema)
+Last activity: 2026-02-05 - Completed 05-02-PLAN.md (Legal Chunker Engine)
 
-Progress: [██████████░] ~58% (18 plans of ~31 total)
+Progress: [████████████░] ~61% (19 plans of ~31 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
-- Average duration: 4.2 min
-- Total execution time: 75.2 min
+- Total plans completed: 19
+- Average duration: 4.3 min
+- Total execution time: 81.3 min
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [██████████░] ~58% (18 plans of ~31 total)
 | 02 | 4 | 19.5 min | 4.9 min |
 | 03 | 5 | 28.5 min | 5.7 min |
 | 04 | 5 | 15.5 min | 3.1 min |
-| 05 | 1 | 3.2 min | 3.2 min |
+| 05 | 2 | 9.3 min | 4.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-03 (5 min), 04-04 (4 min), 04-05 (2 min), 05-01 (3.2 min)
-- Trend: Phase 05 started - foundation types and schema in place
+- Last 5 plans: 04-04 (4 min), 04-05 (2 min), 05-01 (3.2 min), 05-02 (6.1 min)
+- Trend: Phase 05 chunker engine largest plan yet - six strategies plus post-processing
 
 *Updated after each plan completion*
 
@@ -95,6 +95,9 @@ Recent decisions affecting current work:
 - [05-01]: analysisId on documentChunks is plain UUID without FK reference (avoids circular imports)
 - [05-01]: Unique constraint updated to (documentId, analysisId, chunkIndex) for per-analysis chunks
 - [05-01]: Sync token counter fallback uses 4.5 chars/token for legal English text
+- [05-02]: chunk-merger.ts and cross-reference.ts created in Task 1 (legal-chunker.ts requires them for compilation)
+- [05-02]: Recital detection via WHEREAS content pattern since SectionType has no 'recital' value
+- [05-02]: LLM re-chunking only replaces initial results when chunk count improves
 
 ### Pending Todos
 
@@ -107,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T04:48:00Z
-Stopped at: Completed 05-01-PLAN.md (Foundation Types, Token Counter & Schema)
+Last session: 2026-02-05T05:00:00Z
+Stopped at: Completed 05-02-PLAN.md (Legal Chunker Engine)
 Resume file: None
