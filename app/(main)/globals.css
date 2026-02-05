@@ -462,6 +462,64 @@
    Custom utilities that extend Tailwind
    ═══════════════════════════════════════════════════════════════════════════ */
 
+@layer components {
+  /* ═══════════════════════════════════════════════════════════════════════════
+     MARKDOWN / PROSE STYLING
+     Styling for AI-generated content with proper list formatting
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Unordered lists in chat messages */
+  [data-streamdown] ul,
+  .message-content ul {
+    @apply my-3 ml-0 list-none space-y-2;
+  }
+
+  [data-streamdown] ul li,
+  .message-content ul li {
+    @apply relative pl-5 leading-relaxed;
+  }
+
+  [data-streamdown] ul li::before,
+  .message-content ul li::before {
+    @apply absolute left-0 top-[0.5em] h-1.5 w-1.5 rounded-full bg-muted-foreground/60;
+    content: "";
+  }
+
+  /* Ordered lists in chat messages */
+  [data-streamdown] ol,
+  .message-content ol {
+    @apply my-3 ml-0 list-none space-y-2;
+    counter-reset: list-counter;
+  }
+
+  [data-streamdown] ol li,
+  .message-content ol li {
+    @apply relative pl-7 leading-relaxed;
+    counter-increment: list-counter;
+  }
+
+  [data-streamdown] ol li::before,
+  .message-content ol li::before {
+    @apply absolute left-0 top-0 text-sm font-medium text-muted-foreground;
+    content: counter(list-counter) ".";
+  }
+
+  /* Nested lists */
+  [data-streamdown] ul ul,
+  [data-streamdown] ol ul,
+  .message-content ul ul,
+  .message-content ol ul {
+    @apply mt-2 mb-0;
+  }
+
+  [data-streamdown] ul ul li::before,
+  [data-streamdown] ol ul li::before,
+  .message-content ul ul li::before,
+  .message-content ol ul li::before {
+    @apply h-1 w-1 bg-muted-foreground/40;
+  }
+}
+
 @layer utilities {
   /* Typography utilities */
   .text-balance {

@@ -58,13 +58,45 @@ import { getMessages } from "./actions"
 export default function ChatPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const conversationId = searchParams.get("conversation")
+  const urlConversationId = searchParams.get("conversation")
 
   const [inputValue, setInputValue] = React.useState("")
   const [isUploading, setIsUploading] = React.useState(false)
   const inputWrapperRef = React.useRef<HTMLDivElement>(null)
   const { artifact, openArtifact, closeArtifact, toggleArtifactExpanded } =
     useShellStore()
+
+  // Use a ref for active conversation ID so transport body function can read latest value
+  // without causing transport recreation
+  const activeConversationIdRef = React.useRef<string | null>(urlConversationId)
+
+  // Sync ref when URL changes (e.g., clicking sidebar item)
+  React.useEffect(() => {
+    activeConversationIdRef.current = urlConversationId
+  }, [urlConversationId])
+
+  // Custom fetch that captures the X-Conversation-Id header
+  const customFetch = React.useCallback(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const response = await fetch(input, init)
+    const newConvId = response.headers.get("X-Conversation-Id")
+    if (newConvId) {
+      // Store the new conversation ID for subsequent messages
+      activeConversationIdRef.current = newConvId
+      // Update URL for bookmarkability (without re-render)
+      window.history.replaceState(window.history.state, "", `/chat?conversation=${newConvId}`)
+    }
+    return response
+  }, [])
+
+  // Create transport once - body is a function that reads the ref
+  const transport = React.useMemo(
+    () => new DefaultChatTransport({
+      api: "/api/chat",
+      body: () => ({ conversationId: activeConversationIdRef.current }),
+      fetch: customFetch,
+    }),
+    [customFetch] // Only recreate if customFetch changes (which it won't due to useCallback)
+  )
 
   // AI SDK v6 useChat hook
   const {
@@ -73,10 +105,7 @@ export default function ChatPage() {
     status,
     setMessages,
   } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-      body: { conversationId },
-    }),
+    transport,
     onToolCall: async ({ toolCall }) => {
       // Handle client-side tools
       if (toolCall.toolName === "showArtifact") {
@@ -100,12 +129,12 @@ export default function ChatPage() {
 
   const isLoading = status === "streaming" || status === "submitted" || isUploading
 
-  // Load existing conversation on mount
+  // Load existing conversation on mount or when URL changes
   React.useEffect(() => {
     async function loadConversation() {
-      if (!conversationId) return
+      if (!urlConversationId) return
 
-      const result = await getMessages(conversationId)
+      const result = await getMessages(urlConversationId)
       if (result.success) {
         // Convert stored messages to UIMessage format
         const uiMessages: UIMessage[] = result.data.map((msg) => {
@@ -134,7 +163,7 @@ export default function ChatPage() {
       }
     }
     loadConversation()
-  }, [conversationId, setMessages])
+  }, [urlConversationId, setMessages])
 
   // Handle form submission
   const handleSubmit = async (message: PromptInputMessage) => {
@@ -520,7 +549,7 @@ export default function ChatPage() {
               </Suggestions>
             )}
 
-            <div className="relative" ref={inputWrapperRef}>
+            <div className="relative mb-4" ref={inputWrapperRef}>
               <InputAutocomplete
                 inputValue={inputValue}
                 onSlashCommand={handleSlashCommand}

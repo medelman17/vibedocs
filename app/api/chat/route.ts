@@ -57,8 +57,42 @@ export async function POST(req: Request) {
 
   const {
     messages,
-    conversationId,
+    conversationId: incomingConversationId,
   }: { messages: UIMessage[]; conversationId?: string } = await req.json()
+
+  // Create conversation BEFORE streaming if this is a new chat
+  // This ensures the client can receive the ID and update the URL
+  let conversationId = incomingConversationId
+  let isNewConversation = false
+
+  if (!conversationId) {
+    isNewConversation = true
+    // Extract user content for title from the last user message
+    const userMessage = messages[messages.length - 1]
+    let userContent = ""
+    if (userMessage?.parts) {
+      const textPart = userMessage.parts.find(
+        (p): p is { type: "text"; text: string } => p.type === "text"
+      )
+      userContent = textPart?.text || ""
+    }
+    const title = userContent.slice(0, 50) || "New chat"
+
+    const convResult = await createConversationInternal({
+      title,
+      tenantId: tenantContext.tenantId,
+      userId: tenantContext.userId,
+    })
+
+    if (convResult.success) {
+      conversationId = convResult.data.id
+      // Generate better title asynchronously (fire and forget)
+      generateAndUpdateTitle(conversationId, userContent, tenantContext).catch(console.error)
+    } else {
+      console.error("[chat/route] Failed to create conversation:", convResult.error)
+      return new Response("Failed to create conversation", { status: 500 })
+    }
+  }
 
   const result = streamText({
     model,
@@ -82,99 +116,31 @@ export async function POST(req: Request) {
     stopWhen: stepCountIs(5),
   })
 
-  return result.toUIMessageStreamResponse({
+  // Build response with conversation ID header for new conversations
+  const response = result.toUIMessageStreamResponse({
     originalMessages: messages,
     generateMessageId: () => nanoid(),
     onFinish: async ({ responseMessage }) => {
       try {
-        if (!responseMessage) return
-
-        // Debug: Log incoming message structure
-        const lastMsg = messages[messages.length - 1]
-        console.log("[chat/route] onFinish debug:", {
-          conversationId,
-          messageCount: messages.length,
-          lastMsgRole: lastMsg?.role,
-          lastMsgHasParts: !!lastMsg?.parts,
-          lastMsgPartsLength: lastMsg?.parts?.length ?? 0,
-          lastMsgKeys: lastMsg ? Object.keys(lastMsg) : [],
-          responseMsgHasParts: !!responseMessage.parts,
-          responseMsgPartsLength: responseMessage.parts?.length ?? 0,
-        })
-
-        let convId = conversationId
-
-        // Create conversation if new
-        if (!convId) {
-          // Extract user content for title from the last user message
-          const userMessage = messages[messages.length - 1]
-          let userContent = ""
-          if (userMessage?.parts) {
-            const textPart = userMessage.parts.find(
-              (p): p is { type: "text"; text: string } => p.type === "text"
-            )
-            userContent = textPart?.text || ""
-          }
-          const title = userContent.slice(0, 50) || "New chat"
-
-          // Use internal function with pre-captured context (doesn't rely on request context)
-          const convResult = await createConversationInternal({
-            title,
-            tenantId: tenantContext.tenantId,
-            userId: tenantContext.userId,
-          })
-          if (convResult.success) {
-            convId = convResult.data.id
-
-            // Generate better title asynchronously (fire and forget)
-            generateAndUpdateTitle(convId, userContent, tenantContext).catch(console.error)
-          } else {
-            console.error(
-              "[chat/route] Failed to create conversation:",
-              convResult.error
-            )
-            return
-          }
-        }
+        if (!responseMessage || !conversationId) return
 
         // Persist user message (the one that triggered this response)
         const userMsg = messages[messages.length - 1]
         if (userMsg) {
-          // Ensure parts exist - construct from content if missing
-          let userParts = userMsg.parts
-          if (!userParts || userParts.length === 0) {
-            // Fallback: check if there's a content property (legacy format)
-            const content = (userMsg as unknown as { content?: string }).content
-            if (content) {
-              userParts = [{ type: "text" as const, text: content }]
-            }
-            console.warn("[chat/route] User message missing parts, constructed from content:", {
-              hasContent: !!content,
-              messageKeys: Object.keys(userMsg)
-            })
-          }
-
           await createMessageInternal({
-            conversationId: convId,
+            conversationId,
             role: "user",
-            content: JSON.stringify(userParts || []),
+            content: JSON.stringify(userMsg.parts || []),
             tenantId: tenantContext.tenantId,
             userId: tenantContext.userId,
           })
         }
 
         // Persist assistant response message
-        const assistantParts = responseMessage.parts || []
-        if (assistantParts.length === 0) {
-          console.warn("[chat/route] Assistant response has no parts:", {
-            messageKeys: Object.keys(responseMessage)
-          })
-        }
-
         await createMessageInternal({
-          conversationId: convId,
+          conversationId,
           role: "assistant",
-          content: JSON.stringify(assistantParts),
+          content: JSON.stringify(responseMessage.parts || []),
           tenantId: tenantContext.tenantId,
           userId: tenantContext.userId,
         })
@@ -183,6 +149,13 @@ export async function POST(req: Request) {
       }
     },
   })
+
+  // Add conversation ID header for new conversations so client can update URL
+  if (isNewConversation && conversationId) {
+    response.headers.set("X-Conversation-Id", conversationId)
+  }
+
+  return response
 }
 
 /**

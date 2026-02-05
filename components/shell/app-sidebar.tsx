@@ -180,59 +180,64 @@ export function AppSidebar({
       <SidebarSeparator />
 
       <SidebarContent>
-        {groupedItems.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item) => {
-                  const Icon = getIcon(item.type)
-                  return (
-                    <SidebarMenuItem key={item.id}>
-                      <div className="group/item relative flex w-full items-center">
-                        <SidebarMenuButton
-                          onClick={() => onSelectItem?.(item)}
-                          tooltip={item.title}
-                          className="flex-1"
-                        >
-                          <Icon className="size-4" />
-                          <span>{item.title}</span>
-                        </SidebarMenuButton>
-                        {item.type === "conversation" && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                className="absolute right-1 opacity-0 group-hover/item:opacity-100 focus:opacity-100 transition-opacity p-1 hover:bg-accent rounded-sm"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <MoreHorizontalIcon className="size-3.5" />
-                                <span className="sr-only">More options</span>
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem
-                                onClick={() => onDeleteItem?.(item)}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2Icon className="mr-2 size-4" />
-                                Delete conversation
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </SidebarMenuItem>
-                  )
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        {/* Hide history items when collapsed - they don't make sense as icons */}
+        {!isCollapsed && (
+          <>
+            {groupedItems.map((group) => (
+              <SidebarGroup key={group.label}>
+                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => {
+                      const Icon = getIcon(item.type)
+                      return (
+                        <SidebarMenuItem key={item.id}>
+                          <div className="group/item relative flex w-full items-center">
+                            <SidebarMenuButton
+                              onClick={() => onSelectItem?.(item)}
+                              tooltip={item.title}
+                              className="flex-1"
+                            >
+                              <Icon className="size-4" />
+                              <span>{item.title}</span>
+                            </SidebarMenuButton>
+                            {item.type === "conversation" && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    className="absolute right-1 opacity-0 group-hover/item:opacity-100 focus:opacity-100 transition-opacity p-1 hover:bg-accent rounded-sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MoreHorizontalIcon className="size-3.5" />
+                                    <span className="sr-only">More options</span>
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuItem
+                                    onClick={() => onDeleteItem?.(item)}
+                                    className="text-red-600 focus:text-red-600"
+                                  >
+                                    <Trash2Icon className="mr-2 size-4" />
+                                    Delete conversation
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+                        </SidebarMenuItem>
+                      )
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
 
-        {groupedItems.length === 0 && !isCollapsed && (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            No history yet
-          </div>
+            {groupedItems.length === 0 && (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No history yet
+              </div>
+            )}
+          </>
         )}
       </SidebarContent>
 
