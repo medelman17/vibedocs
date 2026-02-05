@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 5 - Legal Chunking (COMPLETE)
+**Current focus:** Phase 6 - CUAD Classification (in progress)
 
 ## Current Position
 
-Phase: 5 of 11 (Legal Chunking)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-05 - Completed 05-03-PLAN.md (Pipeline Integration)
+Phase: 6 of 11 (CUAD Classification)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-05 - Completed 06-01-PLAN.md (Schema & Types Foundation)
 
-Progress: [█████████████░] ~65% (20 plans of ~31 total)
+Progress: [██████████████░] ~68% (21 plans of ~31 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: 4.5 min
-- Total execution time: 90.3 min
+- Total execution time: 94.5 min
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [█████████████░] ~65% (20 plans of ~31 tot
 | 03 | 5 | 28.5 min | 5.7 min |
 | 04 | 5 | 15.5 min | 3.1 min |
 | 05 | 3 | 18.3 min | 6.1 min |
+| 06 | 1 | 4.2 min | 4.2 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-05 (2 min), 05-01 (3.2 min), 05-02 (6.1 min), 05-03 (9.0 min)
-- Trend: Phase 05 pipeline integration was the most complex plan yet - full pipeline rewrite with chunking/embedding/persistence
+- Last 5 plans: 05-01 (3.2 min), 05-02 (6.1 min), 05-03 (9.0 min), 06-01 (4.2 min)
+- Trend: Schema/types plan was straightforward; no new dependencies or complex integrations
 
 *Updated after each plan completion*
 
@@ -102,6 +103,7 @@ Recent decisions affecting current work:
 - [05-03]: Token budget estimation runs pre-chunking on raw text with empty chunks array
 - [05-03]: Shared runChunkingPipeline helper with InngestStep type alias for step parameter
 - [05-03]: validateParserOutput chunks parameter made optional (parser no longer produces chunks)
+- [06-01]: z.enum() with EXTENDED_CATEGORIES uses `as unknown as [string, ...]` cast for spread array compatibility
 
 ### Pending Todos
 
@@ -114,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T05:10:00Z
-Stopped at: Completed 05-03-PLAN.md (Pipeline Integration) - Phase 5 COMPLETE
+Last session: 2026-02-05T05:57:00Z
+Stopped at: Completed 06-01-PLAN.md (Schema & Types Foundation)
 Resume file: None
