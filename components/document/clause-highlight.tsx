@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { MessageSquareIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Tooltip,
@@ -8,6 +9,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
+import { useClauseSelection } from "@/hooks/use-clause-selection"
 
 // ============================================================================
 // Risk Color Configuration
@@ -67,6 +69,7 @@ interface ClauseHighlightProps {
   category: string
   riskLevel: string
   confidence: number
+  clauseText?: string
   isActive: boolean
   isVisible: boolean
   children: React.ReactNode
@@ -78,12 +81,14 @@ export function ClauseHighlight({
   category,
   riskLevel,
   confidence,
+  clauseText,
   isActive,
   isVisible,
   children,
   onClick,
 }: ClauseHighlightProps) {
   const config = getRiskColorConfig(riskLevel)
+  const askAboutClause = useClauseSelection((s) => s.askAboutClause)
 
   // When highlights are not visible, render children transparently
   if (!isVisible) {
@@ -138,6 +143,19 @@ export function ClauseHighlight({
             {Math.round(confidence * 100)}%
           </Badge>
         </div>
+        {clauseText && (
+          <button
+            type="button"
+            className="mt-0.5 flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            onClick={(e) => {
+              e.stopPropagation()
+              askAboutClause(clauseId, clauseText)
+            }}
+          >
+            <MessageSquareIcon className="size-3" />
+            Ask about this
+          </button>
+        )}
       </TooltipContent>
     </Tooltip>
   )

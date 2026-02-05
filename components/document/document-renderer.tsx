@@ -210,6 +210,7 @@ const ParagraphRow = React.memo(function ParagraphRow({
               category={seg.clause.category}
               riskLevel={seg.clause.riskLevel}
               confidence={seg.clause.confidence}
+              clauseText={seg.text}
               isActive={activeClauseId === seg.clause.clauseId}
               isVisible={highlightsEnabled}
               onClick={() => onClauseClick(seg.clause!.clauseId)}

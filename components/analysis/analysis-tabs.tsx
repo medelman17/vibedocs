@@ -14,6 +14,7 @@ import type { RiskLevel } from "@/components/analysis/config"
 import { ClassificationTab } from "@/components/analysis/classification-tab"
 import { RiskTab } from "@/components/analysis/risk-tab"
 import { GapsTab } from "@/components/analysis/gaps-tab"
+import { ChatTab } from "@/components/analysis/chat-tab"
 import {
   useClauseSelection,
   type AnalysisTab,
@@ -118,6 +119,7 @@ interface AnalysisTabsProps {
   riskDistribution: Record<RiskLevel, number> | null
   currentPerspective: Perspective
   onRescoreTriggered: () => void
+  documentTitle?: string
 }
 
 export function AnalysisTabs({
@@ -125,6 +127,7 @@ export function AnalysisTabs({
   analysis,
   clauses,
   riskDistribution,
+  documentTitle,
 }: AnalysisTabsProps) {
   const { activeTab, setActiveTab } = useClauseSelection()
 
@@ -174,17 +177,12 @@ export function AnalysisTabs({
       </TabsContent>
 
       <TabsContent value="chat" className="mt-0 min-h-0 flex-1">
-        <div className="flex h-full items-center justify-center p-8 text-center">
-          <div className="space-y-2">
-            <MessageSquareIcon className="mx-auto size-8 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
-              Chat tab coming soon
-            </p>
-            <p className="text-xs text-muted-foreground/70">
-              Ask questions about specific clauses and get AI-powered analysis
-            </p>
-          </div>
-        </div>
+        {activeTab === "chat" && (
+          <ChatTab
+            analysisId={analysisId}
+            documentTitle={documentTitle || "this document"}
+          />
+        )}
       </TabsContent>
     </Tabs>
   )
