@@ -87,13 +87,14 @@ Plans:
   2. OCR extracts readable text from scanned documents
   3. Low-confidence OCR shows warning to user about potential accuracy impact
   4. User can proceed with analysis despite OCR quality warnings
-**Plans**: 4 plans
+**Plans**: 5 plans
 
 Plans:
 - [ ] 04-01-PLAN.md — OCR infrastructure (types, PDF-to-image conversion)
 - [ ] 04-02-PLAN.md — OCR processor (Tesseract worker, quality assessment)
 - [ ] 04-03-PLAN.md — Pipeline integration (Inngest function, schema updates)
 - [ ] 04-04-PLAN.md — UI warning display and pipeline continuation
+- [ ] 04-05-PLAN.md — Gap closure: Wire OCR trigger event emission
 
 ### Phase 5: Legal Chunking
 **Goal**: Extracted text split into legal-aware chunks with embeddings ready for RAG retrieval
