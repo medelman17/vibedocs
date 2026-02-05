@@ -141,10 +141,13 @@ Plans:
   3. Risk explanations cite evidence from reference corpus (not just LLM opinion)
   4. Citations verified to exist in reference database (no hallucinated evidence)
   5. Document shows overall risk score as weighted average
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 07-01: TBD
+- [ ] 07-01-PLAN.md -- Enhanced types & schema (structured citations, perspective, atypical language)
+- [ ] 07-02-PLAN.md -- Prompt refactor & agent enhancement (perspective-aware scoring, multi-source RAG)
+- [ ] 07-03-PLAN.md -- Pipeline persistence & weighted scoring (clauseExtractions, executive summary)
+- [ ] 07-04-PLAN.md -- Re-score via Inngest, queries, UI (perspective toggle, evidence expandable)
 
 ### Phase 8: Gap Analysis
 **Goal**: Missing CUAD categories identified with importance explanation and recommended language
@@ -217,7 +220,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 4. OCR Processing | 5/5 | Complete | 2026-02-04 |
 | 5. Legal Chunking | 3/3 | Complete | 2026-02-05 |
 | 6. CUAD Classification | 4/4 | Complete | 2026-02-05 |
-| 7. Risk Scoring | 0/TBD | Not started | - |
+| 7. Risk Scoring | 0/4 | Not started | - |
 | 8. Gap Analysis | 0/TBD | Not started | - |
 | 9. Pipeline Orchestration | 0/TBD | Not started | - |
 | 10. Progress Streaming | 0/TBD | Not started | - |
