@@ -196,10 +196,13 @@ Plans:
   2. Web UI shows live progress without polling
   3. Word Add-in receives progress updates for content control placement
   4. Reconnection after disconnect resumes from last event
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 10-01: TBD
+- [ ] 10-01-PLAN.md -- Inngest Realtime infrastructure (middleware, channels, token helper)
+- [ ] 10-02-PLAN.md -- Pipeline publish (emitProgress with realtime + throttle)
+- [ ] 10-03-PLAN.md -- Web UI hook refactor (Inngest Realtime primary + polling fallback)
+- [ ] 10-04-PLAN.md -- Word Add-in token route + hook refactor
 
 ### Phase 11: Document Rendering
 **Goal**: Extracted document displayed in UI with clause highlighting and navigation
@@ -232,7 +235,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 7. Risk Scoring | 4/4 | Complete | 2026-02-05 |
 | 8. Gap Analysis | 4/4 | Complete | 2026-02-05 |
 | 9. Pipeline Orchestration | 7/7 | Complete | 2026-02-05 |
-| 10. Progress Streaming | 0/TBD | Not started | - |
+| 10. Progress Streaming | 0/4 | Not started | - |
 | 11. Document Rendering | 0/TBD | Not started | - |
 
 ---
