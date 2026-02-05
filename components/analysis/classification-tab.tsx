@@ -15,11 +15,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import {
-  getAnalysisClassifications,
-  type ChunkClassificationRow,
-  type ClassificationsByCategory,
-} from "@/app/(main)/(dashboard)/analyses/actions"
+import { getAnalysisClassifications } from "@/app/(main)/(dashboard)/analyses/actions"
+import type {
+  ChunkClassificationRow,
+  ClassificationsByCategory,
+} from "@/db/queries/classifications"
 import { CLASSIFICATION_THRESHOLDS } from "@/agents/types"
 import { useClauseSelection } from "@/hooks/use-clause-selection"
 

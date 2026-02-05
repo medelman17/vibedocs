@@ -16,11 +16,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { Progress } from "@/components/ui/progress"
-import {
-  fetchGapAnalysis,
-  type EnhancedGapResult,
-} from "@/app/(main)/(dashboard)/analyses/actions"
+import { fetchGapAnalysis } from "@/app/(main)/(dashboard)/analyses/actions"
 import type {
+  EnhancedGapResult,
   GapSeverity,
   EnhancedGapStatus,
   EnhancedGapItem,

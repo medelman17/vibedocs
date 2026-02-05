@@ -132,11 +132,13 @@ export interface AnalysisWithDocument extends Analysis {
 /** Assessment perspective for risk scoring */
 export type Perspective = "receiving" | "disclosing" | "balanced";
 
-// Re-export classification, gap, and realtime types for UI consumption
-export type { ChunkClassificationRow, ClassificationsByCategory, ClauseExtractionRow };
-export type { EnhancedGapResult };
-export type { AnalysisToken };
-export type { DocumentRenderingData, RiskLevelInfo };
+// Type re-exports removed -- import types directly from source modules:
+// - ChunkClassificationRow, ClassificationsByCategory: @/db/queries/classifications
+// - ClauseExtractionRow: @/db/queries/risk-scoring
+// - EnhancedGapResult: @/agents/types
+// - AnalysisToken: @/lib/realtime/tokens
+// - DocumentRenderingData, RiskLevelInfo: @/lib/document-rendering/types
+// Turbopack does not support `export type` re-exports in "use server" modules.
 
 // ============================================================================
 // Input Schemas
