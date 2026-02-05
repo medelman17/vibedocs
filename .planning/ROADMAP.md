@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation Hardening** - Migrate to AI SDK 6 patterns, add validation gates, ensure idempotency
 - [x] **Phase 2: Budget Protection** - Pre-flight estimation, hard limits, document size caps
 - [x] **Phase 3: Document Extraction** - Extract text from PDF/DOCX, handle failures, support Word Add-in text input
-- [ ] **Phase 4: OCR Processing** - Detect and process scanned PDFs, handle quality issues
+- [x] **Phase 4: OCR Processing** - Detect and process scanned PDFs, handle quality issues
 - [ ] **Phase 5: Legal Chunking** - Split into legal-aware chunks, embed with Voyage AI, store in tenant DB
 - [ ] **Phase 6: CUAD Classification** - Classify chunks against 41-category taxonomy with confidence scoring
 - [ ] **Phase 7: Risk Scoring** - Assign risk levels with evidence-grounded explanations and citations
@@ -90,11 +90,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — OCR infrastructure (types, PDF-to-image conversion)
-- [ ] 04-02-PLAN.md — OCR processor (Tesseract worker, quality assessment)
-- [ ] 04-03-PLAN.md — Pipeline integration (Inngest function, schema updates)
-- [ ] 04-04-PLAN.md — UI warning display and pipeline continuation
-- [ ] 04-05-PLAN.md — Gap closure: Wire OCR trigger event emission
+- [x] 04-01-PLAN.md — OCR infrastructure (types, PDF-to-image conversion)
+- [x] 04-02-PLAN.md — OCR processor (Tesseract worker, quality assessment)
+- [x] 04-03-PLAN.md — Pipeline integration (Inngest function, schema updates)
+- [x] 04-04-PLAN.md — UI warning display and pipeline continuation
+- [x] 04-05-PLAN.md — Gap closure: Wire OCR trigger event emission
 
 ### Phase 5: Legal Chunking
 **Goal**: Extracted text split into legal-aware chunks with embeddings ready for RAG retrieval
@@ -209,7 +209,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 1. Foundation Hardening | 3/3 | Complete | 2026-02-04 |
 | 2. Budget Protection | 4/4 | Complete | 2026-02-04 |
 | 3. Document Extraction | 5/5 | Complete | 2026-02-04 |
-| 4. OCR Processing | 0/4 | Planned | - |
+| 4. OCR Processing | 5/5 | Complete | 2026-02-04 |
 | 5. Legal Chunking | 0/TBD | Not started | - |
 | 6. CUAD Classification | 0/TBD | Not started | - |
 | 7. Risk Scoring | 0/TBD | Not started | - |
@@ -220,4 +220,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 (Phase 4 planned)*
+*Last updated: 2026-02-04 (Phase 4 complete)*

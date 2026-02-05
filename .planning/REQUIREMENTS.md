@@ -27,10 +27,10 @@ Requirements for the analysis pipeline milestone. Each maps to roadmap phases.
 
 ### OCR
 
-- [ ] **OCR-01**: Detect non-readable PDFs (scanned, image-based) via extraction validation
-- [ ] **OCR-02**: Apply OCR processing to extract text from scanned documents
-- [ ] **OCR-03**: Handle OCR quality issues (low confidence text, partial extraction)
-- [ ] **OCR-04**: Warn user when OCR quality is poor and may affect analysis accuracy
+- [x] **OCR-01**: Detect non-readable PDFs (scanned, image-based) via extraction validation
+- [x] **OCR-02**: Apply OCR processing to extract text from scanned documents
+- [x] **OCR-03**: Handle OCR quality issues (low confidence text, partial extraction)
+- [x] **OCR-04**: Warn user when OCR quality is poor and may affect analysis accuracy
 
 ### Chunking
 
@@ -150,10 +150,10 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | EXT-04 | Phase 3 | Complete |
 | EXT-05 | Phase 3 | Complete |
 | EXT-06 | Phase 3 | Complete |
-| OCR-01 | Phase 4 | Pending |
-| OCR-02 | Phase 4 | Pending |
-| OCR-03 | Phase 4 | Pending |
-| OCR-04 | Phase 4 | Pending |
+| OCR-01 | Phase 4 | Complete |
+| OCR-02 | Phase 4 | Complete |
+| OCR-03 | Phase 4 | Complete |
+| OCR-04 | Phase 4 | Complete |
 | CHK-01 | Phase 5 | Pending |
 | CHK-02 | Phase 5 | Pending |
 | CHK-03 | Phase 5 | Pending |
@@ -207,4 +207,4 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 (Phase 3 requirements complete)*
+*Last updated: 2026-02-04 (Phase 4 requirements complete)*

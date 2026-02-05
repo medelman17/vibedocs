@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 4 - OCR Processing (COMPLETE)
+**Current focus:** Phase 5 - Legal Chunking (next)
 
 ## Current Position
 
