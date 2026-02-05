@@ -12,7 +12,8 @@
  * @see {@link ../../agents/risk-scorer.ts} for RiskAssessmentResult type
  */
 
-import { eq, sql } from "drizzle-orm"
+import { eq, and, asc, sql } from "drizzle-orm"
+import { db } from "../client"
 import type { Database } from "../client"
 import { clauseExtractions, analyses } from "../schema/analyses"
 import { cuadCategories } from "../schema/reference"
@@ -208,4 +209,33 @@ export async function updateAnalysisWithRiskResults(
       })}::jsonb`,
     })
     .where(eq(analyses.id, analysisId))
+}
+
+/** Clause extraction row type inferred from schema */
+export type ClauseExtractionRow = typeof clauseExtractions.$inferSelect
+
+/**
+ * Retrieve all risk assessments (clause extractions) for an analysis.
+ *
+ * Returns rows ordered by startPosition for document-order display.
+ * Uses the shared db client directly (same pattern as classifications queries).
+ *
+ * @param analysisId - UUID of the analysis
+ * @param tenantId - UUID of the tenant for isolation
+ * @returns Array of clause extraction rows in document order
+ */
+export async function getRiskAssessments(
+  analysisId: string,
+  tenantId: string
+): Promise<ClauseExtractionRow[]> {
+  return db
+    .select()
+    .from(clauseExtractions)
+    .where(
+      and(
+        eq(clauseExtractions.analysisId, analysisId),
+        eq(clauseExtractions.tenantId, tenantId)
+      )
+    )
+    .orderBy(asc(clauseExtractions.startPosition))
 }

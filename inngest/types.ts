@@ -305,6 +305,17 @@ export const ocrCompletedPayload = baseTenantPayload.extend({
 });
 
 /**
+ * Analysis re-score event - triggers re-scoring with a different perspective.
+ * Sent when user toggles perspective in the analysis view.
+ */
+export const analysisRescorePayload = baseTenantPayload.extend({
+  /** Analysis to re-score */
+  analysisId: z.string().uuid(),
+  /** New perspective to apply */
+  perspective: z.enum(["receiving", "disclosing", "balanced"]),
+});
+
+/**
  * Analysis cancelled event - triggers cancellation of running analysis.
  * Sent when user deletes document or explicitly cancels analysis.
  */
@@ -338,6 +349,9 @@ export type InngestEvents = {
   };
   "nda/analysis.completed": {
     data: z.infer<typeof analysisCompletedPayload>;
+  };
+  "nda/analysis.rescore": {
+    data: z.infer<typeof analysisRescorePayload>;
   };
   "nda/analysis.cancelled": {
     data: z.infer<typeof analysisCancelledPayload>;
@@ -390,6 +404,7 @@ export type AnalysisCompletedPayload = z.infer<typeof analysisCompletedPayload>;
 export type ComparisonRequestedPayload = z.infer<
   typeof comparisonRequestedPayload
 >;
+export type AnalysisRescorePayload = z.infer<typeof analysisRescorePayload>;
 export type AnalysisCancelledPayload = z.infer<typeof analysisCancelledPayload>;
 export type DocumentDeletedPayload = z.infer<typeof documentDeletedPayload>;
 export type BootstrapIngestRequestedPayload = z.infer<
@@ -419,6 +434,7 @@ export const eventSchemas = {
   "nda/analysis.requested": analysisRequestedPayload,
   "nda/analysis.progress": analysisProgressPayload,
   "nda/analysis.completed": analysisCompletedPayload,
+  "nda/analysis.rescore": analysisRescorePayload,
   "nda/analysis.cancelled": analysisCancelledPayload,
   "nda/document.deleted": documentDeletedPayload,
   "nda/comparison.requested": comparisonRequestedPayload,

@@ -26,6 +26,10 @@ import {
   type ChunkClassificationRow,
   type ClassificationsByCategory,
 } from "@/db/queries/classifications";
+import {
+  getRiskAssessments as queryRiskAssessments,
+  type ClauseExtractionRow,
+} from "@/db/queries/risk-scoring";
 
 // ============================================================================
 // Types
@@ -89,8 +93,11 @@ export interface AnalysisWithDocument extends Analysis {
   };
 }
 
+/** Assessment perspective for risk scoring */
+export type Perspective = "receiving" | "disclosing" | "balanced";
+
 // Re-export classification types for UI consumption
-export type { ChunkClassificationRow, ClassificationsByCategory };
+export type { ChunkClassificationRow, ClassificationsByCategory, ClauseExtractionRow };
 
 // ============================================================================
 // Input Schemas
@@ -787,4 +794,113 @@ export async function getAnalysisClassifications(
     const result = await getClassificationsByPosition(analysisId, tenantId);
     return ok(result);
   }
+}
+
+// ============================================================================
+// Risk Scoring Actions
+// ============================================================================
+
+/**
+ * Trigger re-scoring of an analysis with a different perspective.
+ *
+ * Only triggers when the perspective actually changes (no-op if same).
+ * Re-scoring runs via Inngest to avoid serverless timeout.
+ *
+ * @param analysisId - UUID of the analysis to re-score
+ * @param perspective - New perspective: receiving | disclosing | balanced
+ * @returns void on success
+ */
+export async function triggerRescore(
+  analysisId: string,
+  perspective: Perspective
+): Promise<ApiResponse<void>> {
+  if (!z.string().uuid().safeParse(analysisId).success) {
+    return err("VALIDATION_ERROR", "Invalid analysis ID");
+  }
+
+  if (!["receiving", "disclosing", "balanced"].includes(perspective)) {
+    return err("VALIDATION_ERROR", "Invalid perspective");
+  }
+
+  const { db, tenantId } = await withTenant();
+
+  // Verify analysis exists, is completed, and belongs to tenant
+  const analysis = await db.query.analyses.findFirst({
+    where: and(
+      eq(analyses.id, analysisId),
+      eq(analyses.tenantId, tenantId)
+    ),
+    columns: {
+      id: true,
+      status: true,
+      metadata: true,
+    },
+  });
+
+  if (!analysis) {
+    return err("NOT_FOUND", "Analysis not found");
+  }
+
+  if (analysis.status !== "completed") {
+    return err(
+      "CONFLICT",
+      `Cannot re-score analysis with status: ${analysis.status}. Analysis must be completed.`
+    );
+  }
+
+  // Check if perspective actually changed (no-op if same)
+  const metadata = analysis.metadata as Record<string, unknown> | null;
+  const currentPerspective = metadata?.perspective as string | undefined;
+  if (currentPerspective === perspective) {
+    return err("CONFLICT", "Analysis is already scored from this perspective");
+  }
+
+  // Send re-score event to Inngest
+  await inngest.send({
+    name: "nda/analysis.rescore",
+    data: {
+      tenantId,
+      analysisId,
+      perspective,
+    },
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/analyses");
+
+  return ok(undefined);
+}
+
+/**
+ * Fetch risk assessments (clause extractions) for an analysis.
+ *
+ * Returns all clause extractions ordered by document position.
+ *
+ * @param analysisId - UUID of the analysis
+ * @returns Array of clause extraction rows in document order
+ */
+export async function fetchRiskAssessments(
+  analysisId: string
+): Promise<ApiResponse<ClauseExtractionRow[]>> {
+  if (!z.string().uuid().safeParse(analysisId).success) {
+    return err("VALIDATION_ERROR", "Invalid analysis ID");
+  }
+
+  const { db, tenantId } = await withTenant();
+
+  // Verify analysis exists and belongs to tenant
+  const analysis = await db.query.analyses.findFirst({
+    where: and(
+      eq(analyses.id, analysisId),
+      eq(analyses.tenantId, tenantId)
+    ),
+    columns: { id: true },
+  });
+
+  if (!analysis) {
+    return err("NOT_FOUND", "Analysis not found");
+  }
+
+  const assessments = await queryRiskAssessments(analysisId, tenantId);
+  return ok(assessments);
 }
