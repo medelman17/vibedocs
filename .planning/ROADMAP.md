@@ -176,15 +176,16 @@ Plans:
   3. Stage-level progress visible during analysis (Extracting... Classifying... Scoring...)
   4. Chunk-level progress visible in long stages (Scoring clause 7 of 15...)
   5. User can cancel analysis and see partial results where available
-**Plans**: 6 plans
+**Plans**: 7 plans
 
 Plans:
 - [ ] 09-01-PLAN.md — Schema changes (cancelled status, progressMessage), fix emitProgress IDs, add cancelOn
 - [ ] 09-02-PLAN.md — Cancellation cleanup handler, cancel/resume server actions, progress hook update
-- [ ] 09-03-PLAN.md — Split classifier and risk scorer into per-batch Inngest steps for chunk-level progress
-- [ ] 09-04-PLAN.md — Extend progress polling with detailed messages, queue position, cancelled UI state
-- [ ] 09-05-PLAN.md — Sample NDAs for one-click testing (short, standard, complex)
-- [ ] 09-06-PLAN.md — Debug panel with step timeline, token usage, and metadata inspection
+- [ ] 09-03-PLAN.md — Split classifier into per-batch Inngest steps for chunk-level progress
+- [ ] 09-04-PLAN.md — Split risk scorer into per-batch Inngest steps for clause-level progress
+- [ ] 09-05-PLAN.md — Extend progress polling with detailed messages, queue position, cancelled UI state
+- [ ] 09-06-PLAN.md — Sample NDAs for one-click testing (short, standard, complex)
+- [ ] 09-07-PLAN.md — Debug panel with step timeline, token usage, and metadata inspection
 
 ### Phase 10: Progress Streaming
 **Goal**: Real-time progress updates available via SSE for web UI and Word Add-in
