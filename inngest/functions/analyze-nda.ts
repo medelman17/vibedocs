@@ -157,6 +157,15 @@ export const analyzeNda = inngest.createFunction(
               .where(eq(analyses.id, analysisId))
           })
 
+          // Trigger OCR processing if this is a scanned document
+          if (mapped.routeToOcr) {
+            await step.sendEvent('trigger-ocr', {
+              name: 'nda/ocr.requested',
+              data: { documentId, analysisId, tenantId },
+            })
+          }
+
+          // Halt this pipeline run - OCR function will continue asynchronously
           throw new NonRetriableError(mapped.userMessage)
         }
         throw error
