@@ -239,11 +239,14 @@ export function DocumentRenderer({
 }: DocumentRendererProps) {
   const parentRef = React.useRef<HTMLDivElement>(null)
   const [searchOpen, setSearchOpen] = React.useState(false)
-  const {
-    activeClauseId,
-    highlightsEnabled,
-    selectClause,
-  } = useClauseSelection()
+  const activeClauseId = useClauseSelection((s) => s.activeClauseId)
+  const selectionSource = useClauseSelection((s) => s.selectionSource)
+  const highlightsEnabled = useClauseSelection((s) => s.highlightsEnabled)
+  const selectClause = useClauseSelection((s) => s.selectClause)
+  const clearSelection = useClauseSelection((s) => s.clearSelection)
+  const nextClause = useClauseSelection((s) => s.nextClause)
+  const prevClause = useClauseSelection((s) => s.prevClause)
+  const setClauseIds = useClauseSelection((s) => s.setClauseIds)
 
   // 1. Convert raw text to markdown with offset tracking
   const { markdown, offsetMap } = React.useMemo(
@@ -346,6 +349,70 @@ export function DocumentRenderer({
     [selectClause]
   )
 
+  // 10. Set clause IDs in the selection store when overlays change
+  React.useEffect(() => {
+    const ids = clauseOverlays.map((o) => o.clauseId)
+    setClauseIds(ids)
+  }, [clauseOverlays, setClauseIds])
+
+  // 11. Scroll to clause when selected from analysis panel
+  const virtualizerRef = React.useRef(virtualizer)
+  virtualizerRef.current = virtualizer
+
+  React.useEffect(() => {
+    if (!activeClauseId || selectionSource !== "analysis") return
+
+    // Find the paragraph containing this clause
+    const overlay = clauseOverlays.find((o) => o.clauseId === activeClauseId)
+    if (!overlay) return
+
+    // Find paragraph index via binary search on paragraphOffsets
+    let paragraphIndex = 0
+    for (let i = 0; i < paragraphs.length; i++) {
+      if (
+        overlay.markdownStart >= paragraphs[i].startOffset &&
+        overlay.markdownStart < paragraphs[i].endOffset
+      ) {
+        paragraphIndex = i
+        break
+      }
+    }
+
+    virtualizerRef.current.scrollToIndex(paragraphIndex, {
+      align: "center",
+      behavior: "smooth",
+    })
+  }, [activeClauseId, selectionSource, clauseOverlays, paragraphs])
+
+  // 12. Keyboard navigation
+  React.useEffect(() => {
+    if (!highlightsEnabled) return
+
+    const container = parentRef.current
+    if (!container) return
+
+    function handleKeyDown(e: KeyboardEvent) {
+      switch (e.key) {
+        case "ArrowDown":
+        case "j":
+          e.preventDefault()
+          nextClause()
+          break
+        case "ArrowUp":
+        case "k":
+          e.preventDefault()
+          prevClause()
+          break
+        case "Escape":
+          clearSelection()
+          break
+      }
+    }
+
+    container.addEventListener("keydown", handleKeyDown)
+    return () => container.removeEventListener("keydown", handleKeyDown)
+  }, [highlightsEnabled, nextClause, prevClause, clearSelection])
+
   // Loading state
   if (isLoading) {
     return <DocumentSkeleton />
@@ -407,7 +474,8 @@ export function DocumentRenderer({
       {/* Paper-style document container */}
       <div
         ref={parentRef}
-        className="flex-1 overflow-auto p-6"
+        tabIndex={0}
+        className="flex-1 overflow-auto p-6 outline-none"
       >
         <div
           className={cn(

@@ -14,6 +14,7 @@ interface ClauseSelectionState {
   highlightsEnabled: boolean
   activeTab: AnalysisTab
   pendingClauseContext: PendingClauseContext | null
+  clauseIds: string[]
 }
 
 interface ClauseSelectionActions {
@@ -23,17 +24,21 @@ interface ClauseSelectionActions {
   setHighlightsEnabled: (enabled: boolean) => void
   setActiveTab: (tab: AnalysisTab) => void
   askAboutClause: (clauseId: string, clauseText: string) => void
+  setClauseIds: (ids: string[]) => void
+  nextClause: () => void
+  prevClause: () => void
 }
 
 export const useClauseSelection = create<
   ClauseSelectionState & ClauseSelectionActions
->()((set) => ({
+>()((set, get) => ({
   // Initial state
   activeClauseId: null,
   selectionSource: null,
   highlightsEnabled: false,
   activeTab: "risk",
   pendingClauseContext: null,
+  clauseIds: [],
 
   // Actions
   selectClause: (clauseId, source) =>
@@ -69,4 +74,36 @@ export const useClauseSelection = create<
       activeTab: "chat",
       pendingClauseContext: { clauseId, clauseText },
     }),
+
+  setClauseIds: (ids) =>
+    set({ clauseIds: ids }),
+
+  nextClause: () => {
+    const { clauseIds, activeClauseId } = get()
+    if (clauseIds.length === 0) return
+    if (!activeClauseId) {
+      // No active clause - select the first one
+      set({ activeClauseId: clauseIds[0], selectionSource: "document" })
+      return
+    }
+    const currentIndex = clauseIds.indexOf(activeClauseId)
+    const nextIndex = (currentIndex + 1) % clauseIds.length
+    set({ activeClauseId: clauseIds[nextIndex], selectionSource: "document" })
+  },
+
+  prevClause: () => {
+    const { clauseIds, activeClauseId } = get()
+    if (clauseIds.length === 0) return
+    if (!activeClauseId) {
+      // No active clause - select the last one
+      set({
+        activeClauseId: clauseIds[clauseIds.length - 1],
+        selectionSource: "document",
+      })
+      return
+    }
+    const currentIndex = clauseIds.indexOf(activeClauseId)
+    const prevIndex = (currentIndex - 1 + clauseIds.length) % clauseIds.length
+    set({ activeClauseId: clauseIds[prevIndex], selectionSource: "document" })
+  },
 }))
