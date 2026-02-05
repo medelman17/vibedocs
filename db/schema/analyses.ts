@@ -769,3 +769,129 @@ export const clauseExtractions = pgTable(
     unique("clause_analysis_chunk").on(table.analysisId, table.chunkId),
   ]
 )
+
+/**
+ * Chunk Classifications Table (Multi-Label CUAD Classification)
+ *
+ * Stores multi-label CUAD classifications per document chunk. Each chunk can have
+ * one primary classification and up to two secondary classifications, enabling
+ * richer analysis of clauses that span multiple legal categories.
+ *
+ * @description
+ * Unlike `clauseExtractions` which stores one-to-one clause-to-category mappings,
+ * this table uses a junction pattern where each row represents a single category
+ * label for a chunk. A chunk with primary + 2 secondary labels produces 3 rows.
+ *
+ * ## Key Design Decisions
+ *
+ * - **isPrimary**: Distinguishes the highest-confidence label from secondary labels
+ * - **chunkIndex**: Denormalized from documentChunks for efficient document-order
+ *   queries without requiring a join
+ * - **Unique constraint**: (analysisId, chunkId, category) prevents duplicate labels
+ *   and enables `ON CONFLICT DO NOTHING` for idempotent inserts
+ * - **Cascading deletes**: From analysis, chunk, and document
+ *
+ * ## Multi-Tenancy
+ *
+ * This table uses Row-Level Security (RLS) via `tenantId`. All queries must
+ * go through the DAL's `withTenant()` to ensure proper tenant isolation.
+ *
+ * @example
+ * ```typescript
+ * // Query all primary classifications for an analysis, ordered by document position
+ * const { db, tenantId } = await withTenant()
+ * const primaries = await db
+ *   .select()
+ *   .from(chunkClassifications)
+ *   .where(and(
+ *     eq(chunkClassifications.analysisId, analysisId),
+ *     eq(chunkClassifications.tenantId, tenantId),
+ *     eq(chunkClassifications.isPrimary, true),
+ *   ))
+ *   .orderBy(chunkClassifications.chunkIndex)
+ * ```
+ *
+ * @see {@link analyses} for parent analysis record
+ * @see {@link documentChunks} for associated text chunks
+ */
+export const chunkClassifications = pgTable(
+  "chunk_classifications",
+  {
+    ...primaryId,
+    ...tenantId,
+
+    /** Reference to the parent analysis record. Cascades on delete. */
+    analysisId: uuid("analysis_id")
+      .notNull()
+      .references(() => analyses.id, { onDelete: "cascade" }),
+
+    /** Reference to the classified document chunk. Cascades on delete. */
+    chunkId: uuid("chunk_id")
+      .notNull()
+      .references(() => documentChunks.id, { onDelete: "cascade" }),
+
+    /** Reference to the source document. Cascades on delete. */
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+
+    /**
+     * CUAD category label (or "Uncategorized" for chunks matching no category).
+     * One of 41 CUAD categories or "Uncategorized".
+     */
+    category: text("category").notNull(),
+
+    /** Classification confidence score from 0 to 1. */
+    confidence: real("confidence").notNull(),
+
+    /**
+     * Whether this is the primary (highest-confidence) classification for the chunk.
+     * Each chunk should have exactly one primary and zero or more secondary labels.
+     * @default true
+     */
+    isPrimary: boolean("is_primary").notNull().default(true),
+
+    /** Brief rationale for the classification (1-2 sentences, max ~200 chars). */
+    rationale: text("rationale"),
+
+    /**
+     * Zero-based sequential index of the chunk within the document.
+     * Denormalized from documentChunks for efficient document-order queries.
+     */
+    chunkIndex: integer("chunk_index").notNull(),
+
+    /** Character offset where classified chunk starts in original text. */
+    startPosition: integer("start_position"),
+
+    /** Character offset where classified chunk ends in original text (exclusive). */
+    endPosition: integer("end_position"),
+
+    ...timestamps,
+  },
+  (table) => [
+    /** Index for efficient analysis-scoped queries. */
+    index("idx_chunk_class_analysis").on(table.analysisId),
+
+    /** Composite index for category-based filtering within an analysis. */
+    index("idx_chunk_class_category").on(table.analysisId, table.category),
+
+    /** Index for chunk-scoped queries. */
+    index("idx_chunk_class_chunk").on(table.chunkId),
+
+    /** Composite index for document-order traversal within an analysis. */
+    index("idx_chunk_class_document_order").on(
+      table.analysisId,
+      table.chunkIndex
+    ),
+
+    /**
+     * Unique constraint preventing duplicate category labels per chunk per analysis.
+     * Enables ON CONFLICT DO NOTHING for idempotent inserts.
+     */
+    unique("chunk_class_unique").on(
+      table.analysisId,
+      table.chunkId,
+      table.category
+    ),
+  ]
+)
