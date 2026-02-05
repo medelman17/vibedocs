@@ -106,10 +106,12 @@ Plans:
   3. Chunks stored with Voyage AI embeddings in tenant database
   4. Ambiguous boundaries handled via LLM detection (not arbitrary splits)
   5. No chunk exceeds 512 tokens
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: TBD
+- [ ] 05-01-PLAN.md — Infrastructure: types, Voyage AI token counter, schema extensions
+- [ ] 05-02-PLAN.md — Legal chunker: strategies, merging, cross-references, chunk map
+- [ ] 05-03-PLAN.md — Pipeline integration: refactor parser, wire Inngest steps, embed + persist
 
 ### Phase 6: CUAD Classification
 **Goal**: Every chunk classified against CUAD 41-category taxonomy with confidence scores
@@ -210,7 +212,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. Budget Protection | 4/4 | Complete | 2026-02-04 |
 | 3. Document Extraction | 5/5 | Complete | 2026-02-04 |
 | 4. OCR Processing | 5/5 | Complete | 2026-02-04 |
-| 5. Legal Chunking | 0/TBD | Not started | - |
+| 5. Legal Chunking | 0/3 | Not started | - |
 | 6. CUAD Classification | 0/TBD | Not started | - |
 | 7. Risk Scoring | 0/TBD | Not started | - |
 | 8. Gap Analysis | 0/TBD | Not started | - |
@@ -220,4 +222,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 ---
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 (Phase 4 complete)*
+*Last updated: 2026-02-05 (Phase 5 planned)*
