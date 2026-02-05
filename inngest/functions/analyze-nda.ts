@@ -467,16 +467,60 @@ export const analyzeNda = inngest.createFunction(
         emitProgress,
       })
 
-      // Rate limit delay before Claude API calls
-      await step.sleep('rate-limit-parser', getRateLimitDelay('claude'))
+      // Step 8: Classifier Agent (per-batch for chunk-level progress and independent retry)
+      // Instead of a single monolithic step, split into per-batch Inngest steps.
+      // Each batch is independently retriable and emits chunk-level progress.
+      const CLASSIFIER_BATCH_SIZE = 4 // Match classifier internal batch size
+      const classifierChunks = classifierDocument.chunks
+      const totalClassifierBatches = Math.ceil(classifierChunks.length / CLASSIFIER_BATCH_SIZE)
 
-      // Step 8: Classifier Agent
-      const classifierResult = await step.run('classifier-agent', () =>
-        runClassifierAgent({
-          parsedDocument: classifierDocument,
-          budgetTracker,
-        })
-      )
+      type ClassifierResultType = Awaited<ReturnType<typeof runClassifierAgent>>
+      const allClassifications: ClassifierResultType['rawClassifications'] = []
+      const allClauses: ClassifierResultType['clauses'] = []
+
+      // Rate limit delay before first Claude API call
+      await step.sleep('rate-limit-pre-classify', getRateLimitDelay('claude'))
+
+      for (let batch = 0; batch < totalClassifierBatches; batch++) {
+        const batchStart = batch * CLASSIFIER_BATCH_SIZE
+        const batchEnd = Math.min(batchStart + CLASSIFIER_BATCH_SIZE, classifierChunks.length)
+        const batchChunks = classifierChunks.slice(batchStart, batchEnd)
+
+        // Create a sub-document for this batch (rawText preserved for neighbor context)
+        const batchDocument = {
+          ...classifierDocument,
+          chunks: batchChunks,
+        }
+
+        const batchResult = await step.run(`classify-batch-${batch}`, () =>
+          runClassifierAgent({
+            parsedDocument: batchDocument,
+            budgetTracker,
+          })
+        ) as ClassifierResultType
+
+        allClassifications.push(...batchResult.rawClassifications)
+        allClauses.push(...batchResult.clauses)
+
+        // Chunk-level progress: "Classifying clause X of Y..."
+        const processed = Math.min(batchEnd, classifierChunks.length)
+        await emitProgress(
+          'classifying',
+          40 + Math.round((processed / classifierChunks.length) * 20), // 40-60% range
+          `Classifying clause ${processed} of ${classifierChunks.length}...`
+        )
+
+        // Rate limit between batches (Claude 60 RPM)
+        if (batch < totalClassifierBatches - 1) {
+          await step.sleep(`rate-limit-classify-${batch}`, getRateLimitDelay('claude'))
+        }
+      }
+
+      // Reassemble the combined result for downstream use
+      const classifierResult = {
+        clauses: allClauses,
+        rawClassifications: allClassifications,
+      }
 
       // Classifier validation gate - 0 clauses = always halt (per CONTEXT.md)
       const classifierValidation = validateClassifierOutput(classifierResult.clauses)
@@ -568,11 +612,11 @@ export const analyzeNda = inngest.createFunction(
 
       await emitProgress(
         'classifying',
-        50,
+        60,
         `Classified ${classifierResult.clauses.length} clauses (${classifierResult.rawClassifications.length} total classifications)`
       )
 
-      // Rate limit delay after Claude API calls
+      // Rate limit delay after classifier batches before risk scorer
       await step.sleep('rate-limit-classifier', getRateLimitDelay('claude'))
 
       // Step 9: Risk Scorer Agent
@@ -780,15 +824,58 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
         isOcr: true,
       })
 
-      await step.sleep('rate-limit-parser', getRateLimitDelay('claude'))
+      // Step 7: Classifier Agent (per-batch for chunk-level progress and independent retry)
+      const CLASSIFIER_BATCH_SIZE = 4
+      const classifierChunks = classifierDocument.chunks
+      const totalClassifierBatches = Math.ceil(classifierChunks.length / CLASSIFIER_BATCH_SIZE)
 
-      // Step 7: Classifier Agent
-      const classifierResult = await step.run('classifier-agent', () =>
-        runClassifierAgent({
-          parsedDocument: classifierDocument,
-          budgetTracker,
-        })
-      )
+      type ClassifierResultType = Awaited<ReturnType<typeof runClassifierAgent>>
+      const allClassifications: ClassifierResultType['rawClassifications'] = []
+      const allClauses: ClassifierResultType['clauses'] = []
+
+      // Rate limit delay before first Claude API call
+      await step.sleep('rate-limit-pre-classify', getRateLimitDelay('claude'))
+
+      for (let batch = 0; batch < totalClassifierBatches; batch++) {
+        const batchStart = batch * CLASSIFIER_BATCH_SIZE
+        const batchEnd = Math.min(batchStart + CLASSIFIER_BATCH_SIZE, classifierChunks.length)
+        const batchChunks = classifierChunks.slice(batchStart, batchEnd)
+
+        // Create a sub-document for this batch (rawText preserved for neighbor context)
+        const batchDocument = {
+          ...classifierDocument,
+          chunks: batchChunks,
+        }
+
+        const batchResult = await step.run(`classify-batch-${batch}`, () =>
+          runClassifierAgent({
+            parsedDocument: batchDocument,
+            budgetTracker,
+          })
+        ) as ClassifierResultType
+
+        allClassifications.push(...batchResult.rawClassifications)
+        allClauses.push(...batchResult.clauses)
+
+        // Chunk-level progress: "Classifying clause X of Y..."
+        const processed = Math.min(batchEnd, classifierChunks.length)
+        await emitProgress(
+          'classifying',
+          40 + Math.round((processed / classifierChunks.length) * 20), // 40-60% range
+          `Classifying clause ${processed} of ${classifierChunks.length}...`
+        )
+
+        // Rate limit between batches (Claude 60 RPM)
+        if (batch < totalClassifierBatches - 1) {
+          await step.sleep(`rate-limit-classify-${batch}`, getRateLimitDelay('claude'))
+        }
+      }
+
+      // Reassemble the combined result for downstream use
+      const classifierResult = {
+        clauses: allClauses,
+        rawClassifications: allClassifications,
+      }
 
       const classifierValidation = validateClassifierOutput(classifierResult.clauses)
       if (!classifierValidation.valid) {
@@ -880,7 +967,7 @@ export const analyzeNdaAfterOcr = inngest.createFunction(
 
       await emitProgress(
         'classifying',
-        50,
+        60,
         `Classified ${classifierResult.clauses.length} clauses (${classifierResult.rawClassifications.length} total classifications)`
       )
 
