@@ -125,9 +125,10 @@ export const classificationSchema = z.object({
   reasoning: z.string(),
 })
 
-/** Risk assessment from Risk Scorer agent */
+/** Risk assessment from Risk Scorer agent (original schema, used by tests and gap analyst) */
 export interface RiskAssessment {
   clauseId: string
+  /** PRD risk levels: standard | cautious | aggressive | unknown */
   riskLevel: RiskLevel
   confidence: number
   explanation: string
@@ -148,6 +149,93 @@ export const riskAssessmentSchema = z.object({
     statistic: z.string().optional(),
   }),
 })
+
+// ============================================================================
+// Perspective (Phase 7 - Risk Scoring)
+// ============================================================================
+
+/** Assessment perspective for risk scoring */
+export const PERSPECTIVES = ['receiving', 'disclosing', 'balanced'] as const
+export type Perspective = (typeof PERSPECTIVES)[number]
+export const perspectiveSchema = z.enum(PERSPECTIVES)
+
+// ============================================================================
+// Enhanced Risk Assessment (Phase 7 - Risk Scoring)
+// ============================================================================
+
+/**
+ * Enhanced risk assessment schema for the risk scorer LLM call.
+ *
+ * Adds structured citations, perspective-aware scoring, atypical language
+ * detection, and negotiation suggestions over the original riskAssessmentSchema.
+ */
+export const enhancedRiskAssessmentSchema = z.object({
+  riskLevel: riskLevelSchema,
+  confidence: z.number().min(0).max(1),
+  explanation: z
+    .string()
+    .max(500)
+    .describe('Risk-first plain-language explanation (2-3 sentences)'),
+  negotiationSuggestion: z
+    .string()
+    .max(200)
+    .optional()
+    .describe('Concrete negotiation suggestion for non-standard clauses'),
+  atypicalLanguage: z
+    .boolean()
+    .describe(
+      'True if wording is unusual even when substance is standard'
+    ),
+  atypicalLanguageNote: z
+    .string()
+    .max(200)
+    .optional()
+    .describe('Note about unusual wording'),
+  evidence: z.object({
+    citations: z
+      .array(
+        z.object({
+          text: z
+            .string()
+            .max(300)
+            .describe('Quoted text from the clause'),
+          sourceType: z.enum(['clause', 'reference', 'template']),
+        })
+      )
+      .min(1)
+      .max(5),
+    references: z
+      .array(
+        z.object({
+          sourceId: z.string().describe('ID from reference corpus'),
+          source: z.enum([
+            'cuad',
+            'contract_nli',
+            'bonterms',
+            'commonaccord',
+          ]),
+          section: z.string().optional(),
+          similarity: z.number().min(0).max(1),
+          summary: z
+            .string()
+            .max(200)
+            .describe('Brief summary of the reference'),
+        })
+      )
+      .max(5),
+    baselineComparison: z
+      .string()
+      .max(300)
+      .optional()
+      .describe(
+        'Comparison to Bonterms/standard baseline when template match available'
+      ),
+  }),
+})
+
+export type EnhancedRiskAssessment = z.infer<
+  typeof enhancedRiskAssessmentSchema
+>
 
 /** Hypothesis coverage from Gap Analyst */
 export interface HypothesisCoverage {
