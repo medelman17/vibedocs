@@ -14,6 +14,7 @@ import { db } from '@/db/client'
 import { referenceEmbeddings, referenceDocuments } from '@/db/schema/reference'
 import { cosineDistance, lt, eq, and, sql } from 'drizzle-orm'
 import { getVoyageAIClient } from '@/lib/embeddings'
+import { findSimilarReferences } from '@/db/queries/similarity'
 import { LRUCache } from 'lru-cache'
 import type { CuadCategory } from '../types'
 
@@ -149,6 +150,97 @@ export async function findSimilarClauses(
     limit: options.limit ?? 5,
   })
   return executeVectorSearch(input)
+}
+
+/**
+ * Find template baselines from Bonterms/CommonAccord for baseline comparison.
+ *
+ * Generates an embedding for the clause text, then searches
+ * referenceEmbeddings with granularity='template' for similar templates.
+ * Returns empty array gracefully when no template data exists.
+ */
+export async function findTemplateBaselines(
+  clauseText: string,
+  options: { limit?: number } = {}
+): Promise<VectorSearchResult[]> {
+  const limit = options.limit ?? 2
+
+  // Check cache
+  const queryHash = createHash('sha256').update(clauseText).digest('hex').slice(0, 16)
+  const cacheKey = `tpl:${queryHash}:${limit}`
+  const cached = searchCache.get(cacheKey)
+  if (cached) return cached
+
+  try {
+    const voyageClient = getVoyageAIClient()
+    const { embedding } = await voyageClient.embed(clauseText, 'query')
+
+    const results = await findSimilarReferences(embedding, {
+      granularity: 'template',
+      limit,
+      threshold: 0.5,
+    })
+
+    const searchResults: VectorSearchResult[] = results.map((r) => ({
+      id: r.id,
+      content: r.content.slice(0, 500),
+      category: r.category ?? 'Unknown',
+      similarity: r.similarity,
+      source: r.sectionPath?.[0] ?? 'template',
+    }))
+
+    searchCache.set(cacheKey, searchResults)
+    return searchResults
+  } catch (error) {
+    console.warn('[vector-search] Template baseline search failed:', error)
+    return []
+  }
+}
+
+/**
+ * Find NLI evidence spans from ContractNLI for risk grounding.
+ *
+ * Generates an embedding for the clause text, then searches
+ * referenceEmbeddings with granularity='span' for similar NLI spans.
+ * Returns empty array gracefully when no NLI data exists.
+ */
+export async function findNliSpans(
+  clauseText: string,
+  options: { category?: string; limit?: number } = {}
+): Promise<VectorSearchResult[]> {
+  const limit = options.limit ?? 2
+
+  // Check cache
+  const queryHash = createHash('sha256').update(clauseText).digest('hex').slice(0, 16)
+  const cacheKey = `nli:${queryHash}:${options.category ?? 'all'}:${limit}`
+  const cached = searchCache.get(cacheKey)
+  if (cached) return cached
+
+  try {
+    const voyageClient = getVoyageAIClient()
+    const { embedding } = await voyageClient.embed(clauseText, 'query')
+
+    const results = await findSimilarReferences(embedding, {
+      granularity: 'span',
+      category: options.category,
+      limit,
+      threshold: 0.5,
+    })
+
+    const searchResults: VectorSearchResult[] = results.map((r) => ({
+      id: r.id,
+      content: r.content.slice(0, 500),
+      category: r.category ?? 'Unknown',
+      similarity: r.similarity,
+      source: 'contract_nli',
+    }))
+
+    searchCache.set(cacheKey, searchResults)
+    return searchResults
+  } catch (error) {
+    console.warn('[vector-search] NLI span search failed:', error)
+    return []
+  }
 }
 
 /** Clear search cache (for testing) */
