@@ -66,7 +66,6 @@ export function DocumentDetail({
   const router = useRouter()
   const [document, setDocument] = React.useState<Document | null>(null)
   const [analyses, setAnalyses] = React.useState<Analysis[]>([])
-  const [loading, setLoading] = React.useState(false)
   const [editingTitle, setEditingTitle] = React.useState(false)
   const [titleValue, setTitleValue] = React.useState("")
   const [savingTitle, setSavingTitle] = React.useState(false)
@@ -83,10 +82,9 @@ export function DocumentDetail({
     let cancelled = false
 
     async function fetchDetail() {
-      setLoading(true)
+      setDocument(null)
       const result = await adminGetDocumentDetail({ documentId: documentId! })
       if (cancelled) return
-      setLoading(false)
 
       if (!result.success) {
         toast.error(result.error.message ?? "Failed to load document")
@@ -244,15 +242,7 @@ export function DocumentDetail({
   return (
     <Sheet open={documentId !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        {loading ? (
-          <>
-            <SheetHeader className="sr-only">
-              <SheetTitle>Loading document</SheetTitle>
-              <SheetDescription>Loading document details</SheetDescription>
-            </SheetHeader>
-            <LoadingSkeleton />
-          </>
-        ) : document ? (
+        {document ? (
           <>
             {/* Header: Title + Status */}
             <SheetHeader>
@@ -446,7 +436,15 @@ export function DocumentDetail({
               })()}
             </div>
           </>
-        ) : null}
+        ) : (
+          <>
+            <SheetHeader className="sr-only">
+              <SheetTitle>Loading document</SheetTitle>
+              <SheetDescription>Loading document details</SheetDescription>
+            </SheetHeader>
+            <LoadingSkeleton />
+          </>
+        )}
       </SheetContent>
     </Sheet>
   )

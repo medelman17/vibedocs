@@ -72,11 +72,7 @@ export function AdminPageClient({
 
   // Handlers
   const handleRowClick = (documentId: string) => {
-    // Defer to next frame so the originating click event finishes
-    // before the Sheet mounts and starts listening for outside clicks
-    requestAnimationFrame(() => {
-      setSelectedDocumentId(documentId)
-    })
+    setSelectedDocumentId(documentId)
   }
 
   const handleCloseDetailPanel = React.useCallback(() => {
