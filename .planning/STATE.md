@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 3 - Document Extraction (COMPLETE)
+**Current focus:** Phase 4 - OCR Processing (IN PROGRESS)
 
 ## Current Position
 
-Phase: 3 of 11 (Document Extraction)
-Plan: 5 of 5 in current phase
-Status: Phase complete
-Last activity: 2026-02-04 - Completed 03-05-PLAN.md (Word Add-in Extraction Enhancement)
+Phase: 4 of 11 (OCR Processing)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-05 - Completed 04-01-PLAN.md (OCR Infrastructure)
 
-Progress: [████████░░] ~40% (12 plans of ~30+ total)
+Progress: [████████░░] ~43% (13 plans of ~30+ total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: 4.7 min
-- Total execution time: 56.5 min
+- Total plans completed: 13
+- Average duration: 4.5 min
+- Total execution time: 58 min
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [████████░░] ~40% (12 plans of ~30+ total)
 | 01 | 3 | 8.5 min | 2.8 min |
 | 02 | 4 | 19.5 min | 4.9 min |
 | 03 | 5 | 28.5 min | 5.7 min |
+| 04 | 1 | 1.5 min | 1.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (3 min), 03-03 (7 min), 03-04 (8 min), 03-05 (8 min)
-- Trend: Phase 03 complete - ready for clause classification
+- Last 5 plans: 03-03 (7 min), 03-04 (8 min), 03-05 (8 min), 04-01 (1.5 min)
+- Trend: Phase 04 started - fast infrastructure plan
 
 *Updated after each plan completion*
 
@@ -78,6 +79,10 @@ Recent decisions affecting current work:
 - [03-05]: Office.js creationDate property used (not creationDateTime)
 - [03-05]: Deduplication returns existing analysis without re-processing
 - [03-05]: Failed analyses create new document/analysis (fall through)
+- [04-01]: Confidence thresholds: 85% warning, 60% critical (per RESEARCH.md)
+- [04-01]: MAX_OCR_PAGES=100 to prevent memory exhaustion
+- [04-01]: Scale factor 2.0 for better OCR quality
+- [04-01]: Dynamic import for pdf-to-img to avoid barrel export issues
 
 ### Pending Todos
 
@@ -90,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-04T23:55:00Z
-Stopped at: Completed 03-05-PLAN.md (Word Add-in Extraction Enhancement)
+Last session: 2026-02-05T02:24:37Z
+Stopped at: Completed 04-01-PLAN.md (OCR Infrastructure)
 Resume file: None
