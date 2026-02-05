@@ -183,3 +183,53 @@ export interface GapAnalysis {
   hypothesisCoverage: HypothesisCoverage[]
   gapScore: number
 }
+
+// ============================================================================
+// Multi-Label Classification (Phase 6 - Enhanced CUAD Classification)
+// ============================================================================
+
+/** Extended categories including Uncategorized for chunks matching no CUAD category */
+export const EXTENDED_CATEGORIES = [...CUAD_CATEGORIES, 'Uncategorized'] as const
+export type ExtendedCategory = (typeof EXTENDED_CATEGORIES)[number]
+export const extendedCategorySchema = z.enum(
+  EXTENDED_CATEGORIES as unknown as [string, ...string[]]
+)
+
+/** Single chunk classification result within a batch */
+export const chunkClassificationResultSchema = z.object({
+  chunkIndex: z.number().describe('Index of the chunk in the batch (0-based)'),
+  primary: z.object({
+    category: extendedCategorySchema,
+    confidence: z.number().min(0).max(1),
+    rationale: z.string().max(200).describe('Brief 1-2 sentence explanation'),
+  }),
+  secondary: z
+    .array(
+      z.object({
+        category: cuadCategorySchema,
+        confidence: z.number().min(0).max(1),
+      })
+    )
+    .max(2)
+    .default([]),
+})
+
+/** Batch classification output from enhanced classifier */
+export const multiLabelClassificationSchema = z.object({
+  classifications: z.array(chunkClassificationResultSchema),
+})
+
+export type ChunkClassificationResult = z.infer<
+  typeof chunkClassificationResultSchema
+>
+export type MultiLabelClassificationOutput = z.infer<
+  typeof multiLabelClassificationSchema
+>
+
+/** Classification confidence thresholds */
+export const CLASSIFICATION_THRESHOLDS = {
+  /** Below this, classify as Uncategorized */
+  MINIMUM_FLOOR: 0.3,
+  /** Below this, flag for review */
+  LOW_CONFIDENCE: 0.7,
+} as const
