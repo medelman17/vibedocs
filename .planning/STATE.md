@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Every uploaded NDA gets a complete, evidence-grounded analysis in under 90 seconds
-**Current focus:** Phase 6 - CUAD Classification (in progress)
+**Current focus:** Phase 6 - CUAD Classification (complete)
 
 ## Current Position
 
 Phase: 6 of 11 (CUAD Classification)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-05 - Completed 06-03-PLAN.md (Pipeline Integration)
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-05 - Completed 06-04-PLAN.md (Classification Queries & UI)
 
-Progress: [████████████████░] ~74% (23 plans of ~31 total)
+Progress: [█████████████████░] ~77% (24 plans of ~31 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
+- Total plans completed: 24
 - Average duration: 4.5 min
-- Total execution time: 103.9 min
+- Total execution time: 108.5 min
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [████████████████░] ~74% (23 plans o
 | 03 | 5 | 28.5 min | 5.7 min |
 | 04 | 5 | 15.5 min | 3.1 min |
 | 05 | 3 | 18.3 min | 6.1 min |
-| 06 | 3 | 13.6 min | 4.5 min |
+| 06 | 4 | 18.2 min | 4.6 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-03 (9.0 min), 06-01 (4.2 min), 06-02 (7.3 min), 06-03 (2.1 min)
-- Trend: Pipeline integration was straightforward; single file modification
+- Last 5 plans: 06-01 (4.2 min), 06-02 (7.3 min), 06-03 (2.1 min), 06-04 (4.6 min)
+- Trend: Phase 6 complete; UI + query plans consistently fast
 
 *Updated after each plan completion*
 
@@ -108,6 +108,9 @@ Recent decisions affecting current work:
 - [06-02]: 7 references per chunk via findSimilarClauses, deduplicated to top 10 per batch
 - [06-02]: Both Uncategorized and Unknown filtered from clauses output; rawClassifications preserves all
 - [06-03]: Single persist-classifications step (not per-batch) with ON CONFLICT DO NOTHING for idempotency
+- [06-04]: Classification queries use shared db client directly (existing db/queries pattern, tenantId filtering explicit)
+- [06-04]: ClassificationView fetches via useEffect on mount/toggle (matches existing AnalysisView pattern)
+- [06-04]: No barrel export for db/queries/classifications (import directly per CLAUDE.md)
 
 ### Pending Todos
 
@@ -120,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T06:17:00Z
-Stopped at: Completed 06-03-PLAN.md (Pipeline Integration)
+Last session: 2026-02-05T06:21:00Z
+Stopped at: Completed 06-04-PLAN.md (Classification Queries & UI) - Phase 6 complete
 Resume file: None
