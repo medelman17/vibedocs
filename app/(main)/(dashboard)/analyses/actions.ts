@@ -623,8 +623,11 @@ export async function rerunAnalysis(
 /**
  * Cancel an in-progress analysis.
  *
- * Only analyses with status `pending` or `processing` can be cancelled.
- * Sets the analysis status to `failed` with a cancellation message.
+ * Sends the `nda/analysis.cancelled` event which triggers `cancelOn` on the
+ * running Inngest pipeline. Also optimistically updates the analysis status
+ * to 'cancelled' in the database for immediate UI feedback.
+ *
+ * Cancellable statuses: `pending`, `pending_ocr`, `processing`.
  *
  * @param analysisId - UUID of the analysis to cancel
  * @returns void on success
@@ -654,23 +657,33 @@ export async function cancelAnalysis(
     return err("NOT_FOUND", "Analysis not found");
   }
 
-  if (analysis.status !== "pending" && analysis.status !== "processing") {
+  const cancellableStatuses = ["pending", "pending_ocr", "processing"];
+  if (!cancellableStatuses.includes(analysis.status)) {
     return err(
       "CONFLICT",
-      `Cannot cancel analysis with status: ${analysis.status}. Only pending or processing analyses can be cancelled.`
+      `Cannot cancel analysis with status: ${analysis.status}. Only pending, pending_ocr, or processing analyses can be cancelled.`
     );
   }
 
-  // TODO: Cancel Inngest run via API
-  // if (analysis.inngestRunId) {
-  //   await inngest.cancel(analysis.inngestRunId);
-  // }
+  // Send cancellation event to trigger cancelOn on the running pipeline
+  await inngest.send({
+    name: "nda/analysis.cancelled",
+    data: {
+      tenantId,
+      analysisId,
+      reason: "user_cancelled" as const,
+    },
+  });
 
-  // Update status to failed with cancellation note
+  // Optimistically update status to 'cancelled' for immediate UI feedback.
+  // The cleanup handler (inngest/function.cancelled) will also set this,
+  // but we update eagerly so the UI reflects the change immediately.
   await db
     .update(analyses)
     .set({
-      status: "failed",
+      status: "cancelled",
+      progressStage: "cancelled",
+      progressMessage: "Analysis cancelled by user",
       updatedAt: new Date(),
     })
     .where(eq(analyses.id, analysisId));
@@ -679,6 +692,78 @@ export async function cancelAnalysis(
   revalidatePath("/analyses");
 
   return ok(undefined);
+}
+
+/**
+ * Resume a cancelled or failed analysis.
+ *
+ * Resets the analysis status to 'processing' and re-sends the
+ * `nda/analysis.requested` event. Inngest step memoization replays
+ * completed steps instantly, so the pipeline resumes from where it
+ * stopped rather than starting over.
+ *
+ * Only analyses with status `cancelled` or `failed` can be resumed.
+ *
+ * @param analysisId - UUID of the analysis to resume
+ * @returns The updated analysis record
+ */
+export async function resumeAnalysis(
+  analysisId: string
+): Promise<ApiResponse<Analysis>> {
+  if (!z.string().uuid().safeParse(analysisId).success) {
+    return err("VALIDATION_ERROR", "Invalid analysis ID");
+  }
+
+  const { db, tenantId } = await withTenant();
+
+  const analysis = await db.query.analyses.findFirst({
+    where: and(
+      eq(analyses.id, analysisId),
+      eq(analyses.tenantId, tenantId)
+    ),
+  });
+
+  if (!analysis) {
+    return err("NOT_FOUND", "Analysis not found");
+  }
+
+  const resumableStatuses = ["cancelled", "failed"];
+  if (!resumableStatuses.includes(analysis.status)) {
+    return err(
+      "CONFLICT",
+      `Cannot resume analysis with status: ${analysis.status}. Only cancelled or failed analyses can be resumed.`
+    );
+  }
+
+  // Reset status to processing
+  const [updated] = await db
+    .update(analyses)
+    .set({
+      status: "processing",
+      progressStage: "parsing",
+      progressPercent: 0,
+      progressMessage: "Resuming analysis...",
+      updatedAt: new Date(),
+    })
+    .where(eq(analyses.id, analysisId))
+    .returning();
+
+  // Re-send analysis request event - Inngest step memoization
+  // replays completed steps instantly
+  await inngest.send({
+    name: "nda/analysis.requested",
+    data: {
+      tenantId,
+      documentId: analysis.documentId,
+      analysisId: analysis.id,
+      source: "web-upload" as const,
+    },
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/analyses");
+
+  return ok(updated);
 }
 
 /**

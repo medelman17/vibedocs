@@ -10,14 +10,16 @@ interface AnalysisProgressState {
   status: AnalysisStatus
   progress: number
   stage: string
+  /** Human-readable progress message from the pipeline */
+  message: string
   isLoading: boolean
   error: string | null
 }
 
 /**
  * Hook for polling analysis progress.
- * Polls every 2 seconds while status is "pending" or "processing".
- * Stops polling when status is "completed" or "failed".
+ * Polls every 2 seconds while status is "pending", "pending_ocr", or "processing".
+ * Stops polling when status is "completed", "failed", or "cancelled" (terminal states).
  */
 export function useAnalysisProgress(
   analysisId: string | null
@@ -26,6 +28,7 @@ export function useAnalysisProgress(
     status: "pending",
     progress: 0,
     stage: "",
+    message: "",
     isLoading: true,
     error: null,
   })
@@ -44,6 +47,7 @@ export function useAnalysisProgress(
         status: "pending",
         progress: 0,
         stage: "",
+        message: "",
         isLoading: false,
         error: null,
       })
@@ -75,6 +79,7 @@ export function useAnalysisProgress(
             status: result.data.status,
             progress: result.data.progress?.percent ?? 0,
             stage: result.data.progress?.step ?? "",
+            message: result.data.progress?.step ?? "",
             isLoading: false,
             error: null,
           })
