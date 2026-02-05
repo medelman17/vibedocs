@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 10 of 11 (Progress Streaming)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 10-02-PLAN.md (Pipeline Publishing)
+Last activity: 2026-02-05 - Completed 10-04-PLAN.md (Word Add-in Realtime Hook)
 
-Progress: [██████████████████████████████████████████░░] 95% (41 plans of 43 total)
+Progress: [██████████████████████████████████████████░░] 98% (42 plans of 43 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 41
-- Average duration: 4.3 min
-- Total execution time: 176.9 min
+- Total plans completed: 42
+- Average duration: 4.4 min
+- Total execution time: 183.9 min
 
 **By Phase:**
 
@@ -37,11 +37,11 @@ Progress: [███████████████████████
 | 08 | 4 | 16.2 min | 4.1 min |
 | 09 | 7 | 20.6 min | 2.9 min |
 
-| 10 | 2 | 8.7 min | 4.4 min |
+| 10 | 3 | 15.7 min | 5.2 min |
 
 **Recent Trend:**
-- Last 5 plans: 09-07 (2.7 min), 09-06 (4.0 min), 10-01 (4.8 min), 10-02 (3.9 min)
-- Trend: Phase 10 progressing steadily
+- Last 5 plans: 09-06 (4.0 min), 10-01 (4.8 min), 10-02 (3.9 min), 10-04 (7.0 min)
+- Trend: Phase 10 nearly complete (3/4 plans done)
 
 *Updated after each plan completion*
 
@@ -158,6 +158,9 @@ Recent decisions affecting current work:
 - [10-01]: Channel scoping: analysis:{analysisId} per analysis for progress isolation
 - [10-02]: publish() outside step.run() - fire-and-forget, at-most-once delivery acceptable
 - [10-02]: 1s throttle with terminal bypass for realtime publish (per CONTEXT.md)
+- [10-04]: Track disconnectedFor analysisId instead of boolean flag (React 19 ref-in-render prohibition)
+- [10-04]: Derive progress via useMemo not setState in effect (React 19 set-state-in-effect rule)
+- [10-04]: setTimeout(0) for terminal stage auto-disconnect (cannot setState in useMemo body)
 
 ### Pending Todos
 
@@ -170,5 +173,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 10-02-PLAN.md (Pipeline Publishing)
+Stopped at: Completed 10-04-PLAN.md (Word Add-in Realtime Hook)
 Resume file: None
