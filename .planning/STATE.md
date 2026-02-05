@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 11 of 11 (Document Rendering)
-Plan: 6 of 8 in current phase
+Plan: 7 of 8 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 11-05-PLAN.md
+Last activity: 2026-02-05 - Completed 11-07-PLAN.md
 
-Progress: [████████████████████████████████████████████████] 96% (49 plans of 51 total)
+Progress: [█████████████████████████████████████████████████] 98% (50 plans of 51 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 49
+- Total plans completed: 50
 - Average duration: 4.8 min
-- Total execution time: 233.8 min
+- Total execution time: 237.7 min
 
 **By Phase:**
 
@@ -39,11 +39,11 @@ Progress: [███████████████████████
 
 | 10 | 4 | 24.2 min | 6.1 min |
 
-| 11 | 6 | 41.4 min | 6.9 min |
+| 11 | 7 | 45.3 min | 6.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 11-02 (3.8 min), 11-03 (8.0 min), 11-04 (15.0 min), 11-05 (7.0 min)
-- Trend: Phase 11 in progress - 6 of 8 plans executed
+- Last 5 plans: 11-03 (8.0 min), 11-04 (15.0 min), 11-05 (7.0 min), 11-07 (3.9 min)
+- Trend: Phase 11 in progress - 7 of 8 plans executed
 
 *Updated after each plan completion*
 
@@ -180,6 +180,9 @@ Recent decisions affecting current work:
 - [11-05]: Reuse ChatLayoutClient for analysis route layout (generic sidebar/header shell)
 - [11-05]: orientation prop (not direction) for ResizablePanelGroup (react-resizable-panels v3)
 - [11-05]: Analysis mentions and showArtifact navigate to /analysis/[id] (not artifact panel)
+- [11-07]: Individual Zustand selectors instead of destructured object for fine-grained re-render control
+- [11-07]: nextClause/prevClause set selectionSource to 'document' to trigger analysis-side scroll
+- [11-07]: No changes needed for analysis tabs (already correct from 11-04)
 
 ### Pending Todos
 
@@ -191,6 +194,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T19:34:00Z
-Stopped at: Completed 11-05-PLAN.md
+Last session: 2026-02-05T19:43:00Z
+Stopped at: Completed 11-07-PLAN.md
 Resume file: None
