@@ -79,27 +79,27 @@ Requirements for the analysis pipeline milestone. Each maps to roadmap phases.
 
 ### Progress Streaming
 
-- [ ] **STR-01**: Create SSE endpoint for progress event consumption
-- [ ] **STR-02**: Support progress subscription by analysis ID
-- [ ] **STR-03**: Emit events compatible with Word Add-in consumption
-- [ ] **STR-04**: Handle reconnection gracefully (resume from last event)
+- [x] **STR-01**: Create SSE endpoint for progress event consumption
+- [x] **STR-02**: Support progress subscription by analysis ID
+- [x] **STR-03**: Emit events compatible with Word Add-in consumption
+- [x] **STR-04**: Handle reconnection gracefully (resume from last event)
 
 ### Document Rendering
 
-- [ ] **RND-01**: Convert extracted text to structured markdown representation
-- [ ] **RND-02**: Preserve heading hierarchy and section structure in markdown
-- [ ] **RND-03**: Display rendered document in UI artifact panel
-- [ ] **RND-04**: Highlight clause spans within rendered document (click-to-navigate)
-- [ ] **RND-05**: Sync document view with clause list (scroll to clause on selection)
+- [x] **RND-01**: Convert extracted text to structured markdown representation
+- [x] **RND-02**: Preserve heading hierarchy and section structure in markdown
+- [x] **RND-03**: Display rendered document in UI artifact panel
+- [x] **RND-04**: Highlight clause spans within rendered document (click-to-navigate)
+- [x] **RND-05**: Sync document view with clause list (scroll to clause on selection)
 
 ### Output & Persistence
 
-- [ ] **OUT-01**: Persist clause extractions to `clause_extractions` table
-- [ ] **OUT-02**: Persist gap analysis to `analyses.gap_analysis` JSONB column
-- [ ] **OUT-03**: Persist overall risk score and level to `analyses` table
-- [ ] **OUT-04**: Include clause positions (start/end) for Word Add-in content controls
-- [ ] **OUT-05**: Track token usage and cost per analysis
-- [ ] **OUT-06**: Update document status through pipeline stages
+- [x] **OUT-01**: Persist clause extractions to `clause_extractions` table
+- [x] **OUT-02**: Persist gap analysis to `analyses.gap_analysis` JSONB column
+- [x] **OUT-03**: Persist overall risk score and level to `analyses` table
+- [x] **OUT-04**: Include clause positions (start/end) for Word Add-in content controls
+- [x] **OUT-05**: Track token usage and cost per analysis
+- [x] **OUT-06**: Update document status through pipeline stages
 
 ## v2 Requirements
 
@@ -167,38 +167,38 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | CLS-04 | Phase 6 | Complete |
 | CLS-05 | Phase 6 | Complete |
 | CLS-06 | Phase 6 | Complete |
-| RSK-01 | Phase 7 | Pending |
-| RSK-02 | Phase 7 | Pending |
-| RSK-03 | Phase 7 | Pending |
-| RSK-04 | Phase 7 | Pending |
-| RSK-05 | Phase 7 | Pending |
-| RSK-06 | Phase 7 | Pending |
+| RSK-01 | Phase 7 | Complete |
+| RSK-02 | Phase 7 | Complete |
+| RSK-03 | Phase 7 | Complete |
+| RSK-04 | Phase 7 | Complete |
+| RSK-05 | Phase 7 | Complete |
+| RSK-06 | Phase 7 | Complete |
 | GAP-01 | Phase 8 | Complete |
 | GAP-02 | Phase 8 | Complete |
 | GAP-03 | Phase 8 | Complete |
 | GAP-04 | Phase 8 | Complete |
 | GAP-05 | Phase 8 | Complete |
-| PIP-01 | Phase 9 | Pending |
-| PIP-02 | Phase 9 | Pending |
-| PIP-03 | Phase 9 | Pending |
-| PIP-04 | Phase 9 | Pending |
-| PIP-05 | Phase 9 | Pending |
-| PIP-06 | Phase 9 | Pending |
-| STR-01 | Phase 10 | Pending |
-| STR-02 | Phase 10 | Pending |
-| STR-03 | Phase 10 | Pending |
-| STR-04 | Phase 10 | Pending |
-| RND-01 | Phase 11 | Pending |
-| RND-02 | Phase 11 | Pending |
-| RND-03 | Phase 11 | Pending |
-| RND-04 | Phase 11 | Pending |
-| RND-05 | Phase 11 | Pending |
-| OUT-01 | Phase 11 | Pending |
-| OUT-02 | Phase 11 | Pending |
-| OUT-03 | Phase 11 | Pending |
-| OUT-04 | Phase 11 | Pending |
-| OUT-05 | Phase 11 | Pending |
-| OUT-06 | Phase 11 | Pending |
+| PIP-01 | Phase 9 | Complete |
+| PIP-02 | Phase 9 | Complete |
+| PIP-03 | Phase 9 | Complete |
+| PIP-04 | Phase 9 | Complete |
+| PIP-05 | Phase 9 | Complete |
+| PIP-06 | Phase 9 | Complete |
+| STR-01 | Phase 10 | Complete |
+| STR-02 | Phase 10 | Complete |
+| STR-03 | Phase 10 | Complete |
+| STR-04 | Phase 10 | Complete |
+| RND-01 | Phase 11 | Complete |
+| RND-02 | Phase 11 | Complete |
+| RND-03 | Phase 11 | Complete |
+| RND-04 | Phase 11 | Complete |
+| RND-05 | Phase 11 | Complete |
+| OUT-01 | Phase 11 | Complete |
+| OUT-02 | Phase 11 | Complete |
+| OUT-03 | Phase 11 | Complete |
+| OUT-04 | Phase 11 | Complete |
+| OUT-05 | Phase 11 | Complete |
+| OUT-06 | Phase 11 | Complete |
 
 **Coverage:**
 - v1 requirements: 61 total
@@ -207,4 +207,4 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 (Phase 4 requirements complete)*
+*Last updated: 2026-02-05 (All v1 requirements complete — milestone finished)*

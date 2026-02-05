@@ -22,27 +22,27 @@ Implement the full NDA analysis agent pipeline for VibeDocs — a 5-stage durabl
 
 ### Active
 
-- [ ] **EXT-01**: Extractor step extracts raw text from PDF/DOCX documents
-- [ ] **EXT-02**: Extractor preserves document structure (headings, sections, paragraphs)
-- [ ] **CHK-01**: Chunker splits text into legal-aware chunks with section paths
-- [ ] **CHK-02**: Chunker uses LLM for boundary detection when structure is ambiguous
-- [ ] **CHK-03**: Chunks stored with Voyage AI embeddings in tenant database
-- [ ] **CLS-01**: Classifier retrieves similar CUAD examples via vector search
-- [ ] **CLS-02**: Classifier assigns CUAD category with confidence score per chunk
-- [ ] **CLS-03**: Classifier handles multi-category clauses (primary + secondary)
-- [ ] **RSK-01**: Risk Scorer assigns risk level: standard | cautious | aggressive | unknown
-- [ ] **RSK-02**: Risk Scorer provides plain-language explanation per clause
-- [ ] **RSK-03**: Risk Scorer cites evidence from reference corpus
-- [ ] **GAP-01**: Gap Analyst identifies missing CUAD categories
-- [ ] **GAP-02**: Gap Analyst explains importance of each missing clause
-- [ ] **GAP-03**: Gap Analyst suggests recommended language from templates
-- [ ] **PIP-01**: Full pipeline orchestrated as Inngest steps with durability
-- [ ] **PIP-02**: Pipeline emits progress events (stage + per-chunk granularity)
-- [ ] **PIP-03**: Progress events consumable via SSE for UI and Word Add-in
-- [ ] **PIP-04**: Pipeline works with both file upload (web) and text input (Word Add-in)
-- [ ] **PIP-05**: Results include clause positions for Word Add-in content controls
-- [ ] **OUT-01**: Analysis results persisted to analyses + clause_extractions tables
-- [ ] **OUT-02**: Overall risk score calculated as weighted average
+- [x] **EXT-01**: Extractor step extracts raw text from PDF/DOCX documents
+- [x] **EXT-02**: Extractor preserves document structure (headings, sections, paragraphs)
+- [x] **CHK-01**: Chunker splits text into legal-aware chunks with section paths
+- [x] **CHK-02**: Chunker uses LLM for boundary detection when structure is ambiguous
+- [x] **CHK-03**: Chunks stored with Voyage AI embeddings in tenant database
+- [x] **CLS-01**: Classifier retrieves similar CUAD examples via vector search
+- [x] **CLS-02**: Classifier assigns CUAD category with confidence score per chunk
+- [x] **CLS-03**: Classifier handles multi-category clauses (primary + secondary)
+- [x] **RSK-01**: Risk Scorer assigns risk level: standard | cautious | aggressive | unknown
+- [x] **RSK-02**: Risk Scorer provides plain-language explanation per clause
+- [x] **RSK-03**: Risk Scorer cites evidence from reference corpus
+- [x] **GAP-01**: Gap Analyst identifies missing CUAD categories
+- [x] **GAP-02**: Gap Analyst explains importance of each missing clause
+- [x] **GAP-03**: Gap Analyst suggests recommended language from templates
+- [x] **PIP-01**: Full pipeline orchestrated as Inngest steps with durability
+- [x] **PIP-02**: Pipeline emits progress events (stage + per-chunk granularity)
+- [x] **PIP-03**: Progress events consumable via SSE for UI and Word Add-in
+- [x] **PIP-04**: Pipeline works with both file upload (web) and text input (Word Add-in)
+- [x] **PIP-05**: Results include clause positions for Word Add-in content controls
+- [x] **OUT-01**: Analysis results persisted to analyses + clause_extractions tables
+- [x] **OUT-02**: Overall risk score calculated as weighted average
 
 ### Out of Scope
 
