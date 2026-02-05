@@ -114,7 +114,12 @@ export default function ChatPage() {
           id: string
           title: string
         }
-        openArtifact(input)
+        // Navigate to full analysis page for analysis type
+        if (input.type === "analysis") {
+          router.push(`/analysis/${input.id}`)
+        } else {
+          openArtifact(input)
+        }
         return undefined // Silent execution
       }
     },
@@ -303,15 +308,11 @@ export default function ChatPage() {
         },
       ])
 
-      // Auto-open artifact panel
-      openArtifact({
-        type: "analysis",
-        id: analysisResult.data.id,
-        title: uploadResult.data.title,
-      })
-
-      // Refresh sidebar
+      // Refresh sidebar before navigating
       window.dispatchEvent(new Event("refresh-chat-history"))
+
+      // Navigate to the full analysis page (primary analysis interface)
+      router.push(`/analysis/${analysisResult.data.id}`)
     } catch (err) {
       const errorMsg = `**Error:** ${err instanceof Error ? err.message : "Unknown error"}`
       setMessages([
@@ -361,11 +362,7 @@ export default function ChatPage() {
     setInputValue(newValue)
 
     if (mention.type === "analysis") {
-      openArtifact({
-        type: "analysis",
-        id: mention.id,
-        title: mention.name,
-      })
+      router.push(`/analysis/${mention.id}`)
     } else if (mention.type === "document") {
       openArtifact({
         type: "document",
