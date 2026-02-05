@@ -7,15 +7,15 @@ export const contentType = 'image/png'
 
 export default async function Image() {
   // Load fonts - Cormorant Garamond for display, Inter for body
-  // Note: Google Fonts URLs change over time. Get current URLs from:
-  // https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400&display=swap
-  // https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap
+  // Note: @vercel/og requires TTF format (not WOFF2). Get current TTF URLs from:
+  // curl "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400" | grep ttf
+  // curl "https://fonts.googleapis.com/css2?family=Inter:wght@500" | grep ttf
   const [cormorantFont, interFont] = await Promise.all([
     fetch(
-      'https://fonts.gstatic.com/s/cormorantgaramond/v21/co3umX5slCNuHLi8bLeY9MK7whWMhyjypVO7abI26QOD_v86KnTOig.woff2'
+      'https://fonts.gstatic.com/s/cormorantgaramond/v21/co3umX5slCNuHLi8bLeY9MK7whWMhyjypVO7abI26QOD_v86GnM.ttf'
     ).then((res) => res.arrayBuffer()),
     fetch(
-      'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fAZ9hiA.woff2'
+      'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf'
     ).then((res) => res.arrayBuffer()),
   ])
 
