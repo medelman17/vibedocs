@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 7 of 11 (Risk Scoring)
-Plan: 1 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-05 - Completed 07-01-PLAN.md (Risk Assessment Schema & Types)
+Last activity: 2026-02-05 - Completed 07-03-PLAN.md (Risk Scoring Persistence & Weighted Scoring)
 
-Progress: [██████████████████░] ~81% (25 plans of ~31 total)
+Progress: [████████████████████░] ~87% (27 plans of ~31 total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25
-- Average duration: 4.6 min
-- Total execution time: 116.4 min
+- Total plans completed: 27
+- Average duration: 4.5 min
+- Total execution time: 121.4 min
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [██████████████████░] ~81% (25 p
 | 04 | 5 | 15.5 min | 3.1 min |
 | 05 | 3 | 18.3 min | 6.1 min |
 | 06 | 4 | 18.2 min | 4.6 min |
-| 07 | 1 | 7.9 min | 7.9 min |
+| 07 | 3 | 12.9 min | 4.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-02 (7.3 min), 06-03 (2.1 min), 06-04 (4.6 min), 07-01 (7.9 min)
-- Trend: Schema/type plans take slightly longer due to careful backward compatibility
+- Last 5 plans: 06-03 (2.1 min), 06-04 (4.6 min), 07-01 (7.9 min), 07-03 (5.0 min)
+- Trend: Pipeline integration plans running at expected pace
 
 *Updated after each plan completion*
 
@@ -116,6 +116,10 @@ Recent decisions affecting current work:
 - [07-01]: Bridge transformation from legacy to enhanced evidence in risk-scorer.ts (removed in Plan 02)
 - [07-01]: executiveSummary initialized to empty string placeholder (populated in Plan 03)
 - [07-01]: computeRiskDistribution uses explicit object literal initialization (no RISK_LEVELS runtime dep)
+- [07-03]: ON CONFLICT DO UPDATE (not DO NOTHING) for clauseExtractions supports re-scoring
+- [07-03]: JSONB merge preserves existing metadata while adding perspective/riskDistribution
+- [07-03]: Fallback to uniform weight 1.0 when cuadCategories empty (bootstrap not run)
+- [07-03]: updateAnalysisWithRiskResults exported but not used in pipeline (available for standalone use)
 
 ### Pending Todos
 
@@ -128,6 +132,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-05T07:47:00Z
-Stopped at: Completed 07-01-PLAN.md (Risk Assessment Schema & Types)
+Last session: 2026-02-05T07:57:00Z
+Stopped at: Completed 07-03-PLAN.md (Risk Scoring Persistence & Weighted Scoring)
 Resume file: None
