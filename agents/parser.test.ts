@@ -1,21 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runParserAgent, type ParserInput } from './parser'
 
-// Mock document processing (chunking only, extraction is now separate)
-vi.mock('@/lib/document-processing', () => ({
-  chunkDocument: vi.fn().mockReturnValue([
-    {
-      id: 'chunk-0',
-      index: 0,
-      content: 'Sample NDA text with confidentiality provisions.',
-      sectionPath: [],
-      tokenCount: 10,
-      startPosition: 0,
-      endPosition: 47,
-    },
-  ]),
-}))
-
 // Mock new document extraction infrastructure
 vi.mock('@/lib/document-extraction', () => ({
   extractDocument: vi.fn().mockResolvedValue({
@@ -36,17 +21,6 @@ vi.mock('@/lib/document-extraction', () => ({
     hasExhibits: false,
     hasSignatureBlock: false,
     hasRedactedText: false,
-  }),
-}))
-
-// Mock embeddings client
-vi.mock('@/lib/embeddings', () => ({
-  getVoyageAIClient: () => ({
-    embedBatch: vi.fn().mockResolvedValue({
-      embeddings: [[0.1, 0.2, 0.3]],
-      totalTokens: 100,
-      cacheHits: 0,
-    }),
   }),
 }))
 
@@ -88,13 +62,13 @@ describe('Parser Agent', () => {
     const result = await runParserAgent(input)
 
     expect(result.document.documentId).toBe('doc-123')
-    expect(result.document.chunks.length).toBeGreaterThan(0)
-    expect(result.document.chunks[0].embedding).toBeDefined()
-    expect(result.document.chunks[0].embedding.length).toBe(3) // Mock returns 3 elements
-    // New fields from extraction infrastructure
+    expect(result.document.rawText).toBeDefined()
     expect(result.document.structure).toBeDefined()
     expect(result.quality).toBeDefined()
     expect(result.quality.confidence).toBeGreaterThan(0)
+    // Parser no longer produces chunks or embeddings
+    expect('chunks' in result.document).toBe(false)
+    expect('tokenUsage' in result).toBe(false)
   })
 
   it('parses word-addin source with structured paragraphs', async () => {
@@ -116,33 +90,11 @@ describe('Parser Agent', () => {
 
     expect(result.document.title).toBe('Sample NDA')
     expect(result.document.rawText).toContain('ARTICLE I')
-    expect(result.document.chunks.length).toBeGreaterThan(0)
-    // Word Add-in also gets structure detection
     expect(result.document.structure).toBeDefined()
     expect(result.quality.confidence).toBe(1.0) // Word provides clean text
   })
 
-  it('preserves position information through parsing', async () => {
-    // The mock already returns position information - verify it passes through
-    const input: ParserInput = {
-      documentId: 'doc-pos',
-      tenantId: 'tenant-456',
-      source: 'word-addin',
-      content: { rawText: 'First clause. Second clause.', paragraphs: [] },
-      metadata: { title: 'Test' },
-    }
-
-    const result = await runParserAgent(input)
-
-    // Verify positions are present and make sense
-    expect(result.document.chunks[0].startPosition).toBeDefined()
-    expect(result.document.chunks[0].endPosition).toBeDefined()
-    expect(result.document.chunks[0].endPosition).toBeGreaterThan(
-      result.document.chunks[0].startPosition
-    )
-  })
-
-  it('returns token usage from embedding generation', async () => {
+  it('returns quality metrics from extraction', async () => {
     const input: ParserInput = {
       documentId: 'doc-123',
       tenantId: 'tenant-456',
@@ -151,7 +103,25 @@ describe('Parser Agent', () => {
 
     const result = await runParserAgent(input)
 
-    expect(result.tokenUsage).toBeDefined()
-    expect(result.tokenUsage.embeddingTokens).toBeGreaterThan(0)
+    expect(result.quality).toBeDefined()
+    expect(result.quality.charCount).toBeGreaterThan(0)
+    expect(result.quality.wordCount).toBeGreaterThan(0)
+    expect(result.quality.confidence).toBeGreaterThan(0)
+  })
+
+  it('sets isOcr flag for OCR source', async () => {
+    const input: ParserInput = {
+      documentId: 'doc-ocr',
+      tenantId: 'tenant-456',
+      source: 'ocr',
+      ocrText: 'OCR extracted text from scanned document.',
+      ocrConfidence: 75,
+    }
+
+    const result = await runParserAgent(input)
+
+    expect(result.quality.isOcr).toBe(true)
+    expect(result.quality.confidence).toBe(75)
+    expect(result.quality.warnings.length).toBeGreaterThan(0)
   })
 })

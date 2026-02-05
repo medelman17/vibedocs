@@ -93,6 +93,7 @@ export const analysisProgressPayload = z.object({
   /** Pipeline stage */
   stage: z.enum([
     "parsing",
+    "chunking",
     "ocr_processing",
     "classifying",
     "scoring",
@@ -110,6 +111,8 @@ export const analysisProgressPayload = z.object({
       chunksProcessed: z.number().int().nonnegative().optional(),
       totalChunks: z.number().int().nonnegative().optional(),
       clausesClassified: z.number().int().nonnegative().optional(),
+      embeddingBatchesCompleted: z.number().int().nonnegative().optional(),
+      totalEmbeddingBatches: z.number().int().nonnegative().optional(),
     })
     .optional(),
 });

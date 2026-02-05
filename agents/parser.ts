@@ -1,8 +1,9 @@
 /**
  * @fileoverview Parser Agent
  *
- * First stage of the NDA analysis pipeline. Extracts text from documents,
- * chunks the content with section detection, and generates embeddings.
+ * First stage of the NDA analysis pipeline. Extracts text from documents
+ * and detects document structure. Chunking and embedding are handled as
+ * separate Inngest steps downstream.
  *
  * Supports three source types:
  * - `web`: Downloads document from Vercel Blob storage
@@ -12,13 +13,11 @@
  * @module agents/parser
  */
 
-import { chunkDocument, type DocumentChunk } from '@/lib/document-processing'
 import {
   extractDocument,
   detectStructure,
   type DocumentStructure,
 } from '@/lib/document-extraction'
-import { getVoyageAIClient } from '@/lib/embeddings'
 import { db } from '@/db/client'
 import { documents } from '@/db/schema/documents'
 import { eq } from 'drizzle-orm'
@@ -50,20 +49,12 @@ export interface ParserInput {
   ocrConfidence?: number
 }
 
-export interface ParsedChunk extends DocumentChunk {
-  embedding: number[]
-}
-
 export interface ParserOutput {
   document: {
     documentId: string
     title: string
     rawText: string
-    chunks: ParsedChunk[]
     structure: DocumentStructure
-  }
-  tokenUsage: {
-    embeddingTokens: number
   }
   quality: {
     charCount: number
@@ -71,6 +62,7 @@ export interface ParserOutput {
     pageCount: number
     confidence: number
     warnings: string[]
+    isOcr?: boolean
   }
 }
 
@@ -79,14 +71,16 @@ export interface ParserOutput {
 // ============================================================================
 
 /**
- * Runs the parser agent to extract and chunk document content.
+ * Runs the parser agent to extract document content and detect structure.
  *
  * For web sources, downloads from Vercel Blob and extracts text.
  * For word-addin sources, uses the provided content directly.
  * For ocr sources, uses text that was extracted via OCR processing.
  *
+ * Chunking and embedding are handled as separate Inngest steps downstream.
+ *
  * @param input - Parser input configuration
- * @returns Parsed document with embedded chunks
+ * @returns Parsed document with structure and quality metrics
  */
 export async function runParserAgent(input: ParserInput): Promise<ParserOutput> {
   const { documentId, source, content, metadata, ocrText, ocrConfidence } = input
@@ -124,6 +118,7 @@ export async function runParserAgent(input: ParserInput): Promise<ParserOutput> 
       warnings: ocrConfidence && ocrConfidence < 85
         ? ['Document was processed via OCR. Accuracy may vary.']
         : [],
+      isOcr: true,
     }
   } else if (source === 'web' || source === 'web-upload') {
     // Fetch document from database to get blob URL
@@ -182,30 +177,12 @@ export async function runParserAgent(input: ParserInput): Promise<ParserOutput> 
     }
   }
 
-  // Chunk with section detection and position tracking
-  const baseChunks = chunkDocument(rawText, { maxTokens: 500, overlap: 50 })
-
-  // Generate embeddings in batches
-  const voyageClient = getVoyageAIClient()
-  const texts = baseChunks.map((c) => c.content)
-  const embeddingResult = await voyageClient.embedBatch(texts, 'document')
-
-  // Combine chunks with embeddings
-  const chunks: ParsedChunk[] = baseChunks.map((chunk, i) => ({
-    ...chunk,
-    embedding: embeddingResult.embeddings[i],
-  }))
-
   return {
     document: {
       documentId,
       title,
       rawText,
-      chunks,
       structure,
-    },
-    tokenUsage: {
-      embeddingTokens: embeddingResult.totalTokens,
     },
     quality,
   }

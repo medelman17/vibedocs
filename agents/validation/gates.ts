@@ -27,15 +27,19 @@ import type { ExtractionResult } from "@/lib/document-extraction"
  *
  * Checks for:
  * - Empty or whitespace-only raw text (EMPTY_DOCUMENT)
- * - No chunks generated (NO_CHUNKS)
+ * - No chunks generated (NO_CHUNKS) - only when chunks are provided
+ *
+ * After the parser refactor (05-03), the parser only extracts text and
+ * detects structure. Chunks are produced in a separate Inngest step.
+ * When called without chunks, only validates the raw text.
  *
  * @param rawText - Extracted text from the document
- * @param chunks - Document chunks with id and content
+ * @param chunks - Document chunks with id and content (optional after parser refactor)
  * @returns ValidationResult indicating pass/fail with error details
  */
 export function validateParserOutput(
   rawText: string,
-  chunks: Array<{ id: string; content: string }>
+  chunks?: Array<{ id: string; content: string }>
 ): ValidationResult {
   // Check for empty or whitespace-only document
   if (!rawText || rawText.trim().length === 0) {
@@ -45,8 +49,8 @@ export function validateParserOutput(
     }
   }
 
-  // Check for no chunks generated
-  if (chunks.length === 0) {
+  // Check for no chunks generated (only when chunks are provided)
+  if (chunks && chunks.length === 0) {
     return {
       valid: false,
       error: formatValidationError("NO_CHUNKS", "document parsing"),
