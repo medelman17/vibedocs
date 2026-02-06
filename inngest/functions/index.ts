@@ -7,9 +7,6 @@
  * @module inngest/functions
  */
 
-// Demo functions (for testing Inngest setup)
-import { demoProcess, demoMultiStep } from "./demo"
-
 // Bootstrap pipeline (coordinator + source workers)
 import { ingestCoordinator } from "./bootstrap/ingest-coordinator"
 import { ingestSource } from "./bootstrap/ingest-source"
@@ -36,10 +33,6 @@ import { cleanupCancelledAnalysis } from "./cleanup-cancelled"
  * Add new functions to this array as they are created.
  */
 export const functions = [
-  // Demo functions
-  demoProcess,
-  demoMultiStep,
-
   // Bootstrap functions (coordinator + source workers)
   ingestCoordinator,
   ingestSource,

@@ -146,26 +146,6 @@ export const comparisonRequestedPayload = baseTenantPayload.extend({
 });
 
 // =============================================================================
-// Demo Events (for testing Inngest setup)
-// =============================================================================
-
-/**
- * Demo process event - simulates document processing.
- */
-export const demoProcessPayload = z.object({
-  documentId: z.string(),
-  message: z.string().optional(),
-});
-
-/**
- * Demo multi-step event - runs configurable steps with delays.
- */
-export const demoMultiStepPayload = z.object({
-  steps: z.number().int().positive().optional().default(3),
-  delayMs: z.number().int().nonnegative().optional().default(1000),
-});
-
-// =============================================================================
 // Bootstrap Events (for reference data ingestion)
 // =============================================================================
 
@@ -458,13 +438,6 @@ export type InngestEvents = {
   "nda/analyze-gaps.requested": {
     data: z.infer<typeof ndaAnalyzeGapsRequestedPayload>;
   };
-  // Demo events
-  "demo/process": {
-    data: z.infer<typeof demoProcessPayload>;
-  };
-  "demo/multi-step": {
-    data: z.infer<typeof demoMultiStepPayload>;
-  };
   // Bootstrap events
   "bootstrap/ingest.requested": {
     data: z.infer<typeof bootstrapIngestRequestedPayload>;
@@ -551,9 +524,6 @@ export const eventSchemas = {
   "nda/classify.requested": ndaClassifyRequestedPayload,
   "nda/score-risks.requested": ndaScoreRisksRequestedPayload,
   "nda/analyze-gaps.requested": ndaAnalyzeGapsRequestedPayload,
-  // Demo events
-  "demo/process": demoProcessPayload,
-  "demo/multi-step": demoMultiStepPayload,
   // Bootstrap events
   "bootstrap/ingest.requested": bootstrapIngestRequestedPayload,
   "bootstrap/ingest.progress": bootstrapIngestProgressPayload,
