@@ -2,10 +2,11 @@
 
 import * as React from "react"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
-import { AlertCircleIcon } from "lucide-react"
+import { AlertCircleIcon, FileTextIcon, ShieldCheckIcon } from "lucide-react"
 import { DocumentRenderer } from "@/components/document/document-renderer"
 import { DocumentSkeleton } from "@/components/document/document-skeleton"
 import { AnalysisView } from "@/components/artifact/analysis-view"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAnalysisProgress } from "@/hooks/use-analysis-progress"
 import { useClauseSelection } from "@/hooks/use-clause-selection"
@@ -191,17 +192,27 @@ export default function AnalysisPage() {
     <AnalysisView analysisId={analysisId} documentTitle={documentTitle} />
   )
 
-  // Mobile: stack vertically
+  // Mobile: tab-based switching (full-height per panel)
   if (isMobile) {
     return (
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="min-h-0 flex-1 overflow-hidden border-b">
+      <Tabs defaultValue="analysis" className="flex h-full min-h-0 flex-col overflow-hidden">
+        <TabsList className="mx-2 mt-1 shrink-0 w-auto">
+          <TabsTrigger value="document">
+            <FileTextIcon className="size-4" />
+            Document
+          </TabsTrigger>
+          <TabsTrigger value="analysis">
+            <ShieldCheckIcon className="size-4" />
+            Analysis
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="document" forceMount className="min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden">
           {documentPanel}
-        </div>
-        <div className="min-h-0 flex-1 overflow-hidden">
+        </TabsContent>
+        <TabsContent value="analysis" forceMount className="min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden">
           {analysisPanel}
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     )
   }
 
