@@ -7,6 +7,7 @@ let mockCallCount = 0
 
 // Mock AI SDK generateText with Output.object pattern (sequential responses)
 vi.mock('ai', () => ({
+  tool: vi.fn(),
   generateText: vi.fn().mockImplementation(() => {
     mockCallCount++
     // First call is always gap analysis, subsequent are hypothesis tests
@@ -79,8 +80,8 @@ describe('Gap Analyst Agent', () => {
 
     const result = await runGapAnalystAgent(input)
 
-    expect(result.gapAnalysis.missingCategories.length).toBeGreaterThan(0)
-    expect(result.gapAnalysis.missingCategories[0].importance).toBe('critical')
+    expect(result.gapAnalysis.gaps.length).toBeGreaterThan(0)
+    expect(result.gapAnalysis.gaps[0].severity).toBe('critical')
   })
 
   it('tests ContractNLI hypotheses', async () => {
