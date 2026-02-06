@@ -80,7 +80,8 @@ export default function DashboardPage() {
     return null
   }
 
-  // Mock stats - these would come from your database
+  // Mock stats based on actual database schema
+  // TODO: Replace with real queries from your analyses and documents tables
   const stats = {
     totalAnalyses: 24,
     documentsProcessed: 42,
@@ -88,38 +89,42 @@ export default function DashboardPage() {
     avgAnalysisTime: '32s',
   }
 
-  const recentActivity = [
+  // Mock data structured according to your database schema
+  // - Type: Analyses from db/schema/analyses.ts
+  // - Risk Levels: 'standard' | 'cautious' | 'aggressive' | 'unknown'
+  // - Status: 'pending' | 'pending_ocr' | 'processing' | 'completed' | 'failed' | 'cancelled'
+  const recentAnalyses = [
     {
-      id: 1,
-      type: 'analysis',
-      title: 'Master Service Agreement - Q4 Review',
-      status: 'completed',
-      timestamp: '2 hours ago',
-      riskLevel: 'high',
+      id: 'analysis-1',
+      documentTitle: 'Master Service Agreement - Q4 Review',
+      status: 'completed' as const,
+      overallRiskLevel: 'aggressive' as const,
+      overallRiskScore: 78,
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
     },
     {
-      id: 2,
-      type: 'document',
-      title: 'Employee NDA Template Update',
-      status: 'processing',
-      timestamp: '1 day ago',
-      riskLevel: 'medium',
+      id: 'analysis-2',
+      documentTitle: 'Employee NDA Template Update',
+      status: 'processing' as const,
+      overallRiskLevel: 'cautious' as const,
+      overallRiskScore: 55,
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
     },
     {
-      id: 3,
-      type: 'comparison',
-      title: 'Vendor Contract Comparison',
-      status: 'completed',
-      timestamp: '3 days ago',
-      riskLevel: 'low',
+      id: 'analysis-3',
+      documentTitle: 'Vendor Contract Review',
+      status: 'completed' as const,
+      overallRiskLevel: 'standard' as const,
+      overallRiskScore: 32,
+      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
     },
     {
-      id: 4,
-      type: 'analysis',
-      title: 'Partnership Agreement Review',
-      status: 'completed',
-      timestamp: '1 week ago',
-      riskLevel: 'medium',
+      id: 'analysis-4',
+      documentTitle: 'Partnership Agreement',
+      status: 'completed' as const,
+      overallRiskLevel: 'cautious' as const,
+      overallRiskScore: 58,
+      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
     },
   ]
 
@@ -133,9 +138,9 @@ export default function DashboardPage() {
     },
     {
       icon: <ComparisonIcon className="w-6 h-6" />,
-      title: 'Compare Documents',
-      description: 'Compare two contracts side-by-side',
-      href: '/documents?action=compare',
+      title: 'View Documents',
+      description: 'Browse and manage your documents',
+      href: '/documents',
       color: 'from-purple-500 to-pink-500',
     },
     {
@@ -147,63 +152,60 @@ export default function DashboardPage() {
     },
     {
       icon: <BarChart3Icon className="w-6 h-6" />,
-      title: 'View Reports',
+      title: 'View Analytics',
       description: 'Analyze trends and insights',
       href: '/admin',
       color: 'from-green-500 to-emerald-500',
     },
   ]
 
-  const recentActivity = [
-    {
-      id: 1,
-      type: 'analysis',
-      title: 'Master Service Agreement - Q4 Review',
-      status: 'completed',
-      timestamp: '2 hours ago',
-      riskLevel: 'high',
-    },
-    {
-      id: 2,
-      type: 'document',
-      title: 'Employee NDA Template Update',
-      status: 'processing',
-      timestamp: '1 day ago',
-      riskLevel: 'medium',
-    },
-    {
-      id: 3,
-      type: 'comparison',
-      title: 'Vendor Contract Comparison',
-      status: 'completed',
-      timestamp: '3 days ago',
-      riskLevel: 'low',
-    },
-    {
-      id: 4,
-      type: 'analysis',
-      title: 'Partnership Agreement Review',
-      status: 'completed',
-      timestamp: '1 week ago',
-      riskLevel: 'medium',
-    },
-  ]
+  // Helper function to format relative time
+  const getRelativeTime = (date: Date) => {
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
 
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString()
+  }
+
+  // Helper function to get risk level badge styling
   const getRiskBadgeColor = (level: string) => {
     switch (level) {
-      case 'high':
-        return 'bg-red-100 text-red-700'
-      case 'medium':
-        return 'bg-amber-100 text-amber-700'
+      case 'aggressive':
+        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+      case 'cautious':
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+      case 'standard':
+        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
       default:
-        return 'bg-green-100 text-green-700'
+        return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
     }
   }
 
+  // Helper function to get status icon and styling
   const getStatusIcon = (status: string) => {
-    if (status === 'completed') return <CheckCircleIcon className="w-4 h-4" />
-    if (status === 'processing') return <ClockIcon className="w-4 h-4 animate-spin" />
-    return <AlertCircleIcon className="w-4 h-4" />
+    if (status === 'completed') return <CheckCircleIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
+    if (status === 'processing' || status === 'pending' || status === 'pending_ocr') {
+      return <ClockIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
+    }
+    return <AlertCircleIcon className="w-4 h-4 text-red-600 dark:text-red-400" />
+  }
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'Pending',
+      pending_ocr: 'Pending OCR',
+      processing: 'Processing',
+      completed: 'Completed',
+      failed: 'Failed',
+      cancelled: 'Cancelled',
+    }
+    return labels[status] || status
   }
 
   return (
@@ -327,7 +329,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-              Recent Activity
+              Recent Analyses
             </h2>
             <Link href="/chat" className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
               View All
@@ -336,35 +338,41 @@ export default function DashboardPage() {
 
           <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 overflow-hidden">
             <div className="divide-y divide-slate-200 dark:divide-slate-800">
-              {recentActivity.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              {recentAnalyses.map((analysis) => (
+                <Link
+                  key={analysis.id}
+                  href={`/chat?analysis=${analysis.id}`}
+                  className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors block"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                       <div className="flex-shrink-0">
-                        {getStatusIcon(activity.status)}
+                        {getStatusIcon(analysis.status)}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                          {activity.title}
+                          {analysis.documentTitle}
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                          {activity.timestamp}
+                          {getRelativeTime(analysis.createdAt)} • {getStatusLabel(analysis.status)}
                         </p>
                       </div>
                     </div>
                     <div className="flex-shrink-0 flex items-center gap-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getRiskBadgeColor(activity.riskLevel)}`}
-                      >
-                        {activity.riskLevel}
-                      </span>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                          {analysis.overallRiskScore}
+                        </p>
+                        <span
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${getRiskBadgeColor(analysis.overallRiskLevel)}`}
+                        >
+                          {analysis.overallRiskLevel}
+                        </span>
+                      </div>
                       <ArrowRightIcon className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </Card>
