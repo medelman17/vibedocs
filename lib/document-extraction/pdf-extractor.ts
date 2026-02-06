@@ -1,5 +1,9 @@
 /**
  * @fileoverview PDF text extraction with error handling
+ *
+ * Uses unpdf (serverless-optimized PDF.js build) instead of pdf-parse
+ * to avoid DOMMatrix/pdfjs-dist browser dependency issues in production.
+ *
  * @module lib/document-extraction/pdf-extractor
  */
 
@@ -10,13 +14,10 @@ import { validateExtractionQuality } from './validators'
 /**
  * Extracts text from PDF buffer with proper error handling.
  *
- * Uses dynamic import for pdf-parse per CLAUDE.md decision [02-01]
- * to avoid barrel export issues with pdfjs-dist browser dependencies.
- *
- * **Linearization:** pdf-parse (via pdfjs-dist) outputs text in reading order,
+ * **Linearization:** PDF.js outputs text in reading order,
  * effectively linearizing multi-column layouts. Per CONTEXT.md decision
  * "Linearize PDF layout completely (single-column, discard visual layout)",
- * we rely on pdf-parse's default text extraction which outputs content
+ * we rely on PDF.js's default text extraction which outputs content
  * sequentially as encountered in the PDF content stream.
  *
  * @throws EncryptedDocumentError - Password-protected PDF
@@ -26,46 +27,43 @@ export async function extractPdf(
   buffer: Buffer,
   fileSize?: number
 ): Promise<ExtractionResult> {
-  // Dynamic import to avoid barrel export issues with pdfjs-dist browser deps
-  const { PDFParse, PasswordException, InvalidPDFException } =
-    await import('pdf-parse')
+  const { extractText, getMeta, getDocumentProxy } = await import('unpdf')
 
   try {
-    const pdfParser = new PDFParse({ data: buffer })
-    const result = await pdfParser.getText()
+    const pdf = await getDocumentProxy(new Uint8Array(buffer))
+
+    const { totalPages, text: rawText } = await extractText(pdf, { mergePages: true })
 
     // NFC normalize per CONTEXT.md
-    const text = result.text.normalize('NFC')
+    const text = (rawText as string).normalize('NFC')
 
     // Validate quality with file size
     const quality = validateExtractionQuality(text, fileSize ?? buffer.length)
-    quality.pageCount = result.pages.length
+    quality.pageCount = totalPages
 
-    // Extract metadata via getInfo()
-    const info = await pdfParser.getInfo()
-    const metadata = {
-      title: info.info?.Title,
-      author: info.info?.Author,
-      creationDate: info.info?.CreationDate,
-      modificationDate: info.info?.ModDate,
+    // Extract metadata
+    let metadata: Record<string, string | undefined> = {}
+    try {
+      const { info } = await getMeta(pdf)
+      metadata = {
+        title: info?.Title,
+        author: info?.Author,
+        creationDate: info?.CreationDate,
+        modificationDate: info?.ModDate,
+      }
+    } catch {
+      // Metadata extraction is optional — don't fail the whole extraction
     }
+
+    await pdf.destroy()
 
     return {
       text,
       quality,
-      pageCount: quality.pageCount,
+      pageCount: totalPages,
       metadata,
     }
   } catch (error: unknown) {
-    // Handle pdf-parse specific error classes
-    if (error instanceof PasswordException) {
-      throw new EncryptedDocumentError()
-    }
-    if (error instanceof InvalidPDFException) {
-      throw new CorruptDocumentError()
-    }
-
-    // Fallback to message-based detection for other errors
     const errorMessage = error instanceof Error ? error.message : String(error)
 
     if (

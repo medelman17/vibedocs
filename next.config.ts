@@ -3,8 +3,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   // Opt out of bundling packages that use Node-only APIs or break when bundled
-  // (e.g. pdfjs-dist worker path resolves wrong in Turbopack server bundle)
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
+  serverExternalPackages: [],
 
   // Memory optimization: dispose inactive pages faster, keep fewer buffered
   onDemandEntries: {
