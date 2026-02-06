@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Cormorant_Garamond } from "next/font/google"
 import { GeistSans } from "geist/font/sans"
 import { cn } from "@/lib/utils"
@@ -13,6 +14,28 @@ const cormorant = Cormorant_Garamond({
 })
 
 export default function Home() {
+  const router = useRouter()
+  
+  // Check if user is authenticated on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/session')
+        if (response.ok) {
+          const sessionData = await response.json()
+          if (sessionData?.user) {
+            // Redirect authenticated users to dashboard
+            router.push('/dashboard')
+          }
+        }
+      } catch (error) {
+        // Continue showing landing page if auth check fails
+        console.error('Auth check failed:', error)
+      }
+    }
+
+    checkAuth()
+  }, [router])
   const [email, setEmail] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
