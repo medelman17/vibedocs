@@ -1,8 +1,8 @@
 "use client"
 
+import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { riskConfig, type RiskLevel } from "@/components/analysis/config"
 import type { EnhancedGapResult } from "@/agents/types"
 
@@ -38,41 +38,53 @@ export function SummaryStrip({
     <div className={cn("shrink-0 border-b bg-muted/30 px-4 py-2.5", className)}>
       {/* Row 1: Clause count + risk distribution */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">
+        <motion.span
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="font-medium text-foreground"
+        >
           {clauseCount} {clauseCount === 1 ? "clause" : "clauses"}
-        </span>
+        </motion.span>
         <span>&middot;</span>
-        {(["aggressive", "cautious", "standard", "unknown"] as RiskLevel[]).map(
-          (level) => {
-            const count = riskCounts[level]
-            if (count === 0) return null
+        {(["aggressive", "cautious", "standard", "unknown"] as RiskLevel[])
+          .filter((level) => riskCounts[level] > 0)
+          .map((level, i) => {
             const config = riskConfig[level]
             return (
-              <Badge
+              <motion.span
                 key={level}
-                variant="outline"
-                className="gap-1 px-1.5 py-0 text-xs"
-                style={{
-                  background: config.bgColor,
-                  color: config.textColor,
-                  borderColor: config.borderColor,
-                }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.05, type: "spring", bounce: 0.2, duration: 0.3 }}
               >
-                {count} {config.label.toLowerCase()}
-              </Badge>
+                <Badge
+                  variant="outline"
+                  className="gap-1 px-1.5 py-0 text-xs"
+                  style={{
+                    background: config.bgColor,
+                    color: config.textColor,
+                    borderColor: config.borderColor,
+                  }}
+                >
+                  {riskCounts[level]} {config.label.toLowerCase()}
+                </Badge>
+              </motion.span>
             )
-          }
-        )}
+          })}
       </div>
 
       {/* Row 2: Coverage + gaps */}
       {coverageSummary && (
         <div className="mt-2 flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Progress
-              value={coverageSummary.coveragePercent}
-              className="h-1.5 flex-1"
-            />
+            <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+              <motion.div
+                className="absolute inset-y-0 left-0 rounded-full bg-primary"
+                initial={{ width: "0%" }}
+                animate={{ width: `${coverageSummary.coveragePercent}%` }}
+                transition={{ type: "spring", bounce: 0, duration: 0.8, delay: 0.2 }}
+              />
+            </div>
             <span className="shrink-0 text-xs text-muted-foreground">
               {coverageSummary.coveragePercent}%
             </span>

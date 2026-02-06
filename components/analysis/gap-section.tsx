@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { motion, AnimatePresence } from "motion/react"
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -94,10 +95,14 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
 
 function GapCard({ gap }: { gap: EnhancedGapItem }) {
   const [open, setOpen] = React.useState(false)
+  const config = gapSeverityConfig[gap.severity]
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className="min-w-0">
+      <Card
+        className="min-w-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-pointer"
+        style={{ borderLeft: `3px solid ${config.borderColor}` }}
+      >
         <CardHeader className="pb-2">
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
@@ -121,28 +126,39 @@ function GapCard({ gap }: { gap: EnhancedGapItem }) {
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{gap.explanation}</p>
         </CardHeader>
-        <CollapsibleContent>
-          <CardContent className="space-y-3 pt-0">
-            <div className="space-y-2">
-              <h5 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Recommended Language
-              </h5>
-              <blockquote className="whitespace-pre-wrap border-l-2 pl-3 text-sm">
-                {gap.suggestedLanguage}
-              </blockquote>
-              <div className="flex items-center justify-between">
-                {gap.templateSource && (
-                  <p className="text-xs italic text-muted-foreground">
-                    Source: {gap.templateSource}
-                  </p>
-                )}
-                <CopyButton text={gap.suggestedLanguage} label="Copy clause" />
-              </div>
-              {gap.styleMatch && (
-                <p className="text-xs text-muted-foreground">{gap.styleMatch}</p>
-              )}
-            </div>
-          </CardContent>
+        <CollapsibleContent forceMount className="overflow-hidden">
+          <AnimatePresence initial={false}>
+            {open && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+              >
+                <CardContent className="space-y-3 pt-0">
+                  <div className="space-y-2">
+                    <h5 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Recommended Language
+                    </h5>
+                    <blockquote className="whitespace-pre-wrap border-l-2 pl-3 text-sm">
+                      {gap.suggestedLanguage}
+                    </blockquote>
+                    <div className="flex items-center justify-between">
+                      {gap.templateSource && (
+                        <p className="text-xs italic text-muted-foreground">
+                          Source: {gap.templateSource}
+                        </p>
+                      )}
+                      <CopyButton text={gap.suggestedLanguage} label="Copy clause" />
+                    </div>
+                    {gap.styleMatch && (
+                      <p className="text-xs text-muted-foreground">{gap.styleMatch}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </CollapsibleContent>
       </Card>
     </Collapsible>
@@ -213,14 +229,33 @@ export function GapSection({ gapData }: GapSectionProps) {
           )}
         </CollapsibleTrigger>
 
-        <CollapsibleContent className="mt-3 space-y-2">
-          <div className="flex justify-end">
-            <CopyButton text={allGapsText} label="Copy all gaps" />
-          </div>
+        <CollapsibleContent forceMount className="overflow-hidden">
+          <AnimatePresence initial={false}>
+            {open && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+                className="mt-3 space-y-2"
+              >
+                <div className="flex justify-end">
+                  <CopyButton text={allGapsText} label="Copy all gaps" />
+                </div>
 
-          {sortedGaps.map((gap, i) => (
-            <GapCard key={`${gap.category}-${i}`} gap={gap} />
-          ))}
+                {sortedGaps.map((gap, i) => (
+                  <motion.div
+                    key={`${gap.category}-${i}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04, type: "spring", bounce: 0, duration: 0.3 }}
+                  >
+                    <GapCard gap={gap} />
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </CollapsibleContent>
       </Collapsible>
     </div>

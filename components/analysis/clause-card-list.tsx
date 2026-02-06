@@ -6,6 +6,7 @@ import {
   ChevronRightIcon,
   AlertTriangleIcon,
 } from "lucide-react"
+import { motion, AnimatePresence } from "motion/react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,7 +16,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import type { ClauseExtraction } from "@/app/(main)/(dashboard)/analyses/actions"
-import { sourceConfig, type RiskLevel } from "@/components/analysis/config"
+import { riskConfig, sourceConfig, type RiskLevel } from "@/components/analysis/config"
 import { RiskBadge } from "@/components/analysis/risk-tab"
 import { useClauseSelection } from "@/hooks/use-clause-selection"
 
@@ -99,6 +100,7 @@ function ClauseCard({
   const cardRef = React.useRef<HTMLDivElement>(null)
   const { selectionSource } = useClauseSelection()
 
+  const config = riskConfig[riskLevel]
   const evidence = (clause.evidence as ClauseEvidence) || null
   const meta = (clause.metadata as ClauseMetadata) || null
   const hasEvidence =
@@ -122,10 +124,14 @@ function ClauseCard({
       <Card
         ref={cardRef}
         className={cn(
-          "min-w-0 cursor-pointer transition-shadow",
-          isActive && "ring-2 ring-primary ring-offset-1",
+          "min-w-0 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+          isActive && "shadow-md",
           isHovered && !isActive && "bg-muted/50"
         )}
+        style={{
+          borderLeft: `${isActive ? 4 : 3}px solid ${config.borderColor}`,
+          ...(isActive ? { background: config.bgColor } : {}),
+        }}
         onClick={onSelect}
         onMouseEnter={() => onHover(clause.id)}
         onMouseLeave={() => onHover(null)}
@@ -183,124 +189,136 @@ function ClauseCard({
             )}
             {open ? "Hide details" : "Show details"}
           </CollapsibleTrigger>
-          <CollapsibleContent className="pt-3">
-            <div className="space-y-3 text-sm">
-              {/* Clause Text */}
-              <div>
-                <p className="mb-1 font-medium text-muted-foreground">Clause Text</p>
-                <blockquote className="border-l-2 border-muted pl-3 italic text-muted-foreground">
-                  {clause.clauseText}
-                </blockquote>
-              </div>
-
-              {/* Risk Assessment */}
-              {clause.riskExplanation && (
-                <div>
-                  <p className="mb-1 font-medium text-muted-foreground">
-                    Risk Assessment
-                  </p>
-                  <p>{clause.riskExplanation}</p>
-                </div>
-              )}
-
-              {/* Atypical Language Note */}
-              {meta?.atypicalLanguage && meta.atypicalLanguageNote && (
-                <div
-                  className="rounded-md p-2 text-xs"
-                  style={{
-                    background: "oklch(0.95 0.04 65)",
-                    borderLeft: "3px solid oklch(0.70 0.12 65)",
-                  }}
+          <CollapsibleContent forceMount className="overflow-hidden">
+            <AnimatePresence initial={false}>
+              {open && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+                  className="pt-3"
                 >
-                  <span className="font-semibold">Atypical Language: </span>
-                  {meta.atypicalLanguageNote}
-                </div>
-              )}
+                  <div className="space-y-3 text-sm">
+                    {/* Clause Text */}
+                    <div>
+                      <p className="mb-1 font-medium text-muted-foreground">Clause Text</p>
+                      <blockquote className="border-l-2 border-muted pl-3 italic text-muted-foreground">
+                        {clause.clauseText}
+                      </blockquote>
+                    </div>
 
-              {/* Evidence Expandable */}
-              {hasEvidence && (
-                <Collapsible open={evidenceOpen} onOpenChange={setEvidenceOpen}>
-                  <CollapsibleTrigger
-                    className="flex w-full items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {evidenceOpen ? (
-                      <ChevronDownIcon className="size-3" />
-                    ) : (
-                      <ChevronRightIcon className="size-3" />
-                    )}
-                    {evidenceOpen ? "Hide evidence" : "See evidence"}
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2 space-y-3">
-                    {/* Citations */}
-                    {evidence?.citations && evidence.citations.length > 0 && (
+                    {/* Risk Assessment */}
+                    {clause.riskExplanation && (
                       <div>
-                        <p className="mb-1 text-xs font-medium text-muted-foreground">
-                          Citations
+                        <p className="mb-1 font-medium text-muted-foreground">
+                          Risk Assessment
                         </p>
-                        <div className="space-y-1.5">
-                          {evidence.citations.map((citation, i) => (
-                            <blockquote
-                              key={i}
-                              className="border-l-2 pl-2 text-xs italic text-muted-foreground"
-                              style={{ borderColor: "oklch(0.70 0.12 250)" }}
-                            >
-                              &ldquo;{citation.text}&rdquo;
-                            </blockquote>
-                          ))}
-                        </div>
+                        <p>{clause.riskExplanation}</p>
                       </div>
                     )}
 
-                    {/* References with source labels */}
-                    {evidence?.references && evidence.references.length > 0 && (
-                      <div>
-                        <p className="mb-1 text-xs font-medium text-muted-foreground">
-                          References
-                        </p>
-                        <div className="space-y-2">
-                          {evidence.references.map((ref, i) => (
-                            <div
-                              key={i}
-                              className="flex items-start gap-2 rounded-md border p-2"
-                            >
-                              <SourceBadge source={ref.source} />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs text-muted-foreground">
-                                    {Math.round(ref.similarity * 100)}% match
-                                  </span>
-                                  {ref.section && (
-                                    <span className="text-xs text-muted-foreground">
-                                      - {ref.section}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="mt-0.5 text-xs">{ref.summary}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Baseline Comparison */}
-                    {evidence?.baselineComparison && (
+                    {/* Atypical Language Note */}
+                    {meta?.atypicalLanguage && meta.atypicalLanguageNote && (
                       <div
                         className="rounded-md p-2 text-xs"
                         style={{
-                          background: "oklch(0.95 0.04 250)",
-                          borderLeft: "3px solid oklch(0.70 0.12 250)",
+                          background: "oklch(0.95 0.04 65)",
+                          borderLeft: "3px solid oklch(0.70 0.12 65)",
                         }}
                       >
-                        <span className="font-semibold">Baseline Comparison: </span>
-                        {evidence.baselineComparison}
+                        <span className="font-semibold">Atypical Language: </span>
+                        {meta.atypicalLanguageNote}
                       </div>
                     )}
-                  </CollapsibleContent>
-                </Collapsible>
+
+                    {/* Evidence Expandable */}
+                    {hasEvidence && (
+                      <Collapsible open={evidenceOpen} onOpenChange={setEvidenceOpen}>
+                        <CollapsibleTrigger
+                          className="flex w-full items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {evidenceOpen ? (
+                            <ChevronDownIcon className="size-3" />
+                          ) : (
+                            <ChevronRightIcon className="size-3" />
+                          )}
+                          {evidenceOpen ? "Hide evidence" : "See evidence"}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-2 space-y-3">
+                          {/* Citations */}
+                          {evidence?.citations && evidence.citations.length > 0 && (
+                            <div>
+                              <p className="mb-1 text-xs font-medium text-muted-foreground">
+                                Citations
+                              </p>
+                              <div className="space-y-1.5">
+                                {evidence.citations.map((citation, i) => (
+                                  <blockquote
+                                    key={i}
+                                    className="border-l-2 pl-2 text-xs italic text-muted-foreground"
+                                    style={{ borderColor: "oklch(0.70 0.12 250)" }}
+                                  >
+                                    &ldquo;{citation.text}&rdquo;
+                                  </blockquote>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* References with source labels */}
+                          {evidence?.references && evidence.references.length > 0 && (
+                            <div>
+                              <p className="mb-1 text-xs font-medium text-muted-foreground">
+                                References
+                              </p>
+                              <div className="space-y-2">
+                                {evidence.references.map((ref, i) => (
+                                  <div
+                                    key={i}
+                                    className="flex items-start gap-2 rounded-md border p-2"
+                                  >
+                                    <SourceBadge source={ref.source} />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-xs text-muted-foreground">
+                                          {Math.round(ref.similarity * 100)}% match
+                                        </span>
+                                        {ref.section && (
+                                          <span className="text-xs text-muted-foreground">
+                                            - {ref.section}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="mt-0.5 text-xs">{ref.summary}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Baseline Comparison */}
+                          {evidence?.baselineComparison && (
+                            <div
+                              className="rounded-md p-2 text-xs"
+                              style={{
+                                background: "oklch(0.95 0.04 250)",
+                                borderLeft: "3px solid oklch(0.70 0.12 250)",
+                              }}
+                            >
+                              <span className="font-semibold">Baseline Comparison: </span>
+                              {evidence.baselineComparison}
+                            </div>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+                  </div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </CollapsibleContent>
         </CardContent>
       </Card>
@@ -321,6 +339,11 @@ export function ClauseCardList({ clauses }: ClauseCardListProps) {
   const hoveredClauseId = useClauseSelection((s) => s.hoveredClauseId)
   const selectClause = useClauseSelection((s) => s.selectClause)
   const hoverClause = useClauseSelection((s) => s.hoverClause)
+
+  const prefersReducedMotion = React.useMemo(() => {
+    if (typeof window === "undefined") return false
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  }, [])
 
   const handleSelectClause = React.useCallback(
     (clauseId: string) => {
@@ -346,15 +369,25 @@ export function ClauseCardList({ clauses }: ClauseCardListProps) {
 
   return (
     <div className="space-y-3">
-      {clauses.map((clause) => (
-        <ClauseCard
+      {clauses.map((clause, index) => (
+        <motion.div
           key={clause.id}
-          clause={clause}
-          isActive={activeClauseId === clause.id}
-          isHovered={hoveredClauseId === clause.id}
-          onSelect={() => handleSelectClause(clause.id)}
-          onHover={handleHover}
-        />
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={
+            prefersReducedMotion
+              ? { duration: 0 }
+              : { delay: index * 0.03, type: "spring", bounce: 0, duration: 0.3 }
+          }
+        >
+          <ClauseCard
+            clause={clause}
+            isActive={activeClauseId === clause.id}
+            isHovered={hoveredClauseId === clause.id}
+            onSelect={() => handleSelectClause(clause.id)}
+            onHover={handleHover}
+          />
+        </motion.div>
       ))}
     </div>
   )

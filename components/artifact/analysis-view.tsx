@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { motion, AnimatePresence } from "motion/react"
 import {
   Loader2Icon,
   XCircleIcon,
@@ -325,131 +326,139 @@ export function AnalysisView({ analysisId, documentTitle, className }: AnalysisV
     }, 3000)
   }, [analysisId])
 
-  // Progress state
+  // Determine which state to render
+  let content: React.ReactNode
+  let contentKey: string
+
   if (status === "pending" || status === "pending_ocr" || status === "processing") {
-    return (
-      <div className={cn("h-full", className)}>
-        <ProgressView
-          stage={stage}
-          progress={progress}
-          message={message}
-          queuePosition={queuePosition}
+    contentKey = "progress"
+    content = (
+      <ProgressView
+        stage={stage}
+        progress={progress}
+        message={message}
+        queuePosition={queuePosition}
+        analysisId={analysisId}
+      />
+    )
+  } else if (status === "cancelled") {
+    contentKey = "cancelled"
+    content = (
+      <CancelledView
+        analysisId={analysisId}
+        message={message}
+        onResumed={() => {
+          window.location.reload()
+        }}
+      />
+    )
+  } else if (status === "failed" || error || fetchError) {
+    contentKey = "error"
+    content = (
+      <ErrorView message={error || fetchError || "Analysis failed. Please try again."} />
+    )
+  } else if (!analysis) {
+    contentKey = "loading"
+    content = <ProgressView stage="Loading results..." progress={100} />
+  } else {
+    contentKey = "results"
+
+    // Parse metadata
+    const metadata = analysis.metadata as Record<string, unknown> | null
+    const currentPerspective = (metadata?.perspective as Perspective) || "balanced"
+    const overallRiskLevel = (analysis.overallRiskLevel as RiskLevel) || "unknown"
+
+    // Calculate risk counts
+    const riskCounts = clauses.reduce(
+      (acc, clause) => {
+        const level = (clause.riskLevel as RiskLevel) || "unknown"
+        acc[level]++
+        return acc
+      },
+      { standard: 0, cautious: 0, aggressive: 0, unknown: 0 } as Record<RiskLevel, number>
+    )
+
+    // Filter and sort clauses
+    const displayClauses = filterAndSortClauses(clauses, sortBy, riskFilter, searchQuery)
+
+    // Token usage for summary strip
+    const tokenUsage = metadata?.tokenUsage as { estimatedCost?: number } | undefined
+
+    content = (
+      <>
+        {/* OCR quality warning */}
+        {hasOcrIssues(analysis) && (
+          <div className="shrink-0 px-4 pt-3">
+            <OcrWarning
+              confidence={analysis.ocrConfidence!}
+              warningMessage={analysis.ocrWarning}
+            />
+          </div>
+        )}
+
+        {/* Sticky header */}
+        <AnalysisHeader
           analysisId={analysisId}
+          overallRiskScore={analysis.overallRiskScore}
+          overallRiskLevel={overallRiskLevel}
+          currentPerspective={currentPerspective}
+          onRescoreTriggered={handleRescoreTriggered}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          riskFilter={riskFilter}
+          onRiskFilterChange={setRiskFilter}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
         />
-      </div>
-    )
-  }
 
-  // Cancelled state
-  if (status === "cancelled") {
-    return (
-      <div className={cn("h-full", className)}>
-        <CancelledView
+        {/* Summary strip */}
+        <SummaryStrip
+          clauseCount={clauses.length}
+          riskCounts={riskCounts}
+          gapData={gapData}
+          estimatedCost={tokenUsage?.estimatedCost}
+        />
+
+        {/* Scrollable content: clause cards + gap section */}
+        <ScrollArea className="min-h-0 flex-1">
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.3 }}
+            className="space-y-3 p-4"
+          >
+            <ClauseCardList clauses={displayClauses} />
+
+            {gapData && gapData.gaps.length > 0 && (
+              <>
+                <Separator className="my-4" />
+                <GapSection gapData={gapData} />
+              </>
+            )}
+          </motion.div>
+        </ScrollArea>
+
+        {/* Chat drawer trigger - fixed at bottom */}
+        <ChatDrawer
           analysisId={analysisId}
-          message={message}
-          onResumed={() => {
-            window.location.reload()
-          }}
+          documentTitle={documentTitle || "this document"}
         />
-      </div>
+      </>
     )
   }
-
-  // Error state
-  if (status === "failed" || error || fetchError) {
-    return (
-      <div className={cn("h-full", className)}>
-        <ErrorView message={error || fetchError || "Analysis failed. Please try again."} />
-      </div>
-    )
-  }
-
-  // Loading results
-  if (!analysis) {
-    return (
-      <div className={cn("h-full", className)}>
-        <ProgressView stage="Loading results..." progress={100} />
-      </div>
-    )
-  }
-
-  // Parse metadata
-  const metadata = analysis.metadata as Record<string, unknown> | null
-  const currentPerspective = (metadata?.perspective as Perspective) || "balanced"
-  const overallRiskLevel = (analysis.overallRiskLevel as RiskLevel) || "unknown"
-
-  // Calculate risk counts
-  const riskCounts = clauses.reduce(
-    (acc, clause) => {
-      const level = (clause.riskLevel as RiskLevel) || "unknown"
-      acc[level]++
-      return acc
-    },
-    { standard: 0, cautious: 0, aggressive: 0, unknown: 0 } as Record<RiskLevel, number>
-  )
-
-  // Filter and sort clauses
-  const displayClauses = filterAndSortClauses(clauses, sortBy, riskFilter, searchQuery)
-
-  // Token usage for summary strip
-  const tokenUsage = metadata?.tokenUsage as { estimatedCost?: number } | undefined
 
   return (
-    <div className={cn("flex h-full min-h-0 min-w-0 flex-col", className)}>
-      {/* OCR quality warning */}
-      {hasOcrIssues(analysis) && (
-        <div className="shrink-0 px-4 pt-3">
-          <OcrWarning
-            confidence={analysis.ocrConfidence!}
-            warningMessage={analysis.ocrWarning}
-          />
-        </div>
-      )}
-
-      {/* Sticky header */}
-      <AnalysisHeader
-        analysisId={analysisId}
-        overallRiskScore={analysis.overallRiskScore}
-        overallRiskLevel={overallRiskLevel}
-        currentPerspective={currentPerspective}
-        onRescoreTriggered={handleRescoreTriggered}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        riskFilter={riskFilter}
-        onRiskFilterChange={setRiskFilter}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
-
-      {/* Summary strip */}
-      <SummaryStrip
-        clauseCount={clauses.length}
-        riskCounts={riskCounts}
-        gapData={gapData}
-        estimatedCost={tokenUsage?.estimatedCost}
-      />
-
-      {/* Scrollable content: clause cards + gap section */}
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="space-y-3 p-4">
-          {/* Clause cards */}
-          <ClauseCardList clauses={displayClauses} />
-
-          {/* Gap section */}
-          {gapData && gapData.gaps.length > 0 && (
-            <>
-              <Separator className="my-4" />
-              <GapSection gapData={gapData} />
-            </>
-          )}
-        </div>
-      </ScrollArea>
-
-      {/* Chat drawer trigger - fixed at bottom */}
-      <ChatDrawer
-        analysisId={analysisId}
-        documentTitle={documentTitle || "this document"}
-      />
-    </div>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={contentKey}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className={cn("flex h-full min-h-0 min-w-0 flex-col", className)}
+      >
+        {content}
+      </motion.div>
+    </AnimatePresence>
   )
 }

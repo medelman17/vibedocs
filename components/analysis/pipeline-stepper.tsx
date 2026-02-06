@@ -7,8 +7,8 @@ import {
   CircleIcon,
   BanIcon,
 } from "lucide-react"
+import { motion } from "motion/react"
 import { cn } from "@/lib/utils"
-import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 
 // ============================================================================
@@ -57,16 +57,22 @@ function StageIcon({ status }: { status: StageStatus }) {
   switch (status) {
     case "completed":
       return (
-        <div
+        <motion.div
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", bounce: 0.4, duration: 0.4 }}
           className="flex size-5 items-center justify-center rounded-full"
           style={{ background: "oklch(0.85 0.10 175)" }}
         >
           <CheckIcon className="size-3" style={{ color: "oklch(0.40 0.14 175)" }} />
-        </div>
+        </motion.div>
       )
     case "active":
       return (
-        <div
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", bounce: 0.3, duration: 0.3 }}
           className="flex size-5 items-center justify-center rounded-full"
           style={{ background: "oklch(0.90 0.12 250)" }}
         >
@@ -74,7 +80,7 @@ function StageIcon({ status }: { status: StageStatus }) {
             className="size-3 animate-spin"
             style={{ color: "oklch(0.45 0.15 250)" }}
           />
-        </div>
+        </motion.div>
       )
     case "failed":
       return (
@@ -128,14 +134,16 @@ export function PipelineStepper({
               {/* Connector line (except first) */}
               <div className="flex flex-col items-center">
                 {i > 0 && (
-                  <div
+                  <motion.div
                     className="mb-0.5 h-3 w-px"
-                    style={{
+                    initial={{ background: "oklch(0.90 0.02 0)" }}
+                    animate={{
                       background:
                         status === "completed" || status === "active"
                           ? "oklch(0.75 0.08 175)"
                           : "oklch(0.90 0.02 0)",
                     }}
+                    transition={{ duration: 0.3 }}
                   />
                 )}
                 <StageIcon status={status} />
@@ -144,7 +152,7 @@ export function PipelineStepper({
                 <span
                   className={cn(
                     "text-sm",
-                    status === "active" && "font-medium",
+                    status === "active" && "font-medium text-foreground",
                     status === "pending" && "text-muted-foreground/60",
                     status === "completed" && "text-muted-foreground",
                     status === "failed" && "text-destructive"
@@ -159,7 +167,15 @@ export function PipelineStepper({
       </div>
 
       {/* Progress bar */}
-      <Progress value={progress} className="w-48" />
+      <div className="relative h-2 w-48 overflow-hidden rounded-full bg-muted">
+        <motion.div
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{ background: "oklch(0.65 0.15 250)" }}
+          initial={{ width: "0%" }}
+          animate={{ width: `${progress}%` }}
+          transition={{ type: "spring", bounce: 0, duration: 0.6 }}
+        />
+      </div>
       <p className="mt-2 text-xs text-muted-foreground">{progress}%</p>
 
       {/* Detailed message */}
