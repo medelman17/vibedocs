@@ -1,5 +1,5 @@
 import { encode } from 'gpt-tokenizer'
-import { extractPdf, extractDocx } from '@/lib/document-extraction'
+import { extractDocx } from '@/lib/document-extraction'
 
 // ============================================================================
 // Types
@@ -41,6 +41,7 @@ export async function extractText(
 ): Promise<ExtractionResult> {
   switch (mimeType) {
     case 'application/pdf': {
+      const { extractPdf } = await import('@/lib/document-extraction/pdf-extractor')
       const result = await extractPdf(buffer)
       return { text: result.text, pageCount: result.pageCount }
     }

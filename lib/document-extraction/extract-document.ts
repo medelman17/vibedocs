@@ -8,7 +8,6 @@
  */
 
 import { ValidationError, OcrRequiredError } from '@/lib/errors'
-import { extractPdf } from './pdf-extractor'
 import { extractDocx } from './docx-extractor'
 import { detectLanguage, validateExtractionQuality } from './validators'
 import type { ExtractionResult } from './types'
@@ -60,9 +59,14 @@ export async function extractDocument(
   let result: ExtractionResult
 
   switch (mimeType) {
-    case 'application/pdf':
+    case 'application/pdf': {
+      // Dynamic import to avoid loading pdf-parse at module evaluation time.
+      // pdf-parse → pdfjs-dist references DOMMatrix (browser-only), which crashes
+      // server-side if the module is eagerly evaluated via the static import chain.
+      const { extractPdf } = await import('./pdf-extractor')
       result = await extractPdf(buffer, fileSize)
       break
+    }
 
     case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
       result = await extractDocx(buffer, fileSize)

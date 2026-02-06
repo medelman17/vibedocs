@@ -22,7 +22,9 @@ export type {
 } from './types'
 
 // Extractors
-export { extractPdf } from './pdf-extractor'
+// NOTE: extractPdf is NOT exported here — it must be dynamically imported
+// to avoid loading pdf-parse (which depends on pdfjs-dist/DOMMatrix) at
+// module evaluation time. Use: const { extractPdf } = await import('./pdf-extractor')
 export { extractDocx } from './docx-extractor'
 
 // Validators
