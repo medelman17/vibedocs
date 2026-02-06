@@ -89,6 +89,9 @@ export function ClauseHighlight({
 }: ClauseHighlightProps) {
   const config = getRiskColorConfig(riskLevel)
   const askAboutClause = useClauseSelection((s) => s.askAboutClause)
+  const hoverClause = useClauseSelection((s) => s.hoverClause)
+  const hoveredClauseId = useClauseSelection((s) => s.hoveredClauseId)
+  const isHoveredFromAnalysis = hoveredClauseId === clauseId
 
   // When highlights are not visible, render children transparently
   if (!isVisible) {
@@ -99,8 +102,10 @@ export function ClauseHighlight({
     )
   }
 
+  const isEmphasized = isActive || isHoveredFromAnalysis
+
   const spanStyle: React.CSSProperties = {
-    backgroundColor: isActive ? config.bgActive : config.bg,
+    backgroundColor: isEmphasized ? config.bgActive : config.bg,
     borderLeft: isActive ? `3px solid ${config.border}` : undefined,
     paddingLeft: isActive ? "2px" : undefined,
     borderRadius: "2px",
@@ -113,6 +118,8 @@ export function ClauseHighlight({
         <span
           data-clause-id={clauseId}
           onClick={onClick}
+          onMouseEnter={() => hoverClause(clauseId)}
+          onMouseLeave={() => hoverClause(null)}
           style={spanStyle}
           className={cn(
             "cursor-pointer",

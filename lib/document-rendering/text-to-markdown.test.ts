@@ -7,8 +7,9 @@
  */
 
 import { describe, it, expect } from "vitest"
-import { convertToMarkdown, splitIntoParagraphs } from "./text-to-markdown"
+import { convertToMarkdown, splitIntoParagraphs, splitByChunks } from "./text-to-markdown"
 import type { PositionedSection } from "@/lib/document-extraction/types"
+import type { OffsetMapping } from "./types"
 
 // ============================================================================
 // convertToMarkdown
@@ -290,5 +291,194 @@ describe("splitIntoParagraphs", () => {
 
     expect(result[0].endOffset).toBe(9) // "Para one." = 9 chars
     expect(result[1].endOffset).toBe(20) // ends at position 20
+  })
+})
+
+// ============================================================================
+// splitByChunks
+// ============================================================================
+
+describe("splitByChunks", () => {
+  it("creates segments at chunk boundaries", () => {
+    const markdown =
+      "# Intro\nParagraph one text here.\n## Terms\nPayment terms here."
+    const chunks = [
+      {
+        chunkIndex: 0,
+        chunkType: "clause",
+        sectionPath: ["Intro"],
+        startPosition: 0,
+        endPosition: 26,
+      },
+      {
+        chunkIndex: 1,
+        chunkType: "clause",
+        sectionPath: ["Intro", "Terms"],
+        startPosition: 26,
+        endPosition: 48,
+      },
+    ]
+    const offsetMap: OffsetMapping[] = [
+      { original: 0, markdown: 2 },
+      { original: 26, markdown: 31 },
+    ]
+
+    const segments = splitByChunks(markdown, chunks, offsetMap)
+
+    expect(segments).toHaveLength(2)
+    expect(segments[0].text).toContain("Intro")
+    expect(segments[0].sectionLevel).toBe(1)
+    expect(segments[0].chunkType).toBe("clause")
+    expect(segments[1].text).toContain("Terms")
+    expect(segments[1].sectionLevel).toBe(2)
+    expect(segments[1].chunkType).toBe("clause")
+  })
+
+  it("falls back to splitIntoParagraphs when no chunks provided", () => {
+    const markdown = "Hello\n\nWorld"
+    const segments = splitByChunks(markdown, [], [])
+
+    expect(segments.length).toBeGreaterThanOrEqual(2)
+    expect(segments[0].text).toBe("Hello")
+    expect(segments[0].sectionLevel).toBeUndefined()
+  })
+
+  it("handles preamble text before first chunk", () => {
+    const markdown = "Cover letter text.\nMain clause."
+    const chunks = [
+      {
+        chunkIndex: 0,
+        chunkType: "clause",
+        sectionPath: ["Main"],
+        startPosition: 19,
+        endPosition: 31,
+      },
+    ]
+    const segments = splitByChunks(markdown, chunks, [])
+
+    expect(segments).toHaveLength(2)
+    expect(segments[0].text).toContain("Cover letter")
+    expect(segments[1].text).toContain("Main clause")
+  })
+
+  it("assigns sectionLevel from sectionPath depth", () => {
+    const markdown = "Level one.\nLevel two.\nLevel three."
+    const chunks = [
+      {
+        chunkIndex: 0,
+        chunkType: "definition",
+        sectionPath: ["Art 1"],
+        startPosition: 0,
+        endPosition: 11,
+      },
+      {
+        chunkIndex: 1,
+        chunkType: "sub-clause",
+        sectionPath: ["Art 1", "Sec 1.1"],
+        startPosition: 11,
+        endPosition: 22,
+      },
+      {
+        chunkIndex: 2,
+        chunkType: "sub-clause",
+        sectionPath: ["Art 1", "Sec 1.1", "(a)"],
+        startPosition: 22,
+        endPosition: 34,
+      },
+    ]
+    const segments = splitByChunks(markdown, chunks, [])
+
+    expect(segments[0].sectionLevel).toBe(1)
+    expect(segments[1].sectionLevel).toBe(2)
+    expect(segments[2].sectionLevel).toBe(3)
+  })
+
+  it("skips zero-length segments from overlapping chunks", () => {
+    const markdown = "Text A.Text B."
+    const chunks = [
+      {
+        chunkIndex: 0,
+        chunkType: "clause",
+        sectionPath: ["A"],
+        startPosition: 0,
+        endPosition: 10,
+      },
+      {
+        chunkIndex: 1,
+        chunkType: "clause",
+        sectionPath: ["B"],
+        startPosition: 7,
+        endPosition: 14,
+      },
+    ]
+    const segments = splitByChunks(markdown, chunks, [])
+
+    expect(segments).toHaveLength(2)
+    expect(segments[0].startOffset).toBe(0)
+    expect(segments[1].startOffset).toBe(7)
+  })
+
+  it("returns empty array for empty markdown text", () => {
+    const segments = splitByChunks("", [], [])
+    expect(segments).toHaveLength(0)
+  })
+
+  it("handles chunks with null sectionPath", () => {
+    const markdown = "Some text here."
+    const chunks = [
+      {
+        chunkIndex: 0,
+        chunkType: "clause",
+        sectionPath: null,
+        startPosition: 0,
+        endPosition: 15,
+      },
+    ]
+    const segments = splitByChunks(markdown, chunks, [])
+
+    expect(segments).toHaveLength(1)
+    expect(segments[0].sectionLevel).toBeUndefined()
+  })
+
+  it("handles chunks with null chunkType", () => {
+    const markdown = "Some text here."
+    const chunks = [
+      {
+        chunkIndex: 0,
+        chunkType: null,
+        sectionPath: ["Section"],
+        startPosition: 0,
+        endPosition: 15,
+      },
+    ]
+    const segments = splitByChunks(markdown, chunks, [])
+
+    expect(segments).toHaveLength(1)
+    expect(segments[0].chunkType).toBeUndefined()
+  })
+
+  it("sorts chunks by startPosition regardless of input order", () => {
+    const markdown = "First part.Second part."
+    const chunks = [
+      {
+        chunkIndex: 1,
+        chunkType: "clause",
+        sectionPath: ["B"],
+        startPosition: 11,
+        endPosition: 23,
+      },
+      {
+        chunkIndex: 0,
+        chunkType: "clause",
+        sectionPath: ["A"],
+        startPosition: 0,
+        endPosition: 11,
+      },
+    ]
+    const segments = splitByChunks(markdown, chunks, [])
+
+    expect(segments).toHaveLength(2)
+    expect(segments[0].text).toBe("First part.")
+    expect(segments[1].text).toBe("Second part.")
   })
 })

@@ -14,6 +14,10 @@ import type { PositionedSection, DocumentStructure } from "@/lib/document-extrac
 // Re-export upstream types for rendering consumers
 export type { PositionedSection, DocumentStructure }
 
+// Import and re-export chunk type for rendering consumers
+import type { ChunkForRendering } from "@/db/queries/chunks"
+export type { ChunkForRendering }
+
 // ============================================================================
 // Offset Mapping
 // ============================================================================
@@ -69,6 +73,10 @@ export interface DocumentSegment {
   endOffset: number
   /** Zero-based index of this paragraph */
   index: number
+  /** Section depth from chunk sectionPath (1 = top-level). Undefined for heuristic segments. */
+  sectionLevel?: number
+  /** Chunk type discriminator. Undefined for heuristic segments. */
+  chunkType?: string
 }
 
 // ============================================================================
@@ -129,6 +137,8 @@ export interface DocumentRenderingData {
   structure: DocumentStructure
   /** Clause extractions with positions, ordered by startPosition */
   clauses: ClauseForRendering[]
+  /** Chunk metadata for chunk-based rendering. Empty during progressive reveal before chunking. */
+  chunks: ChunkForRendering[]
   /** Current analysis status */
   status: string
   /** Token usage data (may be null if analysis is still running) */

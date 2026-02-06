@@ -3,16 +3,9 @@
 import * as React from "react"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
 import { AlertCircleIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable"
 import { DocumentRenderer } from "@/components/document/document-renderer"
 import { DocumentSkeleton } from "@/components/document/document-skeleton"
 import { AnalysisView } from "@/components/artifact/analysis-view"
-import { useSidebar } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAnalysisProgress } from "@/hooks/use-analysis-progress"
 import { useClauseSelection } from "@/hooks/use-clause-selection"
@@ -24,10 +17,6 @@ import type { PositionedSection } from "@/lib/document-extraction/types"
 // Stage Order for Progressive Reveal
 // ============================================================================
 
-/**
- * Pipeline stages in execution order.
- * Used to determine when to re-fetch data based on stage transitions.
- */
 const STAGE_ORDER = [
   "parsing",
   "chunking",
@@ -42,7 +31,6 @@ function stageIndex(stage: string): number {
   return idx === -1 ? -1 : idx
 }
 
-/** Check if scoring stage has completed (clauses have risk data) */
 function isScoringComplete(stage: string): boolean {
   return stageIndex(stage) > stageIndex("scoring")
 }
@@ -57,7 +45,6 @@ export default function AnalysisPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const isMobile = useIsMobile()
-  const { setOpen } = useSidebar()
 
   const [data, setData] = React.useState<DocumentRenderingData | null>(null)
   const [error, setError] = React.useState<string | null>(null)
@@ -75,11 +62,6 @@ export default function AnalysisPage() {
   const selectClause = useClauseSelection((s) => s.selectClause)
   const setHighlightsEnabled = useClauseSelection((s) => s.setHighlightsEnabled)
   const activeClauseId = useClauseSelection((s) => s.activeClauseId)
-
-  // Auto-collapse sidebar on mount to maximize horizontal space
-  React.useEffect(() => {
-    setOpen(false)
-  }, [setOpen])
 
   // Initial data fetch
   React.useEffect(() => {
@@ -108,15 +90,12 @@ export default function AnalysisPage() {
 
   // Progressive reveal: re-fetch when pipeline stage transitions
   React.useEffect(() => {
-    // Only re-fetch on stage transitions, not every progress update
     if (!stage || stage === lastFetchedStageRef.current) return
-    // Don't re-fetch if we haven't done the initial fetch yet
     if (loading) return
 
     const currentIdx = stageIndex(stage)
     const lastIdx = stageIndex(lastFetchedStageRef.current)
 
-    // Only re-fetch when moving to a new stage (forward progress)
     if (currentIdx <= lastIdx) return
 
     lastFetchedStageRef.current = stage
@@ -136,7 +115,6 @@ export default function AnalysisPage() {
     if (urlSyncedRef.current || !initialClauseId || !data) return
     if (data.clauses.length === 0) return
 
-    // Check if the clause exists in the data
     const clauseExists = data.clauses.some((c) => c.id === initialClauseId)
     if (clauseExists) {
       selectClause(initialClauseId, "analysis")
@@ -148,9 +126,7 @@ export default function AnalysisPage() {
   // URL state: sync clause selection to URL
   const prevClauseIdRef = React.useRef<string | null>(null)
   React.useEffect(() => {
-    // Skip initial sync (handled above)
     if (!urlSyncedRef.current && initialClauseId) return
-    // Skip if nothing changed
     if (activeClauseId === prevClauseIdRef.current) return
     prevClauseIdRef.current = activeClauseId
 
@@ -181,77 +157,69 @@ export default function AnalysisPage() {
   // Extract sections from structure for DocumentRenderer
   const sections: PositionedSection[] = data?.structure?.sections ?? []
 
+  // Progressive reveal: only pass chunks when chunking is complete
+  const chunkingDone = stageIndex(stage) > stageIndex("chunking")
+  const chunksForRenderer = chunkingDone ? (data?.chunks ?? []) : []
+
   // Progressive reveal: only pass clauses when scoring is complete
-  // This prevents showing incomplete/unscored clause highlights
   const scoringDone = isScoringComplete(stage)
   const clausesForRenderer = scoringDone ? (data?.clauses ?? []) : []
 
   // Token usage: only show when analysis is complete
   const tokenUsage = status === "completed" ? (data?.tokenUsage ?? null) : null
 
+  // Document title for chat drawer
+  const documentTitle = data?.document.title || "this document"
+
+  const documentPanel = loading || !data ? (
+    <DocumentSkeleton />
+  ) : (
+    <DocumentRenderer
+      rawText={data.document.rawText}
+      sections={sections}
+      clauses={clausesForRenderer}
+      chunks={chunksForRenderer}
+      isLoading={false}
+      title={data.document.title}
+      metadata={data.document.metadata}
+      status={data.status}
+      tokenUsage={tokenUsage}
+    />
+  )
+
+  const analysisPanel = (
+    <AnalysisView analysisId={analysisId} documentTitle={documentTitle} />
+  )
+
   // Mobile: stack vertically
   if (isMobile) {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        {/* Document panel */}
         <div className="min-h-0 flex-1 overflow-hidden border-b">
-          {loading || !data ? (
-            <DocumentSkeleton />
-          ) : (
-            <DocumentRenderer
-              rawText={data.document.rawText}
-              sections={sections}
-              clauses={clausesForRenderer}
-              isLoading={false}
-              title={data.document.title}
-              metadata={data.document.metadata}
-              status={data.status}
-              tokenUsage={tokenUsage}
-            />
-          )}
+          {documentPanel}
         </div>
-        {/* Analysis panel */}
         <div className="min-h-0 flex-1 overflow-hidden">
-          <AnalysisView analysisId={analysisId} />
+          {analysisPanel}
         </div>
       </div>
     )
   }
 
-  // Desktop: side-by-side resizable panels
+  // Desktop: side-by-side with fixed split
   return (
-    <ResizablePanelGroup
-      orientation="horizontal"
-      className={cn("h-full min-h-0")}
-    >
+    <div className="flex h-full min-h-0 overflow-hidden">
       {/* Document panel (left, 55%) */}
-      <ResizablePanel defaultSize={55} minSize={35} className="min-h-0">
-        <div className="h-full overflow-hidden">
-          {loading || !data ? (
-            <DocumentSkeleton />
-          ) : (
-            <DocumentRenderer
-              rawText={data.document.rawText}
-              sections={sections}
-              clauses={clausesForRenderer}
-              isLoading={false}
-              title={data.document.title}
-              metadata={data.document.metadata}
-              status={data.status}
-              tokenUsage={tokenUsage}
-            />
-          )}
-        </div>
-      </ResizablePanel>
+      <div className="h-full min-w-0 flex-[55] overflow-hidden">
+        {documentPanel}
+      </div>
 
-      <ResizableHandle withHandle />
+      {/* Divider */}
+      <div className="h-full w-px shrink-0 bg-border" />
 
       {/* Analysis panel (right, 45%) */}
-      <ResizablePanel defaultSize={45} minSize={30} className="min-h-0">
-        <div className="h-full overflow-hidden">
-          <AnalysisView analysisId={analysisId} />
-        </div>
-      </ResizablePanel>
-    </ResizablePanelGroup>
+      <div className="h-full min-w-0 flex-[45] overflow-hidden">
+        {analysisPanel}
+      </div>
+    </div>
   )
 }

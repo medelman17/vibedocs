@@ -1,23 +1,25 @@
 import { withTenant } from "@/lib/dal"
-import { ChatLayoutClient } from "@/app/(main)/chat/chat-layout-client"
-import type { User } from "@/components/shell"
+import { AnalysisShell, type AnalysisShellUser } from "@/components/analysis/analysis-shell"
 
 /**
  * Layout for /analysis/[analysisId] route.
  *
- * Reuses ChatLayoutClient to provide the sidebar, header, and auth context.
- * The ChatLayoutClient is generic (sidebar + header shell) despite its name;
- * it works for any page under (main)/ that needs the sidebar chrome.
+ * Uses AnalysisShell — a minimal sidebar (nav + user menu) with a
+ * full-viewport content area sized for the resizable document/analysis panels.
  */
 export default async function AnalysisLayout({ children }: { children: React.ReactNode }) {
   const { user: sessionUser, role } = await withTenant()
 
-  const user: User = {
+  const user: AnalysisShellUser = {
     id: sessionUser.id,
     name: sessionUser.name || "User",
     email: sessionUser.email,
     avatar: sessionUser.image || undefined,
   }
 
-  return <ChatLayoutClient user={user} userRole={role}>{children}</ChatLayoutClient>
+  return (
+    <AnalysisShell user={user} userRole={role}>
+      {children}
+    </AnalysisShell>
+  )
 }

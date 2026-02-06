@@ -31,6 +31,7 @@ import {
   type ClauseExtractionRow,
 } from "@/db/queries/risk-scoring";
 import { getGapAnalysis } from "@/db/queries/gap-analysis";
+import { getChunksForRendering } from "@/db/queries/chunks";
 import type { EnhancedGapResult } from "@/agents/types";
 import { generateAnalysisToken, type AnalysisToken } from "@/lib/realtime/tokens";
 import type { DocumentRenderingData, RiskLevelInfo } from "@/lib/document-rendering/types";
@@ -1373,6 +1374,9 @@ export async function getDocumentForRendering(
     )
     .orderBy(asc(clauseExtractions.startPosition));
 
+  // Fetch chunk metadata for rendering (lightweight — no content/embeddings)
+  const chunks = await getChunksForRendering(analysisId, tenantId);
+
   // Parse DocumentStructure from document metadata (safe fallback)
   const metadata = (document.metadata ?? {}) as Record<string, unknown>;
   const structure = parseDocumentStructure(metadata);
@@ -1390,6 +1394,7 @@ export async function getDocumentForRendering(
     },
     structure,
     clauses,
+    chunks,
     status: analysis.status,
     tokenUsage: tokenUsage ?? null,
   });

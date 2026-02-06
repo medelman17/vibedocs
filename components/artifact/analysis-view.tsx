@@ -9,13 +9,15 @@ import {
   BanIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
 import { useAnalysisProgress } from "@/hooks/use-analysis-progress"
 import {
   getAnalysis,
   getAnalysisStatus,
   fetchRiskAssessments,
+  fetchGapAnalysis,
   resumeAnalysis,
   triggerAnalysis,
   cancelAnalysis,
@@ -24,9 +26,18 @@ import {
   type Perspective,
 } from "@/app/(main)/(dashboard)/analyses/actions"
 import { type RiskLevel } from "@/components/analysis/config"
-import { RiskBadge } from "@/components/analysis/risk-tab"
-import { AnalysisTabs, PerspectiveToggle } from "@/components/analysis/analysis-tabs"
 import { OcrWarning, hasOcrIssues } from "@/components/analysis/ocr-warning"
+import { PipelineStepper } from "@/components/analysis/pipeline-stepper"
+import {
+  AnalysisHeader,
+  type ClauseSort,
+  type RiskFilter,
+} from "@/components/analysis/analysis-header"
+import { SummaryStrip } from "@/components/analysis/summary-strip"
+import { GapSection } from "@/components/analysis/gap-section"
+import { ChatDrawer } from "@/components/analysis/chat-drawer"
+import { ClauseCardList } from "@/components/analysis/clause-card-list"
+import type { EnhancedGapResult } from "@/agents/types"
 
 // ============================================================================
 // Types
@@ -34,6 +45,7 @@ import { OcrWarning, hasOcrIssues } from "@/components/analysis/ocr-warning"
 
 interface AnalysisViewProps {
   analysisId: string
+  documentTitle?: string
   className?: string
 }
 
@@ -63,39 +75,14 @@ function ProgressView({
   }
 
   return (
-    <div className="flex h-full flex-col items-center justify-center p-8">
-      <Loader2Icon
-        className="size-8 animate-spin"
-        style={{ color: "oklch(0.55 0.24 293)" }}
-      />
-      {/* Show detailed message when available, fall back to stage */}
-      <p className="mt-4 text-sm text-muted-foreground">
-        {message || stage || "Processing..."}
-      </p>
-      {queuePosition != null && queuePosition > 0 && (
-        <p className="mt-1 text-xs text-muted-foreground">
-          Position in queue: {queuePosition}
-        </p>
-      )}
-      <Progress value={progress} className="mt-4 w-48" />
-      <p className="mt-2 text-xs text-muted-foreground">{progress}%</p>
-      {analysisId && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-4 text-muted-foreground"
-          onClick={handleCancel}
-          disabled={isCancelling}
-        >
-          {isCancelling ? (
-            <Loader2Icon className="mr-1.5 size-3.5 animate-spin" />
-          ) : (
-            <BanIcon className="mr-1.5 size-3.5" />
-          )}
-          Cancel
-        </Button>
-      )}
-    </div>
+    <PipelineStepper
+      currentStage={stage}
+      progress={progress}
+      message={message}
+      queuePosition={queuePosition}
+      onCancel={analysisId ? handleCancel : undefined}
+      isCancelling={isCancelling}
+    />
   )
 }
 
@@ -142,7 +129,6 @@ function CancelledView({
   const handleStartFresh = async () => {
     setIsStartingFresh(true)
     setActionError(null)
-    // We need the documentId. Fetch the analysis to get it.
     const analysisResult = await getAnalysis(analysisId)
     if (!analysisResult.success) {
       setActionError(analysisResult.error.message)
@@ -151,7 +137,6 @@ function CancelledView({
     }
     const result = await triggerAnalysis(analysisResult.data.documentId)
     if (result.success) {
-      // Trigger a page reload to redirect to the new analysis
       window.location.reload()
     } else {
       setActionError(result.error.message)
@@ -207,25 +192,91 @@ function CancelledView({
 }
 
 // ============================================================================
+// Clause Filtering & Sorting
+// ============================================================================
+
+const RISK_ORDER: Record<RiskLevel, number> = {
+  aggressive: 0,
+  cautious: 1,
+  standard: 2,
+  unknown: 3,
+}
+
+function filterAndSortClauses(
+  clauses: ClauseExtraction[],
+  sortBy: ClauseSort,
+  riskFilter: RiskFilter,
+  searchQuery: string
+): ClauseExtraction[] {
+  let filtered = clauses
+
+  // Risk filter
+  if (riskFilter !== "all") {
+    filtered = filtered.filter(
+      (c) => (c.riskLevel as RiskLevel) === riskFilter
+    )
+  }
+
+  // Search filter
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase()
+    filtered = filtered.filter(
+      (c) =>
+        c.category.toLowerCase().includes(q) ||
+        c.clauseText.toLowerCase().includes(q) ||
+        c.riskExplanation?.toLowerCase().includes(q)
+    )
+  }
+
+  // Sort
+  const sorted = [...filtered]
+  switch (sortBy) {
+    case "risk":
+      sorted.sort(
+        (a, b) =>
+          (RISK_ORDER[(a.riskLevel as RiskLevel) || "unknown"] ?? 3) -
+          (RISK_ORDER[(b.riskLevel as RiskLevel) || "unknown"] ?? 3)
+      )
+      break
+    case "category":
+      sorted.sort((a, b) => a.category.localeCompare(b.category))
+      break
+    case "position":
+    default:
+      // Already in document order from the DB
+      break
+  }
+
+  return sorted
+}
+
+// ============================================================================
 // AnalysisView (main export)
 // ============================================================================
 
-export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
+export function AnalysisView({ analysisId, documentTitle, className }: AnalysisViewProps) {
   const { status, progress, stage, message, queuePosition, error } = useAnalysisProgress(analysisId)
   const [analysis, setAnalysis] = React.useState<Analysis | null>(null)
   const [clauses, setClauses] = React.useState<ClauseExtraction[]>([])
+  const [gapData, setGapData] = React.useState<EnhancedGapResult | null>(null)
   const [fetchError, setFetchError] = React.useState<string | null>(null)
   const [rescoreVersion, setRescoreVersion] = React.useState(0)
   const rescorePollRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Fetch full data once complete (or after re-score)
+  // Filter/sort state
+  const [sortBy, setSortBy] = React.useState<ClauseSort>("position")
+  const [riskFilter, setRiskFilter] = React.useState<RiskFilter>("all")
+  const [searchQuery, setSearchQuery] = React.useState("")
+
+  // Fetch all data once complete (or after re-score)
   React.useEffect(() => {
     if (status === "completed") {
       Promise.all([
         getAnalysis(analysisId),
         fetchRiskAssessments(analysisId),
+        fetchGapAnalysis(analysisId),
       ])
-        .then(([analysisResult, assessmentsResult]) => {
+        .then(([analysisResult, assessmentsResult, gapResult]) => {
           if (analysisResult.success) {
             setAnalysis(analysisResult.data)
           } else {
@@ -233,6 +284,9 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
           }
           if (assessmentsResult.success) {
             setClauses(assessmentsResult.data as unknown as ClauseExtraction[])
+          }
+          if (gapResult.success) {
+            setGapData(gapResult.data)
           }
         })
         .catch((e) => {
@@ -252,7 +306,6 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
 
   // Handle re-score triggered: poll until progressStage returns to 'complete'
   const handleRescoreTriggered = React.useCallback(() => {
-    // Clear any existing poll
     if (rescorePollRef.current) {
       clearInterval(rescorePollRef.current)
     }
@@ -261,13 +314,11 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
       const result = await getAnalysisStatus(analysisId)
       if (result.success) {
         const statusData = result.data
-        // When re-scoring is complete, refresh data
         if (statusData.status === "completed" && statusData.progress?.percent === 100) {
           if (rescorePollRef.current) {
             clearInterval(rescorePollRef.current)
             rescorePollRef.current = null
           }
-          // Bump version to trigger re-fetch
           setRescoreVersion((v) => v + 1)
         }
       }
@@ -297,7 +348,6 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
           analysisId={analysisId}
           message={message}
           onResumed={() => {
-            // Force a re-mount to restart polling
             window.location.reload()
           }}
         />
@@ -323,12 +373,12 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
     )
   }
 
-  // Parse metadata for perspective and risk distribution
+  // Parse metadata
   const metadata = analysis.metadata as Record<string, unknown> | null
   const currentPerspective = (metadata?.perspective as Perspective) || "balanced"
-  const riskDistribution = (metadata?.riskDistribution as Record<RiskLevel, number>) || null
+  const overallRiskLevel = (analysis.overallRiskLevel as RiskLevel) || "unknown"
 
-  // Calculate risk summary from clauses
+  // Calculate risk counts
   const riskCounts = clauses.reduce(
     (acc, clause) => {
       const level = (clause.riskLevel as RiskLevel) || "unknown"
@@ -337,6 +387,12 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
     },
     { standard: 0, cautious: 0, aggressive: 0, unknown: 0 } as Record<RiskLevel, number>
   )
+
+  // Filter and sort clauses
+  const displayClauses = filterAndSortClauses(clauses, sortBy, riskFilter, searchQuery)
+
+  // Token usage for summary strip
+  const tokenUsage = metadata?.tokenUsage as { estimatedCost?: number } | undefined
 
   return (
     <div className={cn("flex h-full min-h-0 min-w-0 flex-col", className)}>
@@ -350,47 +406,49 @@ export function AnalysisView({ analysisId, className }: AnalysisViewProps) {
         </div>
       )}
 
-      {/* Summary bar with perspective toggle */}
-      <div className="shrink-0 border-b bg-muted/50 px-4 py-3">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="truncate font-medium">Analysis Results</h3>
-          {analysis.overallRiskLevel && (
-            <RiskBadge level={analysis.overallRiskLevel as RiskLevel} />
-          )}
-        </div>
-
-        {/* Perspective toggle */}
-        <PerspectiveToggle
-          analysisId={analysisId}
-          currentPerspective={currentPerspective}
-          onRescoreTriggered={handleRescoreTriggered}
-        />
-
-        {/* Risk distribution counts */}
-        <div className="mt-2 flex flex-wrap gap-2">
-          {(["standard", "cautious", "aggressive", "unknown"] as RiskLevel[]).map(
-            (level) =>
-              riskCounts[level] > 0 && (
-                <div
-                  key={level}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                >
-                  <RiskBadge level={level} />
-                  <span>{riskCounts[level]}</span>
-                </div>
-              )
-          )}
-        </div>
-      </div>
-
-      {/* Tabbed content */}
-      <AnalysisTabs
+      {/* Sticky header */}
+      <AnalysisHeader
         analysisId={analysisId}
-        analysis={analysis}
-        clauses={clauses}
-        riskDistribution={riskDistribution}
+        overallRiskScore={analysis.overallRiskScore}
+        overallRiskLevel={overallRiskLevel}
         currentPerspective={currentPerspective}
         onRescoreTriggered={handleRescoreTriggered}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        riskFilter={riskFilter}
+        onRiskFilterChange={setRiskFilter}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+      />
+
+      {/* Summary strip */}
+      <SummaryStrip
+        clauseCount={clauses.length}
+        riskCounts={riskCounts}
+        gapData={gapData}
+        estimatedCost={tokenUsage?.estimatedCost}
+      />
+
+      {/* Scrollable content: clause cards + gap section */}
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-3 p-4">
+          {/* Clause cards */}
+          <ClauseCardList clauses={displayClauses} />
+
+          {/* Gap section */}
+          {gapData && gapData.gaps.length > 0 && (
+            <>
+              <Separator className="my-4" />
+              <GapSection gapData={gapData} />
+            </>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Chat drawer trigger - fixed at bottom */}
+      <ChatDrawer
+        analysisId={analysisId}
+        documentTitle={documentTitle || "this document"}
       />
     </div>
   )

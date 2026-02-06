@@ -6,10 +6,11 @@ import { useVirtualizer } from "@tanstack/react-virtual"
 import { FileTextIcon, CalendarIcon, FileIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
-import { convertToMarkdown, splitIntoParagraphs } from "@/lib/document-rendering/text-to-markdown"
+import { convertToMarkdown, splitIntoParagraphs, splitByChunks } from "@/lib/document-rendering/text-to-markdown"
 import { mapClausePositions } from "@/lib/document-rendering/offset-mapper"
-import type { PositionedSection, ClauseOverlay, DocumentSegment } from "@/lib/document-rendering/types"
+import type { PositionedSection, ClauseOverlay, DocumentSegment, ChunkForRendering } from "@/lib/document-rendering/types"
 import { ClauseHighlight } from "@/components/document/clause-highlight"
+import { MarginGutter, type GutterDot } from "@/components/document/margin-gutter"
 import { DocumentToolbar } from "@/components/document/document-toolbar"
 import { DocumentSearch } from "@/components/document/document-search"
 import { DocumentSkeleton } from "@/components/document/document-skeleton"
@@ -38,6 +39,7 @@ interface DocumentRendererProps {
   rawText: string
   sections: PositionedSection[]
   clauses: ClauseInput[]
+  chunks?: ChunkForRendering[]
   isLoading: boolean
   /** Document title / filename */
   title?: string
@@ -123,12 +125,13 @@ function splitParagraphIntoSegments(
 
 /**
  * Find the section that contains or precedes a given paragraph offset.
- * Returns the deepest (most specific) section's sectionPath.
+ * Returns the deepest (most specific) section so callers can access
+ * both the sectionPath (for breadcrumbs) and the level (for indentation).
  */
 function findSectionForOffset(
   offset: number,
   sections: PositionedSection[]
-): string[] | null {
+): PositionedSection | null {
   let best: PositionedSection | null = null
 
   for (const section of sections) {
@@ -139,7 +142,7 @@ function findSectionForOffset(
     }
   }
 
-  return best?.sectionPath ?? null
+  return best
 }
 
 // ============================================================================
@@ -239,6 +242,7 @@ export function DocumentRenderer({
   rawText,
   sections,
   clauses,
+  chunks,
   isLoading,
   title,
   metadata,
@@ -262,10 +266,13 @@ export function DocumentRenderer({
     [rawText, sections]
   )
 
-  // 2. Split into paragraphs
+  // 2. Split into paragraphs (chunk-based when available, heuristic fallback)
   const paragraphs = React.useMemo(
-    () => splitIntoParagraphs(markdown),
-    [markdown]
+    () =>
+      chunks && chunks.length > 0
+        ? splitByChunks(markdown, chunks, offsetMap)
+        : splitIntoParagraphs(markdown),
+    [markdown, chunks, offsetMap]
   )
 
   // 3. Map clause positions to markdown coordinates
@@ -307,18 +314,38 @@ export function DocumentRenderer({
     return map
   }, [clauseOverlays, paragraphs])
 
+  // 4b. Map clause overlays to their first paragraph index (for gutter dots)
+  const clauseFirstParagraph = React.useMemo(() => {
+    const map = new Map<string, number>()
+    for (const overlay of clauseOverlays) {
+      for (const para of paragraphs) {
+        if (
+          overlay.markdownStart < para.endOffset &&
+          overlay.markdownEnd > para.startOffset
+        ) {
+          if (!map.has(overlay.clauseId)) {
+            map.set(overlay.clauseId, para.index)
+          }
+          break
+        }
+      }
+    }
+    return map
+  }, [clauseOverlays, paragraphs])
+
   // 5. Paragraph offsets for search
   const paragraphOffsets = React.useMemo(
     () => paragraphs.map((p) => p.startOffset),
     [paragraphs]
   )
 
-  // 6. Virtual scrolling
+  // 6. Virtual scrolling with dynamic measurement
   const virtualizer = useVirtualizer({
     count: paragraphs.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 80,
     overscan: 10,
+    measureElement: (element) => element.getBoundingClientRect().height,
   })
 
   // 7. Track visible section for toolbar (derived via useMemo to avoid setState-in-effect)
@@ -331,9 +358,9 @@ export function DocumentRenderer({
     const paragraph = paragraphs[firstVisible.index]
     if (!paragraph) return null
 
-    const sectionPath = findSectionForOffset(paragraph.startOffset, sections)
-    if (sectionPath && sectionPath.length > 0) {
-      return sectionPath.join(" > ")
+    const section = findSectionForOffset(paragraph.startOffset, sections)
+    if (section && section.sectionPath.length > 0) {
+      return section.sectionPath.join(" > ")
     }
     return null
   }, [paragraphs, sections, virtualItems])
@@ -492,31 +519,73 @@ export function DocumentRenderer({
       >
         <div
           className={cn(
-            "mx-auto max-w-3xl rounded-lg border bg-card px-8 py-10 shadow-sm",
+            "mx-auto max-w-3xl rounded-lg border bg-card py-10 shadow-sm",
             "font-sans"
           )}
           style={{
             height: `${virtualizer.getTotalSize()}px`,
             width: "100%",
             position: "relative",
+            paddingLeft: highlightsEnabled ? "2.5rem" : "2rem",
+            paddingRight: "2rem",
           }}
         >
+          {/* Margin gutter - colored dots for clauses */}
+          {highlightsEnabled && (
+            <MarginGutter
+              dots={virtualizer.getVirtualItems().flatMap((virtualRow) => {
+                const rowClauses = paragraphClauses.get(virtualRow.index) ?? []
+                // Only show dot for clauses that START in this paragraph (avoid duplicates)
+                return rowClauses
+                  .filter((c) => clauseFirstParagraph.get(c.clauseId) === virtualRow.index)
+                  .map((c): GutterDot => ({
+                    clauseId: c.clauseId,
+                    category: c.category,
+                    riskLevel: (c.riskLevel as "standard" | "cautious" | "aggressive" | "unknown") || "unknown",
+                    top: virtualRow.start,
+                  }))
+              })}
+              activeClauseId={activeClauseId}
+              onDotClick={handleClauseClick}
+              totalHeight={virtualizer.getTotalSize()}
+            />
+          )}
+
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const segment = paragraphs[virtualRow.index]
             const overlapClauses = paragraphClauses.get(virtualRow.index) ?? []
+            // Use chunk sectionLevel when available, fall back to section lookup
+            const sectionLevel = segment.sectionLevel
+              ?? findSectionForOffset(segment.startOffset, sections)?.level
+              ?? 0
+            // Headings (level 1) get no extra indent; deeper sections get progressive indent
+            const levelIndent = sectionLevel > 1 ? (sectionLevel - 1) * 0.75 : 0
+            const basePad = highlightsEnabled ? 2.5 : 2
+
+            // Chunk-type visual styling
+            const isBoilerplate = segment.chunkType === "boilerplate"
+            const isDefinition = segment.chunkType === "definition"
+            const isRecital = segment.chunkType === "recital"
 
             return (
               <div
                 key={virtualRow.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualRow.index}
                 style={{
                   position: "absolute",
                   top: 0,
                   left: 0,
                   width: "100%",
                   transform: `translateY(${virtualRow.start}px)`,
-                  paddingLeft: "2rem",
+                  paddingLeft: `${basePad + levelIndent}rem`,
                   paddingRight: "2rem",
                 }}
+                className={cn(
+                  isBoilerplate && "text-muted-foreground/70 text-[0.85em]",
+                  isDefinition && "border-l-2 border-muted-foreground/20",
+                  isRecital && "italic text-muted-foreground"
+                )}
               >
                 <ParagraphRow
                   segment={segment}

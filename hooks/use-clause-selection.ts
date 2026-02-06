@@ -10,6 +10,7 @@ interface PendingClauseContext {
 
 interface ClauseSelectionState {
   activeClauseId: string | null
+  hoveredClauseId: string | null
   selectionSource: SelectionSource | null
   highlightsEnabled: boolean
   activeTab: AnalysisTab
@@ -20,6 +21,7 @@ interface ClauseSelectionState {
 interface ClauseSelectionActions {
   selectClause: (clauseId: string, source: SelectionSource) => void
   clearSelection: () => void
+  hoverClause: (clauseId: string | null) => void
   toggleHighlights: () => void
   setHighlightsEnabled: (enabled: boolean) => void
   setActiveTab: (tab: AnalysisTab) => void
@@ -34,6 +36,7 @@ export const useClauseSelection = create<
 >()((set, get) => ({
   // Initial state
   activeClauseId: null,
+  hoveredClauseId: null,
   selectionSource: null,
   highlightsEnabled: false,
   activeTab: "risk",
@@ -52,6 +55,9 @@ export const useClauseSelection = create<
       activeClauseId: null,
       selectionSource: null,
     }),
+
+  hoverClause: (clauseId) =>
+    set({ hoveredClauseId: clauseId }),
 
   toggleHighlights: () =>
     set((state) => ({
