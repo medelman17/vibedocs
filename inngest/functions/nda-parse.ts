@@ -9,7 +9,7 @@
  * @module inngest/functions/nda-parse
  */
 
-import { inngest, RETRY_CONFIG, withTenantContext } from '@/inngest'
+import { inngest, withTenantContext } from '@/inngest'
 import { NonRetriableError } from '@/inngest/utils/errors'
 import { runParserAgent } from '@/agents/parser'
 import {
@@ -30,7 +30,7 @@ export const ndaParse = inngest.createFunction(
   {
     id: 'nda-parse',
     name: 'NDA Parse',
-    retries: RETRY_CONFIG.default.retries,
+    retries: 1,
     cancelOn: [{
       event: 'nda/analysis.cancelled',
       if: 'async.data.analysisId == event.data.analysisId',
