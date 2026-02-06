@@ -16,6 +16,11 @@ import { ingestSource } from "./bootstrap/ingest-source"
 
 // Analysis pipeline
 import { analyzeNda, analyzeNdaAfterOcr } from "./analyze-nda"
+import { ndaParse } from "./nda-parse"
+import { ndaChunkEmbed } from "./nda-chunk-embed"
+import { ndaClassify } from "./nda-classify"
+import { ndaScoreRisks } from "./nda-score-risks"
+import { ndaAnalyzeGaps } from "./nda-analyze-gaps"
 import { rescoreAnalysis } from "./rescore-analysis"
 import { ocrDocument } from "./ocr-document"
 import { cleanupCancelledAnalysis } from "./cleanup-cancelled"
@@ -39,9 +44,18 @@ export const functions = [
   ingestCoordinator,
   ingestSource,
 
-  // Analysis pipeline
+  // Analysis pipeline - orchestrators
   analyzeNda,
   analyzeNdaAfterOcr,
+
+  // Analysis pipeline - sub-functions (invoked via step.invoke)
+  ndaParse,
+  ndaChunkEmbed,
+  ndaClassify,
+  ndaScoreRisks,
+  ndaAnalyzeGaps,
+
+  // Analysis pipeline - supporting
   rescoreAnalysis,
   ocrDocument,
   cleanupCancelledAnalysis,

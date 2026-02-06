@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useChat } from "@ai-sdk/react"
-import { UIMessage, DefaultChatTransport } from "ai"
-import { FileTextIcon, PlusIcon, SparklesIcon, BrainIcon } from "lucide-react"
-import { useShellStore } from "@/lib/stores/shell-store"
-import { AppBody } from "@/components/shell"
-import { toast } from "sonner"
+import * as React from "react";
+import { useChat } from "@ai-sdk/react";
+import { UIMessage, DefaultChatTransport } from "ai";
+import { FileTextIcon, PlusIcon, SparklesIcon, BrainIcon } from "lucide-react";
+import { useShellStore } from "@/lib/stores/shell-store";
+import { AppBody } from "@/components/shell";
+import { toast } from "sonner";
 import {
   Conversation,
   ConversationContent,
@@ -34,8 +34,8 @@ import {
   type SlashCommand,
   type Mention,
   type PromptInputMessage,
-} from "@/components/chat"
-import { useRouter, useSearchParams } from "next/navigation"
+} from "@/components/chat";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Artifact,
   ArtifactHeader,
@@ -46,162 +46,173 @@ import {
   ArtifactContent,
   DocumentViewer,
   AnalysisView,
-} from "@/components/artifact"
-import { Shimmer } from "@/components/ai-elements/shimmer"
-import { Tool, ToolHeader, ToolContent, ToolOutput } from "@/components/ai-elements/tool"
-import { ErrorBoundary } from "@/components/error-boundary"
-import { ExpandIcon, MoreHorizontalIcon } from "lucide-react"
-import { uploadDocument } from "@/app/(main)/(dashboard)/documents/actions"
-import { triggerAnalysis } from "@/app/(main)/(dashboard)/analyses/actions"
-import { getMessages } from "./actions"
+} from "@/components/artifact";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import {
+  Tool,
+  ToolHeader,
+  ToolContent,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { ExpandIcon, MoreHorizontalIcon } from "lucide-react";
+import { uploadDocument } from "@/app/(main)/(dashboard)/documents/actions";
+import { triggerAnalysis } from "@/app/(main)/(dashboard)/analyses/actions";
+import { getMessages } from "./actions";
 
 export default function ChatPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const urlConversationId = searchParams.get("conversation")
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlConversationId = searchParams.get("conversation");
 
-  const [inputValue, setInputValue] = React.useState("")
-  const [isUploading, setIsUploading] = React.useState(false)
-  const inputWrapperRef = React.useRef<HTMLDivElement>(null)
+  const [inputValue, setInputValue] = React.useState("");
+  const [isUploading, setIsUploading] = React.useState(false);
+  const inputWrapperRef = React.useRef<HTMLDivElement>(null);
   const { artifact, openArtifact, closeArtifact, toggleArtifactExpanded } =
-    useShellStore()
+    useShellStore();
 
   // Use a ref for active conversation ID so transport body function can read latest value
   // without causing transport recreation
-  const activeConversationIdRef = React.useRef<string | null>(urlConversationId)
+  const activeConversationIdRef = React.useRef<string | null>(
+    urlConversationId,
+  );
 
   // Sync ref when URL changes (e.g., clicking sidebar item)
   React.useEffect(() => {
-    activeConversationIdRef.current = urlConversationId
-  }, [urlConversationId])
+    activeConversationIdRef.current = urlConversationId;
+  }, [urlConversationId]);
 
   // Custom fetch that captures the X-Conversation-Id header
-  const customFetch = React.useCallback(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const response = await fetch(input, init)
-    const newConvId = response.headers.get("X-Conversation-Id")
-    if (newConvId) {
-      // Store the new conversation ID for subsequent messages
-      activeConversationIdRef.current = newConvId
-      // Update URL for bookmarkability (without re-render)
-      window.history.replaceState(window.history.state, "", `/chat?conversation=${newConvId}`)
-    }
-    return response
-  }, [])
+  const customFetch = React.useCallback(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const response = await fetch(input, init);
+      const newConvId = response.headers.get("X-Conversation-Id");
+      if (newConvId) {
+        // Store the new conversation ID for subsequent messages
+        activeConversationIdRef.current = newConvId;
+        // Update URL for bookmarkability (without re-render)
+        window.history.replaceState(
+          window.history.state,
+          "",
+          `/chat?conversation=${newConvId}`,
+        );
+      }
+      return response;
+    },
+    [],
+  );
 
   // Create transport once - body is a function that reads the ref
   const transport = React.useMemo(
-    () => new DefaultChatTransport({
-      api: "/api/chat",
-      body: () => ({ conversationId: activeConversationIdRef.current }),
-      fetch: customFetch,
-    }),
-    [customFetch] // Only recreate if customFetch changes (which it won't due to useCallback)
-  )
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        body: () => ({ conversationId: activeConversationIdRef.current }),
+        fetch: customFetch,
+      }),
+    [customFetch], // Only recreate if customFetch changes (which it won't due to useCallback)
+  );
 
   // AI SDK v6 useChat hook
-  const {
-    messages,
-    sendMessage,
-    status,
-    setMessages,
-  } = useChat({
+  const { messages, sendMessage, status, setMessages } = useChat({
     transport,
     onToolCall: async ({ toolCall }) => {
       // Handle client-side tools
       if (toolCall.toolName === "showArtifact") {
         const input = toolCall.input as {
-          type: "analysis" | "document" | "comparison"
-          id: string
-          title: string
-        }
+          type: "analysis" | "document" | "comparison";
+          id: string;
+          title: string;
+        };
         // Navigate to full analysis page for analysis type
         if (input.type === "analysis") {
-          router.push(`/analysis/${input.id}`)
+          router.push(`/analysis/${input.id}`);
         } else {
-          openArtifact(input)
+          openArtifact(input);
         }
-        return undefined // Silent execution
+        return undefined; // Silent execution
       }
     },
     onFinish: () => {
       // Refresh sidebar history
-      window.dispatchEvent(new Event("refresh-chat-history"))
+      window.dispatchEvent(new Event("refresh-chat-history"));
     },
     onError: (error) => {
-      console.error("Chat error:", error)
+      console.error("Chat error:", error);
     },
-  })
+  });
 
-  const isLoading = status === "streaming" || status === "submitted" || isUploading
+  const isLoading =
+    status === "streaming" || status === "submitted" || isUploading;
 
   // Load existing conversation on mount or when URL changes
   React.useEffect(() => {
     async function loadConversation() {
-      if (!urlConversationId) return
+      if (!urlConversationId) return;
 
-      const result = await getMessages(urlConversationId)
+      const result = await getMessages(urlConversationId);
       if (result.success) {
         // Convert stored messages to UIMessage format
         const uiMessages: UIMessage[] = result.data.map((msg) => {
           // Parse stored content (JSON string of parts)
-          let parts: UIMessage["parts"] = []
+          let parts: UIMessage["parts"] = [];
           try {
-            const parsed = JSON.parse(msg.content)
+            const parsed = JSON.parse(msg.content);
             if (Array.isArray(parsed)) {
-              parts = parsed
+              parts = parsed;
             } else {
               // Fallback for plain text content
-              parts = [{ type: "text", text: msg.content }]
+              parts = [{ type: "text", text: msg.content }];
             }
           } catch {
             // Plain text content
-            parts = [{ type: "text", text: msg.content }]
+            parts = [{ type: "text", text: msg.content }];
           }
 
           return {
             id: msg.id,
             role: msg.role,
             parts,
-          }
-        })
-        setMessages(uiMessages)
+          };
+        });
+        setMessages(uiMessages);
       }
     }
-    loadConversation()
-  }, [urlConversationId, setMessages])
+    loadConversation();
+  }, [urlConversationId, setMessages]);
 
   // Handle form submission
   const handleSubmit = async (message: PromptInputMessage) => {
-    if (!message.text.trim() && message.files.length === 0) return
+    if (!message.text.trim() && message.files.length === 0) return;
 
     // Clear input immediately
-    setInputValue("")
+    setInputValue("");
 
     // Handle file upload flow (document analysis)
     if (message.files.length > 0) {
-      await handleFileUpload(message)
-      return
+      await handleFileUpload(message);
+      return;
     }
 
     // Regular text message - send via useChat
-    sendMessage({ text: message.text })
-  }
+    sendMessage({ text: message.text });
+  };
 
   // Handle file upload and analysis
   const handleFileUpload = async (message: PromptInputMessage) => {
     try {
-      setIsUploading(true)
-      const file = message.files[0] // MVP: single file
+      setIsUploading(true);
+      const file = message.files[0]; // MVP: single file
 
       // Add user message with file info
-      const userMessageContent = message.text || `Analyze ${file.filename}`
+      const userMessageContent = message.text || `Analyze ${file.filename}`;
 
       // Show uploading status
       const uploadingMessage: UIMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
         parts: [{ type: "text", text: "Uploading document..." }],
-      }
+      };
       setMessages([
         ...messages,
         {
@@ -218,24 +229,24 @@ export default function ChatPage() {
           ],
         },
         uploadingMessage,
-      ])
+      ]);
 
       // Fetch the blob from the URL and create FormData
-      const response = await fetch(file.url)
+      const response = await fetch(file.url);
       if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.statusText}`)
+        throw new Error(`Failed to fetch file: ${response.statusText}`);
       }
-      const blob = await response.blob()
+      const blob = await response.blob();
 
       // Create a File with the correct MIME type
       const fileObj = new File([blob], file.filename || "document", {
         type: file.mediaType || blob.type,
-      })
-      const formData = new FormData()
-      formData.append("file", fileObj)
+      });
+      const formData = new FormData();
+      formData.append("file", fileObj);
 
       // Upload document
-      const uploadResult = await uploadDocument(formData)
+      const uploadResult = await uploadDocument(formData);
       if (!uploadResult.success) {
         setMessages([
           ...messages,
@@ -254,14 +265,14 @@ export default function ChatPage() {
               },
             ],
           },
-        ])
-        return
+        ]);
+        return;
       }
 
       // Trigger analysis
       const analysisResult = await triggerAnalysis(uploadResult.data.id, {
         userPrompt: message.text || undefined,
-      })
+      });
       if (!analysisResult.success) {
         setMessages([
           ...messages,
@@ -280,12 +291,12 @@ export default function ChatPage() {
               },
             ],
           },
-        ])
-        return
+        ]);
+        return;
       }
 
       // Success message
-      const successMsg = `I'm analyzing **"${uploadResult.data.title}"**. This usually takes about 30 seconds...`
+      const successMsg = `I'm analyzing **"${uploadResult.data.title}"**. This usually takes about 30 seconds...`;
       setMessages([
         ...messages,
         {
@@ -306,15 +317,15 @@ export default function ChatPage() {
           role: "assistant",
           parts: [{ type: "text", text: successMsg }],
         },
-      ])
+      ]);
 
       // Refresh sidebar before navigating
-      window.dispatchEvent(new Event("refresh-chat-history"))
+      window.dispatchEvent(new Event("refresh-chat-history"));
 
       // Navigate to the full analysis page (primary analysis interface)
-      router.push(`/analysis/${analysisResult.data.id}`)
+      router.push(`/analysis/${analysisResult.data.id}`);
     } catch (err) {
-      const errorMsg = `**Error:** ${err instanceof Error ? err.message : "Unknown error"}`
+      const errorMsg = `**Error:** ${err instanceof Error ? err.message : "Unknown error"}`;
       setMessages([
         ...messages,
         {
@@ -322,103 +333,112 @@ export default function ChatPage() {
           role: "assistant",
           parts: [{ type: "text", text: errorMsg }],
         },
-      ])
+      ]);
     } finally {
-      setIsUploading(false)
+      setIsUploading(false);
     }
-  }
+  };
 
   const handleSuggestion = async (suggestion: string) => {
-    sendMessage({ text: suggestion })
-  }
+    sendMessage({ text: suggestion });
+  };
 
   const handleSlashCommand = async (command: SlashCommand) => {
-    setInputValue("")
+    setInputValue("");
 
     switch (command.id) {
       case "analyze":
         // Trigger file upload
         const fileInput = document.querySelector<HTMLInputElement>(
-          'input[type="file"][aria-label="Upload files"]'
-        )
-        fileInput?.click()
-        break
+          'input[type="file"][aria-label="Upload files"]',
+        );
+        fileInput?.click();
+        break;
       case "compare":
-        router.push("/documents?action=compare")
-        break
+        router.push("/documents?action=compare");
+        break;
       case "generate":
-        router.push("/generate")
-        break
+        router.push("/generate");
+        break;
       case "help":
-        sendMessage({ text: "What can VibeDocs help me with?" })
-        break
+        sendMessage({ text: "What can VibeDocs help me with?" });
+        break;
     }
-  }
+  };
 
   const handleMention = (mention: Mention) => {
-    const lastAtIndex = inputValue.lastIndexOf("@")
-    const beforeAt = inputValue.slice(0, lastAtIndex)
-    const newValue = `${beforeAt}@${mention.name} `
-    setInputValue(newValue)
+    const lastAtIndex = inputValue.lastIndexOf("@");
+    const beforeAt = inputValue.slice(0, lastAtIndex);
+    const newValue = `${beforeAt}@${mention.name} `;
+    setInputValue(newValue);
 
     if (mention.type === "analysis") {
-      router.push(`/analysis/${mention.id}`)
+      router.push(`/analysis/${mention.id}`);
     } else if (mention.type === "document") {
       openArtifact({
         type: "document",
         id: mention.id,
         title: mention.name,
-      })
+      });
     }
-  }
+  };
 
   const handleAutocompleteClose = () => {
-    const trimmed = inputValue.trim()
+    const trimmed = inputValue.trim();
     if (trimmed === "/" || trimmed === "@") {
-      setInputValue("")
+      setInputValue("");
     }
-  }
+  };
 
   const renderArtifactContent = () => {
-    if (!artifact.content) return null
+    if (!artifact.content) return null;
 
     switch (artifact.content.type) {
       case "document":
-        return <DocumentViewer documentId={artifact.content.id} />
+        return <DocumentViewer documentId={artifact.content.id} />;
       case "analysis":
-        return <AnalysisView analysisId={artifact.content.id} />
+        return <AnalysisView analysisId={artifact.content.id} />;
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   // Render message parts in order - interleaving text and tool states
   const renderMessageParts = (message: UIMessage) => {
     return message.parts.map((part, index) => {
       // Text parts
       if (part.type === "text") {
-        return (
-          <MessageResponse key={index}>{part.text}</MessageResponse>
-        )
+        return <MessageResponse key={index}>{part.text}</MessageResponse>;
       }
 
       // Tool parts - use ai-elements Tool component
       if (part.type.startsWith("tool-")) {
         const toolPart = part as {
-          type: string
-          toolCallId: string
-          state: "input-streaming" | "input-available" | "output-available" | "output-error" | "output-denied" | "approval-requested" | "approval-responded"
-          input?: unknown
-          output?: unknown
-          errorText?: string
-        }
+          type: string;
+          toolCallId: string;
+          state:
+            | "input-streaming"
+            | "input-available"
+            | "output-available"
+            | "output-error"
+            | "output-denied"
+            | "approval-requested"
+            | "approval-responded";
+          input?: unknown;
+          output?: unknown;
+          errorText?: string;
+        };
 
         // Skip silent tools (showArtifact)
-        if (part.type === "tool-showArtifact") return null
+        if (part.type === "tool-showArtifact") return null;
 
         // Search tool - use Tool component
         if (part.type === "tool-search_references") {
-          const results = toolPart.output as Array<{ id: string; content: string; source: string }> | null
+          const results = toolPart.output as Array<{
+            id: string;
+            content: string;
+            source: string;
+          }> | null;
 
           return (
             <Tool key={index} defaultOpen={false}>
@@ -429,22 +449,26 @@ export default function ChatPage() {
               />
               <ToolContent>
                 <ToolOutput
-                  output={results ? {
-                    found: results.length,
-                    sources: [...new Set(results.map(r => r.source))],
-                    samples: results.slice(0, 2).map(r => ({
-                      source: r.source,
-                      excerpt: r.content.slice(0, 100) + "..."
-                    }))
-                  } : undefined}
+                  output={
+                    results
+                      ? {
+                          found: results.length,
+                          sources: [...new Set(results.map((r) => r.source))],
+                          samples: results.slice(0, 2).map((r) => ({
+                            source: r.source,
+                            excerpt: r.content.slice(0, 100) + "...",
+                          })),
+                        }
+                      : undefined
+                  }
                   errorText={toolPart.errorText}
                 />
               </ToolContent>
             </Tool>
-          )
+          );
         }
 
-        return null
+        return null;
       }
 
       // File parts (shouldn't appear in assistant messages, but handle anyway)
@@ -457,12 +481,12 @@ export default function ChatPage() {
             <FileTextIcon className="size-3" />
             {part.filename || "Attachment"}
           </div>
-        )
+        );
       }
 
-      return null
-    })
-  }
+      return null;
+    });
+  };
 
   return (
     <AppBody
@@ -499,16 +523,18 @@ export default function ChatPage() {
                                 <FileTextIcon className="size-3" />
                                 {part.filename || "Attachment"}
                               </div>
-                            )
+                            );
                           }
                           if (part.type === "text") {
-                            return <span key={i}>{part.text}</span>
+                            return <span key={i}>{part.text}</span>;
                           }
-                          return null
+                          return null;
                         })}
                       </MessageContent>
                     ) : (
-                      <MessageContent>{renderMessageParts(message)}</MessageContent>
+                      <MessageContent>
+                        {renderMessageParts(message)}
+                      </MessageContent>
                     )}
                   </Message>
                 ))}
@@ -563,16 +589,18 @@ export default function ChatPage() {
                   onError={(err) => {
                     if (err.code === "max_file_size") {
                       toast.error("File too large", {
-                        description: "Maximum file size is 50MB. Please choose a smaller file.",
-                      })
+                        description:
+                          "Maximum file size is 50MB. Please choose a smaller file.",
+                      });
                     } else if (err.code === "accept") {
                       toast.error("Unsupported file type", {
-                        description: "Please upload PDF, DOCX, or TXT files only.",
-                      })
+                        description:
+                          "Please upload PDF, DOCX, or TXT files only.",
+                      });
                     } else if (err.code === "max_files") {
                       toast.warning("Too many files", {
                         description: err.message,
-                      })
+                      });
                     }
                   }}
                 >
@@ -611,7 +639,8 @@ export default function ChatPage() {
         </div>
       }
       artifact={
-        artifact.open && artifact.content && (
+        artifact.open &&
+        artifact.content && (
           <Artifact className="h-full">
             <ArtifactHeader>
               <ArtifactTitle>{artifact.content.title}</ArtifactTitle>
@@ -632,5 +661,5 @@ export default function ChatPage() {
         )
       }
     />
-  )
+  );
 }

@@ -69,6 +69,11 @@ export interface MockStep {
     stepId: string,
     payload: SendEventPayload<K>
   ) => Promise<void>
+  /**
+   * Invoke a sub-function. Returns undefined by default.
+   * Override in tests to return specific mock data.
+   */
+  invoke: <T>(stepId: string, opts: { function: unknown; data: unknown; timeout?: string }) => Promise<T>
 }
 
 /**
@@ -185,6 +190,11 @@ export function createMockStep(): MockStepController {
         }
         sentEvents.push(sentEvent)
       }
+    },
+
+    async invoke<T>(_stepId: string, _opts: { function: unknown; data: unknown; timeout?: string }): Promise<T> {
+      // Default no-op implementation. Override in specific tests.
+      return undefined as T
     },
   }
 
@@ -334,6 +344,7 @@ export const testEventData = {
   ) => ({
     tenantId: crypto.randomUUID(),
     documentId: crypto.randomUUID(),
+    analysisId: crypto.randomUUID(),
     source: "web" as const,
     ...overrides,
   }),

@@ -38,10 +38,12 @@ ${CUAD_CATEGORIES.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 - Chunks below 0.3 confidence should use "Uncategorized"
 
 ## Output Format (JSON)
+
+Return one entry per chunk. The chunkIndex must match the document-wide index shown in each chunk header.
 {
   "classifications": [
     {
-      "chunkIndex": 0,
+      "chunkIndex": 5,
       "primary": {
         "category": "Primary CUAD category or Uncategorized",
         "confidence": 0.85,
@@ -121,11 +123,11 @@ export function createBatchClassifierPrompt(
 
   // Section 3: Chunks with context
   const chunksBlock = chunks
-    .map((chunk, i) => {
+    .map((chunk) => {
       const parts: string[] = []
 
-      // Header
-      parts.push(`### Chunk ${i} (index ${chunk.index})`)
+      // Header — use document-wide index only (no batch-local index)
+      parts.push(`### Chunk ${chunk.index}`)
 
       // Section path
       if (chunk.sectionPath && chunk.sectionPath.length > 0) {

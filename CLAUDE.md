@@ -427,6 +427,13 @@ Barrel exports cause production crashes because:
 **See:** [Issue #43](https://github.com/medelman17/vibedocs/issues/43) for full barrel export audit.
 
 ### Component Patterns
+
+**USE EXISTING SHADCN/UI PRIMITIVES. DO NOT write raw HTML/CSS when a component exists in `components/ui/`.**
+The project has 50+ shadcn components already installed (Card, Table, Separator, Badge, Alert, etc.).
+Before writing any UI, check what's available: `ls components/ui/`. Use Card for content sections,
+Table for key-value data, Separator between sections, Badge for status, Alert for errors.
+Never use raw `<dl>`, `<h3>`, or `<div>` for structure that a shadcn primitive already handles.
+
 - UI components use `data-slot` attributes for styling hooks
 - Use `cva` (class-variance-authority) for component variants
 - Use `cn()` from `@/lib/utils` for conditional classNames

@@ -174,11 +174,9 @@ export const enhancedRiskAssessmentSchema = z.object({
   confidence: z.number().min(0).max(1),
   explanation: z
     .string()
-    .max(500)
     .describe('Risk-first plain-language explanation (2-3 sentences)'),
   negotiationSuggestion: z
     .string()
-    .max(200)
     .optional()
     .describe('Concrete negotiation suggestion for non-standard clauses'),
   atypicalLanguage: z
@@ -188,7 +186,6 @@ export const enhancedRiskAssessmentSchema = z.object({
     ),
   atypicalLanguageNote: z
     .string()
-    .max(200)
     .optional()
     .describe('Note about unusual wording'),
   evidence: z.object({
@@ -197,12 +194,10 @@ export const enhancedRiskAssessmentSchema = z.object({
         z.object({
           text: z
             .string()
-            .max(300)
             .describe('Quoted text from the clause'),
           sourceType: z.enum(['clause', 'reference', 'template']),
         })
       )
-      .min(1)
       .max(5),
     references: z
       .array(
@@ -218,14 +213,12 @@ export const enhancedRiskAssessmentSchema = z.object({
           similarity: z.number().min(0).max(1),
           summary: z
             .string()
-            .max(200)
             .describe('Brief summary of the reference'),
         })
       )
       .max(5),
     baselineComparison: z
       .string()
-      .max(300)
       .optional()
       .describe(
         'Comparison to Bonterms/standard baseline when template match available'
@@ -235,6 +228,21 @@ export const enhancedRiskAssessmentSchema = z.object({
 
 export type EnhancedRiskAssessment = z.infer<
   typeof enhancedRiskAssessmentSchema
+>
+
+/** Batched risk assessment output schema — wraps N assessments with clauseId keys */
+export const batchedRiskAssessmentOutputSchema = z.object({
+  assessments: z
+    .array(
+      enhancedRiskAssessmentSchema.extend({
+        clauseId: z.string().describe('The clauseId from the clause header'),
+      })
+    )
+    .describe('One risk assessment per input clause, in the same order'),
+})
+
+export type BatchedRiskAssessmentOutput = z.infer<
+  typeof batchedRiskAssessmentOutputSchema
 >
 
 /** Hypothesis coverage from Gap Analyst */
@@ -301,20 +309,16 @@ export const enhancedGapItemSchema = z.object({
   severity: gapSeveritySchema,
   explanation: z
     .string()
-    .max(300)
     .describe('Why this gap matters for this NDA'),
   suggestedLanguage: z
     .string()
-    .max(500)
     .describe('Full clause draft (1-3 paragraphs), insertable'),
   templateSource: z
     .string()
-    .max(100)
     .optional()
     .describe('e.g., "Bonterms NDA Section 3.2"'),
   styleMatch: z
     .string()
-    .max(200)
     .optional()
     .describe('How language was adapted to match NDA style'),
 })
@@ -379,26 +383,49 @@ export const extendedCategorySchema = z.enum(
 
 /** Single chunk classification result within a batch */
 export const chunkClassificationResultSchema = z.object({
-  chunkIndex: z.number().describe('Index of the chunk in the batch (0-based)'),
-  primary: z.object({
-    category: extendedCategorySchema,
-    confidence: z.number().min(0).max(1),
-    rationale: z.string().max(200).describe('Brief 1-2 sentence explanation'),
-  }),
+  chunkIndex: z
+    .number()
+    .describe('The document-wide chunk index matching the index shown in the chunk header'),
+  primary: z
+    .object({
+      category: extendedCategorySchema.describe(
+        'The single most relevant CUAD category. Use Uncategorized only when no category fits after careful consideration.'
+      ),
+      confidence: z
+        .number()
+        .min(0)
+        .max(1)
+        .describe(
+          'Float 0.0-1.0. 0.9+ unambiguous, 0.7-0.9 strong match, 0.5-0.7 moderate, below 0.3 use Uncategorized.'
+        ),
+      rationale: z
+        .string()
+        .describe('1-2 sentence explanation of why this category was chosen.'),
+    })
+    .describe('The single most relevant classification for this chunk'),
   secondary: z
     .array(
       z.object({
-        category: cuadCategorySchema,
-        confidence: z.number().min(0).max(1),
+        category: cuadCategorySchema.describe('Additional CUAD category for multi-topic chunks'),
+        confidence: z
+          .number()
+          .min(0)
+          .max(1)
+          .describe('Float 0.0-1.0. Only include if confidence >= 0.3.'),
       })
     )
     .max(2)
-    .default([]),
+    .default([])
+    .describe(
+      'Up to 2 additional categories only when the chunk clearly spans multiple topics. Empty array if single-category.'
+    ),
 })
 
 /** Batch classification output from enhanced classifier */
 export const multiLabelClassificationSchema = z.object({
-  classifications: z.array(chunkClassificationResultSchema),
+  classifications: z
+    .array(chunkClassificationResultSchema)
+    .describe('One classification per input chunk, in the same order as the input chunks'),
 })
 
 export type ChunkClassificationResult = z.infer<

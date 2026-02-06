@@ -483,6 +483,80 @@ export async function adminDeleteAnalysis(
 }
 
 /**
+ * Initiate first analysis on a newly uploaded document.
+ *
+ * Unlike adminTriggerAnalysis, this works on "pending" documents
+ * (freshly uploaded, not yet processed). Creates analysis record
+ * and sends the Inngest event to start the full pipeline.
+ *
+ * @param input - Document ID
+ * @returns Newly created analysis
+ */
+export async function adminInitiateAnalysis(
+  input: z.infer<typeof documentIdSchema>
+): Promise<ApiResponse<Analysis>> {
+  try {
+    const { db, tenantId } = await requireRole(["admin", "owner"])
+
+    const parsed = documentIdSchema.safeParse(input)
+    if (!parsed.success) {
+      return err(
+        "VALIDATION_ERROR",
+        parsed.error.issues[0]?.message ?? "Invalid document ID"
+      )
+    }
+
+    const { documentId } = parsed.data
+
+    // Verify document exists (any non-deleted status)
+    const [doc] = await db
+      .select({ id: documents.id, status: documents.status })
+      .from(documents)
+      .where(
+        and(
+          eq(documents.id, documentId),
+          eq(documents.tenantId, tenantId),
+          isNull(documents.deletedAt)
+        )
+      )
+      .limit(1)
+
+    if (!doc) {
+      return err("NOT_FOUND", "Document not found")
+    }
+
+    // Create analysis record (version 1 for new uploads)
+    const [newAnalysis] = await db
+      .insert(analyses)
+      .values({
+        tenantId,
+        documentId,
+        status: "pending",
+        version: 1,
+        progressPercent: 0,
+        metadata: {},
+      })
+      .returning()
+
+    // Send inngest event to start full pipeline
+    await inngest.send({
+      name: "nda/analysis.requested",
+      data: {
+        tenantId,
+        documentId,
+        analysisId: newAnalysis.id,
+        source: "web",
+      },
+    })
+
+    revalidatePath("/admin")
+    return ok(newAnalysis)
+  } catch (error) {
+    return wrapError(error)
+  }
+}
+
+/**
  * Re-trigger analysis on existing document.
  *
  * Creates new analysis record and sends inngest event.

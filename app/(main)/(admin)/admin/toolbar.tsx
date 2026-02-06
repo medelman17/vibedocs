@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { uploadDocument } from "@/app/(main)/(dashboard)/documents/actions"
-import { adminTriggerAnalysis } from "./actions"
+import { adminInitiateAnalysis } from "./actions"
 import { toast } from "sonner"
 
 // ============================================================================
@@ -100,7 +100,7 @@ export function Toolbar({ selectedCount, onBulkDelete }: ToolbarProps) {
         return
       }
 
-      const analysisResult = await adminTriggerAnalysis({
+      const analysisResult = await adminInitiateAnalysis({
         documentId: uploadResult.data.id,
       })
       if (!analysisResult.success) {

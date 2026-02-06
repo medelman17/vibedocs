@@ -86,6 +86,7 @@ describe("test-helpers", () => {
       const analysisRequested = createMockEvent("nda/analysis.requested", {
         tenantId: crypto.randomUUID(),
         documentId: crypto.randomUUID(),
+        analysisId: crypto.randomUUID(),
         source: "web",
       })
       expect(analysisRequested.name).toBe("nda/analysis.requested")

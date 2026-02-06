@@ -1,4 +1,4 @@
-"use server"
+"use server";
 
 /**
  * @fileoverview Document Server Actions
@@ -9,13 +9,22 @@
  * @module app/(dashboard)/documents/actions
  */
 
-import { z } from "zod"
-import { withTenant } from "@/lib/dal"
-import { ok, err, type ApiResponse } from "@/lib/api-response"
-import { documents, documentChunks } from "@/db/schema"
-import { eq, and, isNull, ilike, desc, sql, count, isNotNull } from "drizzle-orm"
-import { uploadFile, deleteFile, computeContentHash } from "@/lib/blob"
-import { validateFileSize, validatePageCount } from "@/lib/budget"
+import { z } from "zod";
+import { withTenant } from "@/lib/dal";
+import { ok, err, type ApiResponse } from "@/lib/api-response";
+import { documents, documentChunks } from "@/db/schema";
+import {
+  eq,
+  and,
+  isNull,
+  ilike,
+  desc,
+  sql,
+  count,
+  isNotNull,
+} from "drizzle-orm";
+import { uploadFile, deleteFile, computeContentHash } from "@/lib/blob";
+import { validateFileSize, validatePageCount } from "@/lib/budget";
 
 // ============================================================================
 // Types
@@ -28,24 +37,24 @@ export type DocumentStatus =
   | "embedding"
   | "analyzing"
   | "complete"
-  | "failed"
+  | "failed";
 
 /** Document record returned from queries */
-export type Document = typeof documents.$inferSelect
+export type Document = typeof documents.$inferSelect;
 
 /** Document chunk record */
-export type DocumentChunk = typeof documentChunks.$inferSelect
+export type DocumentChunk = typeof documentChunks.$inferSelect;
 
 /** Document with its associated chunks */
-export type DocumentWithChunks = Document & { chunks: DocumentChunk[] }
+export type DocumentWithChunks = Document & { chunks: DocumentChunk[] };
 
 /** Dashboard statistics summary */
 export interface DashboardStats {
-  totalDocuments: number
-  pendingDocuments: number
-  processingDocuments: number
-  completedDocuments: number
-  failedDocuments: number
+  totalDocuments: number;
+  pendingDocuments: number;
+  processingDocuments: number;
+  completedDocuments: number;
+  failedDocuments: number;
 }
 
 // ============================================================================
@@ -56,7 +65,7 @@ export interface DashboardStats {
 const ALLOWED_FILE_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-] as const
+] as const;
 
 /** Valid document status values */
 const documentStatusSchema = z.enum([
@@ -66,42 +75,41 @@ const documentStatusSchema = z.enum([
   "analyzing",
   "complete",
   "failed",
-])
+]);
 
 /** Schema for getDocuments options */
 const getDocumentsInputSchema = z.object({
   status: documentStatusSchema.optional(),
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),
-})
+});
 
 /** Schema for searchDocuments */
 const searchDocumentsInputSchema = z.object({
   query: z.string().min(1).max(200),
   limit: z.number().min(1).max(100).default(20),
-})
+});
 
 /** Schema for document ID parameter */
 const documentIdSchema = z.object({
   documentId: z.string().uuid(),
-})
+});
 
 /** Schema for updateDocumentTitle */
 const updateTitleInputSchema = z.object({
   documentId: z.string().uuid(),
   title: z.string().min(1).max(255).trim(),
-})
+});
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-
 /**
  * Extract title from filename (remove extension)
  */
 function extractTitleFromFilename(fileName: string): string {
-  return fileName.replace(/\.(pdf|docx)$/i, "")
+  return fileName.replace(/\.(pdf|docx)$/i, "");
 }
 
 // ============================================================================
@@ -131,45 +139,49 @@ function extractTitleFromFilename(fileName: string): string {
  * ```
  */
 export async function uploadDocument(
-  formData: FormData
+  formData: FormData,
 ): Promise<ApiResponse<Document>> {
-  const { db, tenantId, userId } = await withTenant()
+  const { db, tenantId, userId } = await withTenant();
 
   // Extract form data
-  const file = formData.get("file")
-  const titleInput = formData.get("title")
+  const file = formData.get("file");
+  const titleInput = formData.get("title");
 
   // Validate file presence
   if (!file || !(file instanceof File)) {
-    return err("VALIDATION_ERROR", "No file provided")
+    return err("VALIDATION_ERROR", "No file provided");
   }
 
   // Validate file type
-  if (!ALLOWED_FILE_TYPES.includes(file.type as (typeof ALLOWED_FILE_TYPES)[number])) {
+  if (
+    !ALLOWED_FILE_TYPES.includes(
+      file.type as (typeof ALLOWED_FILE_TYPES)[number],
+    )
+  ) {
     return err(
       "VALIDATION_ERROR",
-      "Invalid file type. Only PDF and DOCX files are allowed."
-    )
+      "Invalid file type. Only PDF and DOCX files are allowed.",
+    );
   }
 
   // Stage 1: Quick size check using centralized limits
-  const sizeValidation = validateFileSize(file.size)
+  const sizeValidation = validateFileSize(file.size);
   if (!sizeValidation.valid) {
-    return err("VALIDATION_ERROR", sizeValidation.error!.message)
+    return err("VALIDATION_ERROR", sizeValidation.error!.message);
   }
 
   // Stage 1b: Page count check for PDFs (quick rejection before expensive operations)
   if (file.type === "application/pdf") {
     try {
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const pageValidation = await validatePageCount(buffer, file.type)
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const pageValidation = await validatePageCount(buffer, file.type);
       if (!pageValidation.valid) {
-        return err("VALIDATION_ERROR", pageValidation.error!.message)
+        return err("VALIDATION_ERROR", pageValidation.error!.message);
       }
     } catch (pageError) {
       // If we can't read the PDF to count pages, let it through
       // The token budget check after parsing will catch oversized documents
-      console.warn("[uploadDocument] Could not check page count:", pageError)
+      console.warn("[uploadDocument] Could not check page count:", pageError);
     }
   }
 
@@ -177,11 +189,11 @@ export async function uploadDocument(
   const title =
     typeof titleInput === "string" && titleInput.trim()
       ? titleInput.trim()
-      : extractTitleFromFilename(file.name)
+      : extractTitleFromFilename(file.name);
 
   try {
     // Compute content hash for duplicate detection
-    const contentHash = await computeContentHash(file)
+    const contentHash = await computeContentHash(file);
 
     // Check for duplicate within tenant
     const [existingDoc] = await db
@@ -191,21 +203,21 @@ export async function uploadDocument(
         and(
           eq(documents.tenantId, tenantId),
           eq(documents.contentHash, contentHash),
-          isNull(documents.deletedAt)
-        )
+          isNull(documents.deletedAt),
+        ),
       )
-      .limit(1)
+      .limit(1);
 
     if (existingDoc) {
       return err(
         "DUPLICATE",
-        `A document with the same content already exists: "${existingDoc.title}"`
-      )
+        `A document with the same content already exists: "${existingDoc.title}"`,
+      );
     }
 
     // Upload file to Vercel Blob
-    const blob = await uploadFile(file, { folder: "documents" })
-    const fileUrl = blob.url
+    const blob = await uploadFile(file, { folder: "documents" });
+    const fileUrl = blob.url;
 
     // Create document record
     const [newDocument] = await db
@@ -222,12 +234,12 @@ export async function uploadDocument(
         status: "pending",
         metadata: {},
       })
-      .returning()
+      .returning();
 
-    return ok(newDocument)
+    return ok(newDocument);
   } catch (error) {
-    console.error("[uploadDocument]", error)
-    return err("INTERNAL_ERROR", "Failed to upload document")
+    console.error("[uploadDocument]", error);
+    return err("INTERNAL_ERROR", "Failed to upload document");
   }
 }
 
@@ -254,25 +266,25 @@ export async function uploadDocument(
  * ```
  */
 export async function getDocuments(
-  input: z.input<typeof getDocumentsInputSchema> = {}
+  input: z.input<typeof getDocumentsInputSchema> = {},
 ): Promise<ApiResponse<Document[]>> {
-  const { db, tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant();
 
-  const parsed = getDocumentsInputSchema.safeParse(input)
+  const parsed = getDocumentsInputSchema.safeParse(input);
   if (!parsed.success) {
-    return err("VALIDATION_ERROR", "Invalid input", parsed.error.issues)
+    return err("VALIDATION_ERROR", "Invalid input", parsed.error.issues);
   }
 
-  const { status, limit, offset } = parsed.data
+  const { status, limit, offset } = parsed.data;
 
   try {
     const conditions = [
       eq(documents.tenantId, tenantId),
       isNull(documents.deletedAt),
-    ]
+    ];
 
     if (status) {
-      conditions.push(eq(documents.status, status))
+      conditions.push(eq(documents.status, status));
     }
 
     const result = await db
@@ -281,12 +293,12 @@ export async function getDocuments(
       .where(and(...conditions))
       .orderBy(desc(documents.createdAt))
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 
-    return ok(result)
+    return ok(result);
   } catch (error) {
-    console.error("[getDocuments]", error)
-    return err("INTERNAL_ERROR", "Failed to fetch documents")
+    console.error("[getDocuments]", error);
+    return err("INTERNAL_ERROR", "Failed to fetch documents");
   }
 }
 
@@ -306,16 +318,16 @@ export async function getDocuments(
  * ```
  */
 export async function searchDocuments(
-  input: z.input<typeof searchDocumentsInputSchema>
+  input: z.input<typeof searchDocumentsInputSchema>,
 ): Promise<ApiResponse<Document[]>> {
-  const { db, tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant();
 
-  const parsed = searchDocumentsInputSchema.safeParse(input)
+  const parsed = searchDocumentsInputSchema.safeParse(input);
   if (!parsed.success) {
-    return err("VALIDATION_ERROR", "Invalid input", parsed.error.issues)
+    return err("VALIDATION_ERROR", "Invalid input", parsed.error.issues);
   }
 
-  const { query, limit } = parsed.data
+  const { query, limit } = parsed.data;
 
   try {
     const result = await db
@@ -325,16 +337,16 @@ export async function searchDocuments(
         and(
           eq(documents.tenantId, tenantId),
           isNull(documents.deletedAt),
-          ilike(documents.title, `%${query}%`)
-        )
+          ilike(documents.title, `%${query}%`),
+        ),
       )
       .orderBy(desc(documents.createdAt))
-      .limit(limit)
+      .limit(limit);
 
-    return ok(result)
+    return ok(result);
   } catch (error) {
-    console.error("[searchDocuments]", error)
-    return err("INTERNAL_ERROR", "Failed to search documents")
+    console.error("[searchDocuments]", error);
+    return err("INTERNAL_ERROR", "Failed to search documents");
   }
 }
 
@@ -357,16 +369,16 @@ export async function searchDocuments(
  * ```
  */
 export async function getDocument(
-  input: z.infer<typeof documentIdSchema>
+  input: z.infer<typeof documentIdSchema>,
 ): Promise<ApiResponse<Document>> {
-  const { db, tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant();
 
-  const parsed = documentIdSchema.safeParse(input)
+  const parsed = documentIdSchema.safeParse(input);
   if (!parsed.success) {
-    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues)
+    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues);
   }
 
-  const { documentId } = parsed.data
+  const { documentId } = parsed.data;
 
   try {
     const [doc] = await db
@@ -376,19 +388,19 @@ export async function getDocument(
         and(
           eq(documents.id, documentId),
           eq(documents.tenantId, tenantId),
-          isNull(documents.deletedAt)
-        )
+          isNull(documents.deletedAt),
+        ),
       )
-      .limit(1)
+      .limit(1);
 
     if (!doc) {
-      return err("NOT_FOUND", "Document not found")
+      return err("NOT_FOUND", "Document not found");
     }
 
-    return ok(doc)
+    return ok(doc);
   } catch (error) {
-    console.error("[getDocument]", error)
-    return err("INTERNAL_ERROR", "Failed to fetch document")
+    console.error("[getDocument]", error);
+    return err("INTERNAL_ERROR", "Failed to fetch document");
   }
 }
 
@@ -411,16 +423,16 @@ export async function getDocument(
  * ```
  */
 export async function getDocumentWithChunks(
-  input: z.infer<typeof documentIdSchema>
+  input: z.infer<typeof documentIdSchema>,
 ): Promise<ApiResponse<DocumentWithChunks>> {
-  const { db, tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant();
 
-  const parsed = documentIdSchema.safeParse(input)
+  const parsed = documentIdSchema.safeParse(input);
   if (!parsed.success) {
-    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues)
+    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues);
   }
 
-  const { documentId } = parsed.data
+  const { documentId } = parsed.data;
 
   try {
     // Get document first
@@ -431,13 +443,13 @@ export async function getDocumentWithChunks(
         and(
           eq(documents.id, documentId),
           eq(documents.tenantId, tenantId),
-          isNull(documents.deletedAt)
-        )
+          isNull(documents.deletedAt),
+        ),
       )
-      .limit(1)
+      .limit(1);
 
     if (!doc) {
-      return err("NOT_FOUND", "Document not found")
+      return err("NOT_FOUND", "Document not found");
     }
 
     // Get associated chunks
@@ -447,15 +459,15 @@ export async function getDocumentWithChunks(
       .where(
         and(
           eq(documentChunks.documentId, documentId),
-          eq(documentChunks.tenantId, tenantId)
-        )
+          eq(documentChunks.tenantId, tenantId),
+        ),
       )
-      .orderBy(documentChunks.chunkIndex)
+      .orderBy(documentChunks.chunkIndex);
 
-    return ok({ ...doc, chunks })
+    return ok({ ...doc, chunks });
   } catch (error) {
-    console.error("[getDocumentWithChunks]", error)
-    return err("INTERNAL_ERROR", "Failed to fetch document with chunks")
+    console.error("[getDocumentWithChunks]", error);
+    return err("INTERNAL_ERROR", "Failed to fetch document with chunks");
   }
 }
 
@@ -477,16 +489,16 @@ export async function getDocumentWithChunks(
  * ```
  */
 export async function updateDocumentTitle(
-  input: z.infer<typeof updateTitleInputSchema>
+  input: z.infer<typeof updateTitleInputSchema>,
 ): Promise<ApiResponse<Document>> {
-  const { db, tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant();
 
-  const parsed = updateTitleInputSchema.safeParse(input)
+  const parsed = updateTitleInputSchema.safeParse(input);
   if (!parsed.success) {
-    return err("VALIDATION_ERROR", "Invalid input", parsed.error.issues)
+    return err("VALIDATION_ERROR", "Invalid input", parsed.error.issues);
   }
 
-  const { documentId, title } = parsed.data
+  const { documentId, title } = parsed.data;
 
   try {
     const [updated] = await db
@@ -499,19 +511,19 @@ export async function updateDocumentTitle(
         and(
           eq(documents.id, documentId),
           eq(documents.tenantId, tenantId),
-          isNull(documents.deletedAt)
-        )
+          isNull(documents.deletedAt),
+        ),
       )
-      .returning()
+      .returning();
 
     if (!updated) {
-      return err("NOT_FOUND", "Document not found")
+      return err("NOT_FOUND", "Document not found");
     }
 
-    return ok(updated)
+    return ok(updated);
   } catch (error) {
-    console.error("[updateDocumentTitle]", error)
-    return err("INTERNAL_ERROR", "Failed to update document title")
+    console.error("[updateDocumentTitle]", error);
+    return err("INTERNAL_ERROR", "Failed to update document title");
   }
 }
 
@@ -531,16 +543,16 @@ export async function updateDocumentTitle(
  * ```
  */
 export async function deleteDocument(
-  input: z.infer<typeof documentIdSchema>
+  input: z.infer<typeof documentIdSchema>,
 ): Promise<ApiResponse<Document>> {
-  const { db, tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant();
 
-  const parsed = documentIdSchema.safeParse(input)
+  const parsed = documentIdSchema.safeParse(input);
   if (!parsed.success) {
-    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues)
+    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues);
   }
 
-  const { documentId } = parsed.data
+  const { documentId } = parsed.data;
 
   try {
     const [deleted] = await db
@@ -553,19 +565,19 @@ export async function deleteDocument(
         and(
           eq(documents.id, documentId),
           eq(documents.tenantId, tenantId),
-          isNull(documents.deletedAt)
-        )
+          isNull(documents.deletedAt),
+        ),
       )
-      .returning()
+      .returning();
 
     if (!deleted) {
-      return err("NOT_FOUND", "Document not found")
+      return err("NOT_FOUND", "Document not found");
     }
 
-    return ok(deleted)
+    return ok(deleted);
   } catch (error) {
-    console.error("[deleteDocument]", error)
-    return err("INTERNAL_ERROR", "Failed to delete document")
+    console.error("[deleteDocument]", error);
+    return err("INTERNAL_ERROR", "Failed to delete document");
   }
 }
 
@@ -585,16 +597,16 @@ export async function deleteDocument(
  * ```
  */
 export async function restoreDocument(
-  input: z.infer<typeof documentIdSchema>
+  input: z.infer<typeof documentIdSchema>,
 ): Promise<ApiResponse<Document>> {
-  const { db, tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant();
 
-  const parsed = documentIdSchema.safeParse(input)
+  const parsed = documentIdSchema.safeParse(input);
   if (!parsed.success) {
-    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues)
+    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues);
   }
 
-  const { documentId } = parsed.data
+  const { documentId } = parsed.data;
 
   try {
     // Find and restore the soft-deleted document
@@ -608,19 +620,19 @@ export async function restoreDocument(
         and(
           eq(documents.id, documentId),
           eq(documents.tenantId, tenantId),
-          isNotNull(documents.deletedAt)
-        )
+          isNotNull(documents.deletedAt),
+        ),
       )
-      .returning()
+      .returning();
 
     if (!restored) {
-      return err("NOT_FOUND", "Document not found or not deleted")
+      return err("NOT_FOUND", "Document not found or not deleted");
     }
 
-    return ok(restored)
+    return ok(restored);
   } catch (error) {
-    console.error("[restoreDocument]", error)
-    return err("INTERNAL_ERROR", "Failed to restore document")
+    console.error("[restoreDocument]", error);
+    return err("INTERNAL_ERROR", "Failed to restore document");
   }
 }
 
@@ -647,16 +659,16 @@ export async function restoreDocument(
  * ```
  */
 export async function hardDeleteDocument(
-  input: z.infer<typeof documentIdSchema>
+  input: z.infer<typeof documentIdSchema>,
 ): Promise<ApiResponse<{ message: string }>> {
-  const { db, tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant();
 
-  const parsed = documentIdSchema.safeParse(input)
+  const parsed = documentIdSchema.safeParse(input);
   if (!parsed.success) {
-    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues)
+    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues);
   }
 
-  const { documentId } = parsed.data
+  const { documentId } = parsed.data;
 
   try {
     // Find the soft-deleted document
@@ -672,25 +684,25 @@ export async function hardDeleteDocument(
         and(
           eq(documents.id, documentId),
           eq(documents.tenantId, tenantId),
-          isNotNull(documents.deletedAt) // Only allow hard delete of soft-deleted docs
-        )
+          isNotNull(documents.deletedAt), // Only allow hard delete of soft-deleted docs
+        ),
       )
-      .limit(1)
+      .limit(1);
 
     if (!doc) {
       return err(
         "NOT_FOUND",
-        "Document not found or not in deleted state. Soft-delete the document first."
-      )
+        "Document not found or not in deleted state. Soft-delete the document first.",
+      );
     }
 
     // Delete blob file if it exists
     if (doc.fileUrl) {
       try {
-        await deleteFile(doc.fileUrl)
+        await deleteFile(doc.fileUrl);
       } catch (blobError) {
         // Log but don't fail if blob deletion fails (file may already be gone)
-        console.warn("[hardDeleteDocument] Failed to delete blob:", blobError)
+        console.warn("[hardDeleteDocument] Failed to delete blob:", blobError);
       }
     }
 
@@ -700,19 +712,17 @@ export async function hardDeleteDocument(
       .where(
         and(
           eq(documentChunks.documentId, documentId),
-          eq(documentChunks.tenantId, tenantId)
-        )
-      )
+          eq(documentChunks.tenantId, tenantId),
+        ),
+      );
 
     // Permanently delete the document record
-    await db
-      .delete(documents)
-      .where(eq(documents.id, documentId))
+    await db.delete(documents).where(eq(documents.id, documentId));
 
-    return ok({ message: `Document "${doc.title}" permanently deleted` })
+    return ok({ message: `Document "${doc.title}" permanently deleted` });
   } catch (error) {
-    console.error("[hardDeleteDocument]", error)
-    return err("INTERNAL_ERROR", "Failed to permanently delete document")
+    console.error("[hardDeleteDocument]", error);
+    return err("INTERNAL_ERROR", "Failed to permanently delete document");
   }
 }
 
@@ -732,16 +742,16 @@ export async function hardDeleteDocument(
  * ```
  */
 export async function retryDocumentProcessing(
-  input: z.infer<typeof documentIdSchema>
+  input: z.infer<typeof documentIdSchema>,
 ): Promise<ApiResponse<Document>> {
-  const { db, tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant();
 
-  const parsed = documentIdSchema.safeParse(input)
+  const parsed = documentIdSchema.safeParse(input);
   if (!parsed.success) {
-    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues)
+    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues);
   }
 
-  const { documentId } = parsed.data
+  const { documentId } = parsed.data;
 
   try {
     // Only allow retry for documents in error state
@@ -752,20 +762,20 @@ export async function retryDocumentProcessing(
         and(
           eq(documents.id, documentId),
           eq(documents.tenantId, tenantId),
-          isNull(documents.deletedAt)
-        )
+          isNull(documents.deletedAt),
+        ),
       )
-      .limit(1)
+      .limit(1);
 
     if (!doc) {
-      return err("NOT_FOUND", "Document not found")
+      return err("NOT_FOUND", "Document not found");
     }
 
     if (doc.status !== "failed") {
       return err(
         "BAD_REQUEST",
-        `Cannot retry document with status "${doc.status}". Only failed documents can be retried.`
-      )
+        `Cannot retry document with status "${doc.status}". Only failed documents can be retried.`,
+      );
     }
 
     // Reset to pending and clear error
@@ -777,7 +787,7 @@ export async function retryDocumentProcessing(
         updatedAt: new Date(),
       })
       .where(eq(documents.id, documentId))
-      .returning()
+      .returning();
 
     // TODO: Trigger reprocessing via Inngest
     // await inngest.send({
@@ -785,10 +795,10 @@ export async function retryDocumentProcessing(
     //   data: { documentId: updated.id, tenantId },
     // })
 
-    return ok(updated)
+    return ok(updated);
   } catch (error) {
-    console.error("[retryDocumentProcessing]", error)
-    return err("INTERNAL_ERROR", "Failed to retry document processing")
+    console.error("[retryDocumentProcessing]", error);
+    return err("INTERNAL_ERROR", "Failed to retry document processing");
   }
 }
 
@@ -811,16 +821,16 @@ export async function retryDocumentProcessing(
  * ```
  */
 export async function getDocumentDownloadUrl(
-  input: z.infer<typeof documentIdSchema>
+  input: z.infer<typeof documentIdSchema>,
 ): Promise<ApiResponse<{ url: string; fileName: string }>> {
-  const { db, tenantId } = await withTenant()
+  const { db, tenantId } = await withTenant();
 
-  const parsed = documentIdSchema.safeParse(input)
+  const parsed = documentIdSchema.safeParse(input);
   if (!parsed.success) {
-    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues)
+    return err("VALIDATION_ERROR", "Invalid document ID", parsed.error.issues);
   }
 
-  const { documentId } = parsed.data
+  const { documentId } = parsed.data;
 
   try {
     const [doc] = await db
@@ -833,25 +843,25 @@ export async function getDocumentDownloadUrl(
         and(
           eq(documents.id, documentId),
           eq(documents.tenantId, tenantId),
-          isNull(documents.deletedAt)
-        )
+          isNull(documents.deletedAt),
+        ),
       )
-      .limit(1)
+      .limit(1);
 
     if (!doc) {
-      return err("NOT_FOUND", "Document not found")
+      return err("NOT_FOUND", "Document not found");
     }
 
     if (!doc.fileUrl) {
-      return err("BAD_REQUEST", "Document file not available")
+      return err("BAD_REQUEST", "Document file not available");
     }
 
     // Vercel Blob URLs with public access are directly accessible
     // No signed URL generation needed for public blobs
-    return ok({ url: doc.fileUrl, fileName: doc.fileName })
+    return ok({ url: doc.fileUrl, fileName: doc.fileName });
   } catch (error) {
-    console.error("[getDocumentDownloadUrl]", error)
-    return err("INTERNAL_ERROR", "Failed to generate download URL")
+    console.error("[getDocumentDownloadUrl]", error);
+    return err("INTERNAL_ERROR", "Failed to generate download URL");
   }
 }
 
@@ -873,8 +883,10 @@ export async function getDocumentDownloadUrl(
  * }
  * ```
  */
-export async function getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
-  const { db, tenantId } = await withTenant()
+export async function getDashboardStats(): Promise<
+  ApiResponse<DashboardStats>
+> {
+  const { db, tenantId } = await withTenant();
 
   try {
     // Get all status counts in a single query using conditional aggregation
@@ -888,11 +900,8 @@ export async function getDashboardStats(): Promise<ApiResponse<DashboardStats>> 
       })
       .from(documents)
       .where(
-        and(
-          eq(documents.tenantId, tenantId),
-          isNull(documents.deletedAt)
-        )
-      )
+        and(eq(documents.tenantId, tenantId), isNull(documents.deletedAt)),
+      );
 
     const stats = result[0] ?? {
       totalDocuments: 0,
@@ -900,7 +909,7 @@ export async function getDashboardStats(): Promise<ApiResponse<DashboardStats>> 
       processingDocuments: 0,
       completedDocuments: 0,
       failedDocuments: 0,
-    }
+    };
 
     return ok({
       totalDocuments: Number(stats.totalDocuments),
@@ -908,9 +917,9 @@ export async function getDashboardStats(): Promise<ApiResponse<DashboardStats>> 
       processingDocuments: Number(stats.processingDocuments),
       completedDocuments: Number(stats.completedDocuments),
       failedDocuments: Number(stats.failedDocuments),
-    })
+    });
   } catch (error) {
-    console.error("[getDashboardStats]", error)
-    return err("INTERNAL_ERROR", "Failed to fetch dashboard statistics")
+    console.error("[getDashboardStats]", error);
+    return err("INTERNAL_ERROR", "Failed to fetch dashboard statistics");
   }
 }

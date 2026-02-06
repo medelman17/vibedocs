@@ -38,7 +38,16 @@ export const cleanupCancelledAnalysis = inngest.createFunction(
     const eventData = event.data as any
 
     const functionId = eventData?.function_id as string | undefined
-    if (functionId !== "analyze-nda" && functionId !== "analyze-nda-after-ocr") {
+    const analysisFunctionIds = new Set([
+      "analyze-nda",
+      "analyze-nda-after-ocr",
+      "nda-parse",
+      "nda-chunk-embed",
+      "nda-classify",
+      "nda-score-risks",
+      "nda-analyze-gaps",
+    ])
+    if (!functionId || !analysisFunctionIds.has(functionId)) {
       return { skipped: true, reason: `Not an analysis function: ${functionId}` }
     }
 

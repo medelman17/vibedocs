@@ -7,8 +7,8 @@ import { BudgetTracker } from '@/lib/ai/budget'
 // Now returns batch classification format (multiLabelClassificationSchema)
 vi.mock('ai', () => ({
   generateText: vi.fn().mockImplementation(({ prompt }: { prompt: string }) => {
-    // Parse chunk indices from the prompt to build matching classifications
-    const chunkMatches = [...prompt.matchAll(/### Chunk \d+ \(index (\d+)\)/g)]
+    // Parse chunk indices from the prompt (format: ### Chunk N)
+    const chunkMatches = [...prompt.matchAll(/### Chunk (\d+)/g)]
     const chunkIndices = chunkMatches.map((m) => parseInt(m[1], 10))
 
     return Promise.resolve({
@@ -85,7 +85,6 @@ describe('Classifier Agent', () => {
             tokenCount: 50,
             startPosition: 0,
             endPosition: SAMPLE_GOVERNING_LAW_CLAUSE.length,
-            embedding: [0.1, 0.2, 0.3],
           },
         ],
       },
@@ -116,7 +115,6 @@ describe('Classifier Agent', () => {
             tokenCount: 50,
             startPosition: 0,
             endPosition: SAMPLE_GOVERNING_LAW_CLAUSE.length,
-            embedding: [0.1, 0.2, 0.3],
           },
         ],
       },
@@ -146,7 +144,6 @@ describe('Classifier Agent', () => {
             tokenCount: 5,
             startPosition: 0,
             endPosition: 4,
-            embedding: [],
           },
         ],
       },
@@ -195,7 +192,6 @@ describe('Classifier Agent', () => {
             tokenCount: 5,
             startPosition: 0,
             endPosition: 19,
-            embedding: [],
           },
         ],
       },
@@ -245,7 +241,6 @@ describe('Classifier Agent', () => {
             tokenCount: 5,
             startPosition: 0,
             endPosition: 15,
-            embedding: [],
           },
         ],
       },
@@ -278,8 +273,7 @@ describe('Classifier Agent', () => {
             tokenCount: 5,
             startPosition: 0,
             endPosition: 14,
-            embedding: [0.1],
-          },
+                },
           {
             id: 'chunk-1',
             index: 1,
@@ -288,8 +282,7 @@ describe('Classifier Agent', () => {
             tokenCount: 5,
             startPosition: 15,
             endPosition: 29,
-            embedding: [0.2],
-          },
+                },
         ],
       },
       budgetTracker,
@@ -304,10 +297,10 @@ describe('Classifier Agent', () => {
     expect(result.clauses[1].startPosition).toBe(15)
   })
 
-  it('batches chunks into groups of 4 (BATCH_SIZE)', async () => {
+  it('processes all chunks in a single LLM call', async () => {
     const { generateText } = await import('ai')
 
-    // Create 6 chunks -> should produce 2 batches (4 + 2)
+    // Create 6 chunks — classifier sends all in one call (batching is in nda-classify.ts)
     const chunks = Array.from({ length: 6 }, (_, i) => ({
       id: `chunk-${i}`,
       index: i,
@@ -316,7 +309,6 @@ describe('Classifier Agent', () => {
       tokenCount: 10,
       startPosition: i * 30,
       endPosition: (i + 1) * 30,
-      embedding: [0.1 * i],
     }))
 
     const input: ClassifierInput = {
@@ -331,8 +323,8 @@ describe('Classifier Agent', () => {
 
     await runClassifierAgent(input)
 
-    // Should have been called twice (2 batches: 4 + 2)
-    expect(vi.mocked(generateText)).toHaveBeenCalledTimes(2)
+    // Single LLM call for all 6 chunks
+    expect(vi.mocked(generateText)).toHaveBeenCalledTimes(1)
   })
 
   it('uses two-stage RAG with vector search per chunk', async () => {
@@ -352,8 +344,7 @@ describe('Classifier Agent', () => {
             tokenCount: 5,
             startPosition: 0,
             endPosition: 9,
-            embedding: [0.1],
-          },
+                },
           {
             id: 'chunk-1',
             index: 1,
@@ -362,8 +353,7 @@ describe('Classifier Agent', () => {
             tokenCount: 5,
             startPosition: 10,
             endPosition: 19,
-            embedding: [0.2],
-          },
+                },
         ],
       },
       budgetTracker,
@@ -376,5 +366,109 @@ describe('Classifier Agent', () => {
     // Each call should request 7 results
     expect(vi.mocked(mockFindSimilar)).toHaveBeenCalledWith('Clause 1.', { limit: 7 })
     expect(vi.mocked(mockFindSimilar)).toHaveBeenCalledWith('Clause 2.', { limit: 7 })
+  })
+
+  it('throws AnalysisFailedError on empty classifications output', async () => {
+    const { generateText } = await import('ai')
+    vi.mocked(generateText).mockResolvedValueOnce({
+      output: { classifications: [] },
+      usage: { inputTokens: 800, outputTokens: 50 },
+    } as unknown as Awaited<ReturnType<typeof generateText>>)
+
+    const input: ClassifierInput = {
+      parsedDocument: {
+        documentId: 'doc-empty',
+        title: 'Empty Test',
+        rawText: 'Some clause text.',
+        chunks: [
+          {
+            id: 'chunk-0',
+            index: 0,
+            content: 'Some clause text.',
+            sectionPath: [],
+            tokenCount: 5,
+            startPosition: 0,
+            endPosition: 17,
+          },
+        ],
+      },
+      budgetTracker,
+    }
+
+    await expect(runClassifierAgent(input)).rejects.toThrow(
+      'Classification returned empty output for 1 chunks'
+    )
+  })
+
+  it('records budget even when classification fails', async () => {
+    const { generateText } = await import('ai')
+    // Single call returns empty classifications (fails)
+    vi.mocked(generateText).mockResolvedValueOnce({
+      output: { classifications: [] },
+      usage: { inputTokens: 800, outputTokens: 50 },
+    } as unknown as Awaited<ReturnType<typeof generateText>>)
+
+    const input: ClassifierInput = {
+      parsedDocument: {
+        documentId: 'doc-fail',
+        title: 'Fail Test',
+        rawText: 'Clause text.',
+        chunks: [
+          {
+            id: 'chunk-0',
+            index: 0,
+            content: 'Clause text.',
+            sectionPath: [],
+            tokenCount: 5,
+            startPosition: 0,
+            endPosition: 12,
+          },
+        ],
+      },
+      budgetTracker,
+    }
+
+    await expect(runClassifierAgent(input)).rejects.toThrow()
+
+    // Budget should still be recorded via finally block
+    const usage = budgetTracker.getUsage()
+    expect(usage.byAgent['classifier']).toBeDefined()
+    expect(usage.byAgent['classifier'].input).toBe(800)
+    expect(usage.byAgent['classifier'].output).toBe(50)
+  })
+
+  it('selects category-diverse references', async () => {
+    const { findSimilarClauses: mockFindSimilar } = await import('./tools/vector-search')
+
+    // Return different categories from different chunks' vector searches
+    vi.mocked(mockFindSimilar)
+      .mockResolvedValueOnce([
+        { id: 'ref-0', content: 'Governing law clause.', category: 'Governing Law', similarity: 0.95, source: 'CUAD' },
+        { id: 'ref-1', content: 'Another governing law.', category: 'Governing Law', similarity: 0.90, source: 'CUAD' },
+      ])
+      .mockResolvedValueOnce([
+        { id: 'ref-2', content: 'Non-compete clause.', category: 'Non-Compete', similarity: 0.85, source: 'CUAD' },
+        { id: 'ref-3', content: 'Another non-compete.', category: 'Non-Compete', similarity: 0.80, source: 'CUAD' },
+      ])
+
+    const input: ClassifierInput = {
+      parsedDocument: {
+        documentId: 'doc-diverse',
+        title: 'Diverse Refs Test',
+        rawText: 'Clause 1. Clause 2.',
+        chunks: [
+          { id: 'chunk-0', index: 0, content: 'Clause 1.', sectionPath: [], tokenCount: 5, startPosition: 0, endPosition: 9 },
+          { id: 'chunk-1', index: 1, content: 'Clause 2.', sectionPath: [], tokenCount: 5, startPosition: 10, endPosition: 19 },
+        ],
+      },
+      budgetTracker,
+    }
+
+    const result = await runClassifierAgent(input)
+
+    // The prompt should have been called — verify it executed without errors
+    expect(result.clauses.length).toBe(2)
+    // Both vector searches were called (parallel)
+    expect(vi.mocked(mockFindSimilar)).toHaveBeenCalledTimes(2)
   })
 })

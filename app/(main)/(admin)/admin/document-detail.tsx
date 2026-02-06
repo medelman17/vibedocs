@@ -34,6 +34,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Separator } from "@/components/ui/separator"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardAction,
+  CardContent,
+} from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table"
 import {
   adminGetDocumentDetail,
   adminUpdateDocumentTitle,
@@ -241,7 +255,7 @@ export function DocumentDetail({
 
   return (
     <Sheet open={documentId !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-lg">
         {document ? (
           <>
             {/* Header: Title + Status */}
@@ -279,142 +293,163 @@ export function DocumentDetail({
                   {getStatusLabel(document.status)}
                 </Badge>
               </div>
+              <SheetDescription className="sr-only">
+                Document details and management actions
+              </SheetDescription>
             </SheetHeader>
 
-            {/* Document Info */}
-            <div className="space-y-4 mt-6">
-              <div>
-                <h3 className="text-sm font-medium mb-3">Document Info</h3>
-                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-                  <dt className="text-muted-foreground">File name:</dt>
-                  <dd className="font-mono text-xs truncate">{document.fileName}</dd>
-
-                  <dt className="text-muted-foreground">File type:</dt>
-                  <dd>{formatFileType(document.fileType)}</dd>
-
-                  <dt className="text-muted-foreground">File size:</dt>
-                  <dd>{formatFileSize(document.fileSize)}</dd>
-
-                  <dt className="text-muted-foreground">Upload date:</dt>
-                  <dd>{formatDate(document.createdAt)}</dd>
-
-                  <dt className="text-muted-foreground">Content hash:</dt>
-                  <dd className="font-mono text-xs truncate">
-                    {document.contentHash ? document.contentHash.slice(0, 12) + "..." : "N/A"}
-                  </dd>
-                </dl>
-              </div>
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-4">
+              {/* Document Info Card */}
+              <Card className="py-0">
+                <CardHeader className="pb-0 pt-4">
+                  <CardTitle className="text-sm">Document Info</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 px-0">
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-muted-foreground font-medium w-[120px]">File name</TableCell>
+                        <TableCell className="font-mono text-xs truncate max-w-0">{document.fileName}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-muted-foreground font-medium">Type</TableCell>
+                        <TableCell>{formatFileType(document.fileType)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-muted-foreground font-medium">Size</TableCell>
+                        <TableCell>{formatFileSize(document.fileSize)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-muted-foreground font-medium">Uploaded</TableCell>
+                        <TableCell>{formatDate(document.createdAt)}</TableCell>
+                      </TableRow>
+                      <TableRow className="border-0">
+                        <TableCell className="text-muted-foreground font-medium">Hash</TableCell>
+                        <TableCell className="font-mono text-xs truncate max-w-0">
+                          {document.contentHash ? document.contentHash.slice(0, 16) + "..." : "N/A"}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
 
               {/* Actions */}
-              <div>
-                <h3 className="text-sm font-medium mb-3">Actions</h3>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDownload}
-                    disabled={!document.fileUrl}
-                  >
-                    <DownloadIcon className="size-4 mr-2" />
-                    Download
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReRunAnalysis}
-                    disabled={
-                      triggeringAnalysis ||
-                      (document.status !== "ready" && document.status !== "complete")
-                    }
-                  >
-                    {triggeringAnalysis ? (
-                      <Loader2Icon className="size-4 mr-2 animate-spin" />
-                    ) : (
-                      <RefreshCwIcon className="size-4 mr-2" />
-                    )}
-                    Re-run Analysis
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeleteDocument}
-                  >
-                    <Trash2Icon className="size-4 mr-2" />
-                    Delete Document
-                  </Button>
-                </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownload}
+                  disabled={!document.fileUrl}
+                >
+                  <DownloadIcon className="size-4" />
+                  Download
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReRunAnalysis}
+                  disabled={
+                    triggeringAnalysis ||
+                    (document.status !== "ready" && document.status !== "complete")
+                  }
+                >
+                  {triggeringAnalysis ? (
+                    <Loader2Icon className="size-4 animate-spin" />
+                  ) : (
+                    <RefreshCwIcon className="size-4" />
+                  )}
+                  Re-run Analysis
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteDocument}
+                >
+                  <Trash2Icon className="size-4" />
+                  Delete
+                </Button>
               </div>
 
+              <Separator />
+
               {/* Analyses */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="text-sm font-medium">Analyses</h3>
-                  <Badge variant="secondary">{analyses.length}</Badge>
-                </div>
-                {analyses.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No analyses yet</p>
-                ) : (
-                  <div className="space-y-2">
-                    {analyses.map((analysis) => (
-                      <div
-                        key={analysis.id}
-                        className="flex items-center gap-2 p-2 rounded-md border bg-card text-sm"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">v{analysis.version}</span>
-                            <Badge
-                              variant={getStatusBadgeVariant(analysis.status)}
-                              className={
-                                analysis.status === "complete"
-                                  ? "text-green-600"
-                                  : ""
-                              }
-                            >
-                              {getStatusLabel(analysis.status)}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(analysis.createdAt)}
-                            </span>
+              <Card className="py-0">
+                <CardHeader className="pb-0 pt-4">
+                  <CardTitle className="text-sm">Analyses</CardTitle>
+                  <CardAction>
+                    <Badge variant="secondary">{analyses.length}</Badge>
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  {analyses.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No analyses yet</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {analyses.map((analysis) => (
+                        <div
+                          key={analysis.id}
+                          className="flex items-center gap-2 rounded-lg border p-3 text-sm"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">v{analysis.version}</span>
+                              <Badge
+                                variant={getStatusBadgeVariant(analysis.status)}
+                                className={
+                                  analysis.status === "complete"
+                                    ? "text-green-600"
+                                    : ""
+                                }
+                              >
+                                {getStatusLabel(analysis.status)}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(analysis.createdAt)}
+                              </span>
+                              {analysis.status === "complete" &&
+                                typeof analysis.overallRiskScore === "number" && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Risk: {analysis.overallRiskScore.toFixed(1)}
+                                  </span>
+                                )}
+                            </div>
                           </div>
-                          {analysis.status === "complete" &&
-                            typeof analysis.overallRiskScore === "number" && (
-                              <div className="text-xs text-muted-foreground mt-1">
-                                Risk: {analysis.overallRiskScore.toFixed(1)}
-                              </div>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
-                            className="h-8 w-8 p-0"
-                          >
-                            <a
-                              href={`/analysis/${analysis.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              className="size-8"
                             >
-                              <ExternalLinkIcon className="size-3.5" />
-                              <span className="sr-only">Open analysis</span>
-                            </a>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteAnalysis(analysis.id)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-600"
-                          >
-                            <Trash2Icon className="size-3.5" />
-                            <span className="sr-only">Delete analysis</span>
-                          </Button>
+                              <a
+                                href={`/analysis/${analysis.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLinkIcon className="size-3.5" />
+                                <span className="sr-only">Open analysis</span>
+                              </a>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteAnalysis(analysis.id)}
+                              className="size-8 text-destructive hover:text-destructive"
+                            >
+                              <Trash2Icon className="size-3.5" />
+                              <span className="sr-only">Delete analysis</span>
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Error Info */}
               {document.status === "failed" && (() => {
@@ -424,14 +459,11 @@ export function DocumentDetail({
                   : null
                 if (!errMsg) return null
                 return (
-                  <div>
-                    <h3 className="text-sm font-medium mb-3">Error Info</h3>
-                    <Alert variant="destructive">
-                      <AlertDescription className="text-sm">
-                        {errMsg}
-                      </AlertDescription>
-                    </Alert>
-                  </div>
+                  <Alert variant="destructive">
+                    <AlertDescription className="text-sm">
+                      {errMsg}
+                    </AlertDescription>
+                  </Alert>
                 )
               })()}
             </div>
@@ -442,7 +474,9 @@ export function DocumentDetail({
               <SheetTitle>Loading document</SheetTitle>
               <SheetDescription>Loading document details</SheetDescription>
             </SheetHeader>
-            <LoadingSkeleton />
+            <div className="flex-1 px-4 pb-4">
+              <LoadingSkeleton />
+            </div>
           </>
         )}
       </SheetContent>
@@ -461,22 +495,28 @@ function LoadingSkeleton() {
         <Skeleton className="h-6 flex-1" />
         <Skeleton className="h-5 w-20" />
       </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-20 w-full" />
+      <Card className="py-0">
+        <CardContent className="py-4 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex gap-4">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 flex-1" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      <div className="flex gap-2">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-8 w-20" />
       </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-16" />
-        <div className="flex gap-2">
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-8 w-32" />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-20" />
-        <Skeleton className="h-16 w-full" />
-      </div>
+      <Separator />
+      <Card className="py-0">
+        <CardContent className="py-4">
+          <Skeleton className="h-4 w-20 mb-3" />
+          <Skeleton className="h-16 w-full" />
+        </CardContent>
+      </Card>
     </div>
   )
 }

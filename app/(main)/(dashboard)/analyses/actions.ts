@@ -1259,8 +1259,11 @@ export async function fetchRealtimeToken(
 /**
  * Risk level visual configuration for document rendering.
  * Maps risk levels to display labels and Tailwind CSS color classes.
+ * 
+ * Note: This is kept as a private constant since "use server" files can only
+ * export async functions. If needed elsewhere, move to a separate config file.
  */
-export const riskLevelConfig: Record<RiskLevel | "unknown", RiskLevelInfo> = {
+const _riskLevelConfig: Record<RiskLevel | "unknown", RiskLevelInfo> = {
   standard: {
     level: "standard",
     label: "Standard",

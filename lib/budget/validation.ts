@@ -55,13 +55,33 @@ export function validateFileSize(sizeBytes: number): UploadValidationResult {
 }
 
 /**
+ * Lightweight PDF page count by scanning the buffer for /Count in the Pages tree.
+ * Avoids loading pdf-parse/pdfjs-dist in the Next.js server (where the worker path
+ * is broken in Turbopack). If the count cannot be determined, returns null and
+ * upload is allowed; the token budget check after parsing will catch oversized docs.
+ */
+function getPdfPageCountFromBuffer(buffer: Buffer): number | null {
+  const str = buffer.toString('latin1')
+  // Match /Count N where N is a positive integer (PDF Pages dictionary)
+  const countMatches = str.matchAll(/\/Count\s+(\d+)/g)
+  let maxCount = 0
+  for (const m of countMatches) {
+    const n = parseInt(m[1], 10)
+    if (n > maxCount) maxCount = n
+  }
+  return maxCount > 0 ? maxCount : null
+}
+
+/**
  * Validates that PDF page count is within acceptable limits.
  *
  * Note: Only validates PDFs - DOCX page count requires rendering which
  * is unreliable. Token-based truncation handles oversized DOCX files.
  *
- * Uses dynamic import for pdf-parse to avoid barrel export issues
- * (pdf-parse pulls in browser-only dependencies).
+ * Uses a lightweight buffer scan for /Count to avoid loading pdf-parse
+ * in the Next.js server (pdfjs-dist worker path is broken in Turbopack).
+ * If page count cannot be determined, upload is allowed and the token
+ * budget check after parsing will catch oversized documents.
  *
  * @param buffer - File buffer to check
  * @param mimeType - MIME type of the file
@@ -73,14 +93,8 @@ export async function validatePageCount(
 ): Promise<UploadValidationResult> {
   // Only check PDF - DOCX page count requires rendering
   if (mimeType === 'application/pdf') {
-    // Dynamic import to avoid loading pdf-parse unless needed
-    // This prevents barrel export issues with browser-only deps
-    const { PDFParse } = await import('pdf-parse')
-    const pdfParser = new PDFParse({ data: buffer })
-    const result = await pdfParser.getText()
-    const pageCount = result.pages.length
-
-    if (pageCount > BUDGET_LIMITS.MAX_PAGES) {
+    const pageCount = getPdfPageCountFromBuffer(buffer)
+    if (pageCount !== null && pageCount > BUDGET_LIMITS.MAX_PAGES) {
       return {
         valid: false,
         error: {

@@ -47,14 +47,12 @@ export const documentUploadedPayload = baseTenantPayload.extend({
 export const analysisRequestedPayload = baseTenantPayload.extend({
   /** Document to analyze */
   documentId: z.string().uuid(),
-  /** Analysis record ID (pre-created with status='pending') - optional for Word Add-in */
-  analysisId: z.string().uuid().optional(),
+  /** Analysis record ID (pre-created with status='pending') */
+  analysisId: z.string().uuid(),
   /** Optional: specific analysis version (for re-analysis) */
   version: z.number().int().positive().optional(),
   /** Source of the document */
   source: z.enum(["web", "web-upload", "word-addin"]).default("web"),
-  /** Timestamp when analysis was requested (for deterministic ID generation) */
-  requestedAt: z.number().int().positive().optional(),
   /** User's optional prompt/instructions for the analysis */
   userPrompt: z.string().optional(),
   /** Word Add-in content (required when source='word-addin') */
@@ -327,6 +325,80 @@ export const analysisCancelledPayload = baseTenantPayload.extend({
   reason: z.enum(["document_deleted", "user_cancelled", "superseded"]),
 });
 
+// =============================================================================
+// NDA Sub-Function Events (step.invoke targets)
+// =============================================================================
+
+/**
+ * Parse request event - triggers the parser sub-function.
+ * Reads document from blob storage or uses inline content.
+ */
+export const ndaParseRequestedPayload = baseTenantPayload.extend({
+  documentId: z.string().uuid(),
+  analysisId: z.string().uuid(),
+  source: z.enum(["web", "web-upload", "word-addin", "ocr"]),
+  content: z
+    .object({
+      rawText: z.string(),
+      paragraphs: z.array(
+        z.object({
+          text: z.string(),
+          style: z.string(),
+          isHeading: z.boolean(),
+        })
+      ),
+    })
+    .optional(),
+  metadata: z
+    .object({
+      title: z.string(),
+      author: z.string().optional(),
+    })
+    .optional(),
+  ocrText: z.string().optional(),
+  ocrConfidence: z.number().min(0).max(100).optional(),
+});
+
+/**
+ * Chunk+embed request event - triggers chunking and embedding sub-function.
+ * Reads rawText from documents.rawText and structure from analyses.metadata.
+ */
+export const ndaChunkEmbedRequestedPayload = baseTenantPayload.extend({
+  documentId: z.string().uuid(),
+  analysisId: z.string().uuid(),
+  title: z.string(),
+  isOcr: z.boolean().optional(),
+});
+
+/**
+ * Classify request event - triggers the classifier sub-function.
+ * Reads chunks from documentChunks table.
+ */
+export const ndaClassifyRequestedPayload = baseTenantPayload.extend({
+  documentId: z.string().uuid(),
+  analysisId: z.string().uuid(),
+  title: z.string(),
+});
+
+/**
+ * Score risks request event - triggers the risk scorer sub-function.
+ * Reads from chunkClassifications + documentChunks.
+ */
+export const ndaScoreRisksRequestedPayload = baseTenantPayload.extend({
+  documentId: z.string().uuid(),
+  analysisId: z.string().uuid(),
+});
+
+/**
+ * Gap analysis request event - triggers the gap analyst sub-function.
+ * Reads clauses + assessments from DB.
+ */
+export const ndaAnalyzeGapsRequestedPayload = baseTenantPayload.extend({
+  documentId: z.string().uuid(),
+  analysisId: z.string().uuid(),
+  documentSummary: z.string(),
+});
+
 /**
  * Document deleted event - triggers cleanup and cancellation.
  */
@@ -369,6 +441,22 @@ export type InngestEvents = {
   };
   "nda/analysis.ocr-complete": {
     data: z.infer<typeof ocrCompletedPayload>;
+  };
+  // NDA sub-function events
+  "nda/parse.requested": {
+    data: z.infer<typeof ndaParseRequestedPayload>;
+  };
+  "nda/chunk-embed.requested": {
+    data: z.infer<typeof ndaChunkEmbedRequestedPayload>;
+  };
+  "nda/classify.requested": {
+    data: z.infer<typeof ndaClassifyRequestedPayload>;
+  };
+  "nda/score-risks.requested": {
+    data: z.infer<typeof ndaScoreRisksRequestedPayload>;
+  };
+  "nda/analyze-gaps.requested": {
+    data: z.infer<typeof ndaAnalyzeGapsRequestedPayload>;
   };
   // Demo events
   "demo/process": {
@@ -426,6 +514,21 @@ export type BootstrapSourceCompletedPayload = z.infer<
 export type OcrRequestedPayload = z.infer<typeof ocrRequestedPayload>;
 export type OcrCompletedPayload = z.infer<typeof ocrCompletedPayload>;
 export type OcrQualityPayload = z.infer<typeof ocrQualityPayload>;
+export type NdaParseRequestedPayload = z.infer<
+  typeof ndaParseRequestedPayload
+>;
+export type NdaChunkEmbedRequestedPayload = z.infer<
+  typeof ndaChunkEmbedRequestedPayload
+>;
+export type NdaClassifyRequestedPayload = z.infer<
+  typeof ndaClassifyRequestedPayload
+>;
+export type NdaScoreRisksRequestedPayload = z.infer<
+  typeof ndaScoreRisksRequestedPayload
+>;
+export type NdaAnalyzeGapsRequestedPayload = z.infer<
+  typeof ndaAnalyzeGapsRequestedPayload
+>;
 
 /**
  * Map of event names to their Zod schemas for runtime validation.
@@ -442,6 +545,12 @@ export const eventSchemas = {
   // OCR events
   "nda/ocr.requested": ocrRequestedPayload,
   "nda/analysis.ocr-complete": ocrCompletedPayload,
+  // NDA sub-function events
+  "nda/parse.requested": ndaParseRequestedPayload,
+  "nda/chunk-embed.requested": ndaChunkEmbedRequestedPayload,
+  "nda/classify.requested": ndaClassifyRequestedPayload,
+  "nda/score-risks.requested": ndaScoreRisksRequestedPayload,
+  "nda/analyze-gaps.requested": ndaAnalyzeGapsRequestedPayload,
   // Demo events
   "demo/process": demoProcessPayload,
   "demo/multi-step": demoMultiStepPayload,

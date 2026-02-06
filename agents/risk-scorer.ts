@@ -25,7 +25,7 @@ import { AnalysisFailedError } from '@/lib/errors'
 import { db } from '@/db/client'
 import { referenceDocuments } from '@/db/schema/reference'
 import {
-  enhancedRiskAssessmentSchema,
+  batchedRiskAssessmentOutputSchema,
   type RiskLevel,
   type EnhancedRiskAssessment,
 } from './types'
@@ -34,10 +34,10 @@ import {
   findSimilarClauses,
   findTemplateBaselines,
   findNliSpans,
+  type VectorSearchResult,
 } from './tools/vector-search'
 import {
   createRiskScorerSystemPrompt,
-  createEnhancedRiskScorerPrompt,
 } from './prompts'
 import type { BudgetTracker } from '@/lib/ai/budget'
 import type { ClassifiedClause } from './classifier'
@@ -237,27 +237,108 @@ function generateExecutiveSummary(
  * @param input - Risk scorer input with classified clauses
  * @returns Risk assessments with overall score
  */
+
+/**
+ * Builds a self-contained prompt section for a single clause with its evidence.
+ * Used to compose the batched multi-clause prompt.
+ */
+function buildClauseSection(
+  clause: ClassifiedClause,
+  references: VectorSearchResult[],
+  templates: VectorSearchResult[],
+  nliSpans: VectorSearchResult[],
+  perspective: Perspective
+): string {
+  const refBlock =
+    references.length > 0
+      ? references
+          .map(
+            (r, i) =>
+              `[REF-${i + 1}] Source: ${r.source} | Category: ${r.category} | ID: ${r.id} | Similarity: ${Math.round(r.similarity * 100)}%\n${r.content.slice(0, 300)}`
+          )
+          .join('\n\n')
+      : 'No reference corpus matches found.'
+
+  const templateBlock =
+    templates.length > 0
+      ? templates
+          .map(
+            (t, i) =>
+              `[TPL-${i + 1}] Source: ${t.source} | ID: ${t.id} | Similarity: ${Math.round(t.similarity * 100)}%\n${t.content.slice(0, 300)}`
+          )
+          .join('\n\n')
+      : 'No template baselines available.'
+
+  const nliBlock =
+    nliSpans.length > 0
+      ? nliSpans
+          .map(
+            (n, i) =>
+              `[NLI-${i + 1}] Source: ContractNLI | Category: ${n.category} | ID: ${n.id}\n${n.content.slice(0, 200)}`
+          )
+          .join('\n\n')
+      : 'No NLI evidence available.'
+
+  return `## Clause: ${clause.chunkId}
+Category: ${clause.category}
+Perspective: ${perspective}
+
+${clause.clauseText}
+
+### Reference Clauses (CUAD)
+${refBlock}
+
+### Template Baselines (Bonterms/CommonAccord)
+${templateBlock}
+
+### NLI Evidence Spans
+${nliBlock}`
+}
+
 export async function runRiskScorerAgent(
   input: RiskScorerInput
 ): Promise<RiskScorerOutput> {
   const { clauses, budgetTracker } = input
   const perspective = input.perspective ?? 'balanced'
-  const assessments: RiskAssessmentResult[] = []
   let totalInputTokens = 0
   let totalOutputTokens = 0
 
-  // Build perspective-aware system prompt (cached across clauses)
+  if (clauses.length === 0) {
+    budgetTracker.record('riskScorer', 0, 0)
+    return {
+      assessments: [],
+      overallRiskScore: 0,
+      overallRiskLevel: 'standard',
+      perspective,
+      executiveSummary: 'No clauses to assess.',
+      riskDistribution: { standard: 0, cautious: 0, aggressive: 0, unknown: 0 },
+      tokenUsage: { inputTokens: 0, outputTokens: 0 },
+    }
+  }
+
+  // Build perspective-aware system prompt (same for all clauses)
   const systemPrompt = createRiskScorerSystemPrompt(perspective)
 
-  for (const clause of clauses) {
-    // Budget-aware reference count reduction
-    const isApproachingLimit = budgetTracker.isWarning
-    const refLimit = isApproachingLimit ? 2 : 3
-    const tplLimit = isApproachingLimit ? 1 : 2
-    const nliLimit = isApproachingLimit ? 1 : 2
+  // ====================================================================
+  // Step 1: Parallel evidence retrieval for ALL clauses at once
+  // ====================================================================
+  //
+  // BEFORE: Sequential loop — for each clause, 3 parallel searches,
+  //   then LLM call, then next clause. N clauses = N serial rounds.
+  //   24 clauses × (~100ms searches + ~5s LLM) = ~120s serial.
+  //
+  // AFTER: All evidence searches fire in parallel (N×3 concurrent),
+  //   then one LLM call. 24 clauses = ~100ms searches + ~25s LLM = ~25s.
+  //
+  // Budget-aware reference limits still apply per clause.
+  const isApproachingLimit = budgetTracker.isWarning
+  const refLimit = isApproachingLimit ? 2 : 3
+  const tplLimit = isApproachingLimit ? 1 : 2
+  const nliLimit = isApproachingLimit ? 1 : 2
 
-    // Multi-source evidence retrieval (in parallel)
-    const [references, templates, nliSpans] = await Promise.all([
+  // Fire all 3N searches in parallel
+  const evidencePromises = clauses.map((clause) =>
+    Promise.all([
       findSimilarClauses(clause.clauseText, {
         category: clause.category,
         limit: refLimit,
@@ -268,81 +349,113 @@ export async function runRiskScorerAgent(
         limit: nliLimit,
       }),
     ])
+  )
 
-    // Build enhanced prompt with all evidence sources
-    const prompt = createEnhancedRiskScorerPrompt(
-      clause.clauseText,
-      clause.category,
-      references,
-      templates,
-      nliSpans,
-      perspective
-    )
+  const allEvidence = await Promise.all(evidencePromises)
 
-    // Generate risk assessment with enhanced schema
-    let result
-    try {
-      result = await generateText({
-        model: getAgentModel('riskScorer'),
-        system: systemPrompt,
-        prompt,
-        output: Output.object({ schema: enhancedRiskAssessmentSchema }),
+  // ====================================================================
+  // Step 2: Build batched prompt with per-clause evidence sections
+  // ====================================================================
+  const clauseSections = clauses.map((clause, i) => {
+    const [references, templates, nliSpans] = allEvidence[i]
+    return buildClauseSection(clause, references, templates, nliSpans, perspective)
+  })
+
+  const batchedPrompt = `You are assessing ${clauses.length} clauses from the same NDA.
+For each clause, assess risk independently using only the evidence provided for that clause.
+Return one assessment per clause, in the same order, using the clauseId to identify each.
+
+${clauseSections.join('\n\n---\n\n')}
+
+Return a JSON object with an "assessments" array containing one assessment per clause above, in the same order. Each assessment must include a "clauseId" field matching the clause header.`
+
+  // ====================================================================
+  // Step 3: Single LLM call for all clauses
+  // ====================================================================
+  let result
+  try {
+    result = await generateText({
+      model: getAgentModel('riskScorer'),
+      system: systemPrompt,
+      prompt: batchedPrompt,
+      output: Output.object({ schema: batchedRiskAssessmentOutputSchema }),
+    })
+  } catch (error) {
+    if (NoObjectGeneratedError.isInstance(error)) {
+      totalInputTokens += error.usage?.inputTokens ?? 0
+      totalOutputTokens += error.usage?.outputTokens ?? 0
+      console.error('[RiskScorer] Batched assessment failed', {
+        clauseCount: clauses.length,
+        clauseIds: clauses.map((c) => c.chunkId),
+        cause: error.cause,
+        text: error.text?.slice(0, 500),
       })
-    } catch (error) {
-      if (NoObjectGeneratedError.isInstance(error)) {
-        console.error('[RiskScorer] Object generation failed', {
-          clauseId: clause.chunkId,
-          cause: error.cause,
-          text: error.text?.slice(0, 500),
-        })
-        throw new AnalysisFailedError(
-          'Risk scoring failed to produce valid output',
-          [{ field: 'clause', message: clause.chunkId }]
-        )
-      }
-      throw error
+      throw new AnalysisFailedError(
+        `Risk scoring failed for ${clauses.length} clauses`,
+        [{ field: 'riskScoring', message: error.text?.slice(0, 200) ?? 'empty output' }]
+      )
+    }
+    throw error
+  }
+
+  const { output, usage } = result
+  totalInputTokens += usage?.inputTokens ?? 0
+  totalOutputTokens += usage?.outputTokens ?? 0
+
+  // ====================================================================
+  // Step 4: Map results back to clauses and verify citations
+  // ====================================================================
+  const clauseById = new Map(clauses.map((c) => [c.chunkId, c]))
+  const assessments: RiskAssessmentResult[] = []
+
+  for (const assessment of output.assessments) {
+    const clause = clauseById.get(assessment.clauseId)
+    if (!clause) {
+      console.warn('[RiskScorer] Assessment references unknown clauseId', {
+        clauseId: assessment.clauseId,
+        validIds: [...clauseById.keys()],
+      })
+      continue
     }
 
-    const { output, usage } = result
+    // Verify LLM-generated citations against reference database
+    const verifiedReferences = await verifyCitations(assessment.evidence.references)
 
-    totalInputTokens += usage?.inputTokens ?? 0
-    totalOutputTokens += usage?.outputTokens ?? 0
-
-    // Verify LLM-generated citations against reference database (RSK-05)
-    const verifiedReferences = await verifyCitations(
-      output.evidence.references
-    )
-
-    // Map enhanced output to RiskAssessmentResult
     assessments.push({
       clauseId: clause.chunkId,
       clause,
-      riskLevel: output.riskLevel,
-      confidence: output.confidence,
-      explanation: output.explanation,
-      negotiationSuggestion: output.negotiationSuggestion,
-      atypicalLanguage: output.atypicalLanguage,
-      atypicalLanguageNote: output.atypicalLanguageNote,
+      riskLevel: assessment.riskLevel,
+      confidence: assessment.confidence,
+      explanation: assessment.explanation,
+      negotiationSuggestion: assessment.negotiationSuggestion,
+      atypicalLanguage: assessment.atypicalLanguage,
+      atypicalLanguageNote: assessment.atypicalLanguageNote,
       evidence: {
-        citations: output.evidence.citations,
+        citations: assessment.evidence.citations,
         references: verifiedReferences,
-        baselineComparison: output.evidence.baselineComparison,
+        baselineComparison: assessment.evidence.baselineComparison,
       },
       startPosition: clause.startPosition,
       endPosition: clause.endPosition,
     })
   }
 
-  // Calculate overall risk
+  // Log any clauses the model skipped
+  if (assessments.length < clauses.length) {
+    const assessedIds = new Set(assessments.map((a) => a.clauseId))
+    const missed = clauses.filter((c) => !assessedIds.has(c.chunkId))
+    console.warn('[RiskScorer] Model skipped clauses', {
+      expected: clauses.length,
+      got: assessments.length,
+      missedIds: missed.map((c) => c.chunkId),
+    })
+  }
+
+  // Calculate overall risk from ALL assessments
   const { score, level } = calculateOverallRisk(assessments)
-
-  // Compute risk distribution
   const riskDistribution = computeRiskDistribution(assessments)
-
-  // Generate executive summary
   const executiveSummary = generateExecutiveSummary(assessments, score, level)
 
-  // Record budget
   budgetTracker.record('riskScorer', totalInputTokens, totalOutputTokens)
 
   return {

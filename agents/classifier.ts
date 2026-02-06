@@ -33,7 +33,7 @@ import type { DocumentChunk } from '@/lib/document-processing'
 // ============================================================================
 
 /** Number of chunks to process per LLM call (3-5 range, 4 is a good default) */
-const BATCH_SIZE = 4
+
 
 /** Number of reference examples to fetch per chunk from vector search */
 const REFERENCES_PER_CHUNK = 7
@@ -48,9 +48,7 @@ const NEIGHBOR_CONTEXT_CHARS = 200
 // Types
 // ============================================================================
 
-export interface ParsedChunk extends DocumentChunk {
-  embedding: number[]
-}
+export type ParsedChunk = DocumentChunk
 
 export interface ClassifierInput {
   parsedDocument: {
@@ -116,12 +114,14 @@ function buildNeighborMap(chunks: ParsedChunk[]): Map<string, NeighborContext> {
 
 /**
  * Deduplicates vector search results by ID, keeping the highest-similarity
- * instance of each unique reference.
+ * instance of each unique reference. Ensures category diversity so the LLM
+ * sees examples from multiple CUAD categories, not just the top-similarity one.
  */
-function deduplicateReferences(
+function selectDiverseReferences(
   allRefs: VectorSearchResult[],
   maxCount: number
 ): VectorSearchResult[] {
+  // Deduplicate by ID, keeping highest similarity
   const seen = new Map<string, VectorSearchResult>()
   for (const ref of allRefs) {
     const existing = seen.get(ref.id)
@@ -129,9 +129,36 @@ function deduplicateReferences(
       seen.set(ref.id, ref)
     }
   }
-  return Array.from(seen.values())
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, maxCount)
+  const unique = Array.from(seen.values()).sort((a, b) => b.similarity - a.similarity)
+
+  // Ensure category diversity: pick top ref per category first, then fill remaining by similarity
+  const selected: VectorSearchResult[] = []
+  const usedIds = new Set<string>()
+  const byCategory = new Map<string, VectorSearchResult[]>()
+
+  for (const ref of unique) {
+    const list = byCategory.get(ref.category) ?? []
+    list.push(ref)
+    byCategory.set(ref.category, list)
+  }
+
+  // Round 1: top ref from each category
+  for (const [, refs] of byCategory) {
+    if (selected.length >= maxCount) break
+    selected.push(refs[0])
+    usedIds.add(refs[0].id)
+  }
+
+  // Round 2: fill remaining slots by similarity
+  for (const ref of unique) {
+    if (selected.length >= maxCount) break
+    if (!usedIds.has(ref.id)) {
+      selected.push(ref)
+      usedIds.add(ref.id)
+    }
+  }
+
+  return selected
 }
 
 // ============================================================================
@@ -163,34 +190,36 @@ export async function runClassifierAgent(
   let totalInputTokens = 0
   let totalOutputTokens = 0
 
-  // Step 1: Build neighbor context map
-  const neighborMap = buildNeighborMap(parsedDocument.chunks)
+  const chunks = parsedDocument.chunks
+  if (chunks.length === 0) {
+    budgetTracker.record('classifier', 0, 0)
+    return { clauses, rawClassifications, tokenUsage: { inputTokens: 0, outputTokens: 0 } }
+  }
 
-  // Step 2: Process chunks in batches
-  const totalBatches = Math.ceil(parsedDocument.chunks.length / BATCH_SIZE)
+  // Step 1: Build neighbor context map from full chunk list
+  const neighborMap = buildNeighborMap(chunks)
 
-  for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
-    const batchStart = batchIdx * BATCH_SIZE
-    const batchEnd = Math.min(batchStart + BATCH_SIZE, parsedDocument.chunks.length)
-    const batchChunks = parsedDocument.chunks.slice(batchStart, batchEnd)
+  try {
+    // Step 2: Parallel vector search for ALL chunks at once
+    // With 24 chunks × 7 refs each, this fires 24 parallel searches.
+    // The LRU cache in vector-search.ts deduplicates identical queries.
+    const refArrays = await Promise.all(
+      chunks.map((chunk) =>
+        findSimilarClauses(chunk.content, { limit: REFERENCES_PER_CHUNK })
+      )
+    )
+    const allReferences = refArrays.flat()
 
-    // Step 3a: Two-stage RAG - vector search per chunk in batch
-    const allReferences: VectorSearchResult[] = []
-    for (const chunk of batchChunks) {
-      const refs = await findSimilarClauses(chunk.content, {
-        limit: REFERENCES_PER_CHUNK,
-      })
-      allReferences.push(...refs)
-    }
-
-    // Deduplicate references across batch, keep top by similarity
-    const dedupedRefs = deduplicateReferences(allReferences, MAX_BATCH_REFERENCES)
-
-    // Step 3b: Extract candidate categories from references
+    // Step 3: Category-diverse reference selection
+    // With all chunks' refs pooled, we get much better category diversity
+    // than the per-batch approach (which could miss categories split across batches)
+    const dedupedRefs = selectDiverseReferences(allReferences, MAX_BATCH_REFERENCES)
     const candidateCategories = [...new Set(dedupedRefs.map((r) => r.category))]
 
-    // Step 3c: Build batch prompt with neighbor context
-    const promptChunks = batchChunks.map((chunk) => {
+    // Step 4: Build prompt with ALL chunks using document-wide indices only
+    // FIX: The original used `Chunk ${i} (index ${chunk.index})` creating a
+    // dual-mapping ambiguity. With a single call, we use chunk.index exclusively.
+    const promptChunks = chunks.map((chunk) => {
       const neighbors = neighborMap.get(chunk.id)
       return {
         index: chunk.index,
@@ -203,7 +232,7 @@ export async function runClassifierAgent(
 
     const prompt = createBatchClassifierPrompt(promptChunks, dedupedRefs, candidateCategories)
 
-    // Step 3d: Call LLM with structured output
+    // Step 5: Single LLM call for all chunks
     let result
     try {
       result = await generateText({
@@ -214,20 +243,23 @@ export async function runClassifierAgent(
       })
     } catch (error) {
       if (NoObjectGeneratedError.isInstance(error)) {
-        console.error('[Classifier] Batch object generation failed', {
-          batch: batchIdx + 1,
-          totalBatches,
-          chunkIndices: batchChunks.map((c) => c.index),
+        if (error.usage) {
+          totalInputTokens += error.usage.inputTokens ?? 0
+          totalOutputTokens += error.usage.outputTokens ?? 0
+        }
+        console.error('[Classifier] Object generation failed', {
+          chunkCount: chunks.length,
+          chunkIndices: chunks.map((c) => c.index),
           cause: error.cause,
           text: error.text?.slice(0, 500),
           usage: error.usage,
         })
         throw new AnalysisFailedError(
-          `Classification failed for batch ${batchIdx + 1}/${totalBatches}`,
+          `Classification failed for ${chunks.length} chunks`,
           [
             {
-              field: 'batch',
-              message: `Chunks ${batchChunks[0].index}-${batchChunks[batchChunks.length - 1].index}: ${error.text?.slice(0, 100) ?? 'empty'}`,
+              field: 'classification',
+              message: `Chunks ${chunks[0].index}-${chunks[chunks.length - 1].index}: ${error.text?.slice(0, 100) ?? 'empty'}`,
             },
           ]
         )
@@ -236,69 +268,75 @@ export async function runClassifierAgent(
     }
 
     const { output, usage } = result
-
-    // Track token usage
     totalInputTokens += usage?.inputTokens ?? 0
     totalOutputTokens += usage?.outputTokens ?? 0
 
-    // Step 3e: Process batch results
-    if (output?.classifications) {
-      for (const classification of output.classifications) {
-        // Find the corresponding chunk in the batch
-        const chunk = batchChunks.find((c) => c.index === classification.chunkIndex)
-        if (!chunk) {
-          console.warn('[Classifier] Classification references unknown chunk index', {
-            chunkIndex: classification.chunkIndex,
-            batchChunks: batchChunks.map((c) => c.index),
-          })
-          continue
-        }
-
-        // Apply minimum confidence threshold
-        const isPrimaryBelowFloor =
-          classification.primary.confidence < CLASSIFICATION_THRESHOLDS.MINIMUM_FLOOR
-
-        // Store raw classification (with threshold applied to primary)
-        const rawResult: ChunkClassificationResult = {
-          chunkIndex: classification.chunkIndex,
-          primary: isPrimaryBelowFloor
-            ? {
-                category: 'Uncategorized',
-                confidence: classification.primary.confidence,
-                rationale: classification.primary.rationale,
-              }
-            : classification.primary,
-          secondary: classification.secondary.filter(
-            (s) => s.confidence >= CLASSIFICATION_THRESHOLDS.MINIMUM_FLOOR
-          ),
-        }
-        rawClassifications.push(rawResult)
-
-        // Skip Uncategorized from filtered clauses output (for risk-scorer compat)
-        if (
-          rawResult.primary.category === 'Uncategorized' ||
-          rawResult.primary.category === 'Unknown'
-        ) {
-          continue
-        }
-
-        // Map to ClassifiedClause for backward compatibility
-        clauses.push({
-          chunkId: chunk.id,
-          clauseText: chunk.content,
-          category: rawResult.primary.category as CuadCategory,
-          secondaryCategories: rawResult.secondary.map((s) => s.category as CuadCategory),
-          confidence: rawResult.primary.confidence,
-          reasoning: rawResult.primary.rationale,
-          startPosition: chunk.startPosition,
-          endPosition: chunk.endPosition,
-        })
-      }
+    // Step 6: Validate output
+    if (!output?.classifications || output.classifications.length === 0) {
+      throw new AnalysisFailedError(
+        `Classification returned empty output for ${chunks.length} chunks`,
+        [
+          {
+            field: 'classification',
+            message: `Expected ${chunks.length} classifications, got 0 (${usage?.inputTokens ?? 0} input tokens consumed)`,
+          },
+        ]
+      )
     }
-  }
 
-  // Record budget
-  budgetTracker.record('classifier', totalInputTokens, totalOutputTokens)
+    // Step 7: Map results using document-wide index ONLY
+    // No more dual batch-local / doc-wide mapping — single source of truth
+    const chunkByDocIndex = new Map(chunks.map((c) => [c.index, c]))
+
+    for (const classification of output.classifications) {
+      const chunk = chunkByDocIndex.get(classification.chunkIndex)
+      if (!chunk) {
+        console.warn('[Classifier] Classification references unknown chunk index', {
+          chunkIndex: classification.chunkIndex,
+          validIndices: [...chunkByDocIndex.keys()],
+        })
+        continue
+      }
+
+      const isPrimaryBelowFloor =
+        classification.primary.confidence < CLASSIFICATION_THRESHOLDS.MINIMUM_FLOOR
+
+      const rawResult: ChunkClassificationResult = {
+        chunkIndex: classification.chunkIndex,
+        primary: isPrimaryBelowFloor
+          ? {
+              category: 'Uncategorized',
+              confidence: classification.primary.confidence,
+              rationale: classification.primary.rationale,
+            }
+          : classification.primary,
+        secondary: classification.secondary.filter(
+          (s) => s.confidence >= CLASSIFICATION_THRESHOLDS.MINIMUM_FLOOR
+        ),
+      }
+      rawClassifications.push(rawResult)
+
+      if (
+        rawResult.primary.category === 'Uncategorized' ||
+        rawResult.primary.category === 'Unknown'
+      ) {
+        continue
+      }
+
+      clauses.push({
+        chunkId: chunk.id,
+        clauseText: chunk.content,
+        category: rawResult.primary.category as CuadCategory,
+        secondaryCategories: rawResult.secondary.map((s) => s.category as CuadCategory),
+        confidence: rawResult.primary.confidence,
+        reasoning: rawResult.primary.rationale,
+        startPosition: chunk.startPosition,
+        endPosition: chunk.endPosition,
+      })
+    }
+  } finally {
+    budgetTracker.record('classifier', totalInputTokens, totalOutputTokens)
+  }
 
   return {
     clauses,

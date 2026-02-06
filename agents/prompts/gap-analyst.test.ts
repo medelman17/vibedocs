@@ -30,13 +30,12 @@ describe('Gap Analyst constants', () => {
 })
 
 describe('GAP_ANALYST_SYSTEM_PROMPT', () => {
-  it('lists critical and important categories', () => {
-    for (const cat of CRITICAL_CATEGORIES) {
-      expect(GAP_ANALYST_SYSTEM_PROMPT).toContain(cat)
-    }
-    for (const cat of IMPORTANT_CATEGORIES) {
-      expect(GAP_ANALYST_SYSTEM_PROMPT).toContain(cat)
-    }
+  it('includes gap status tiers and severity levels', () => {
+    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('missing')
+    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('incomplete')
+    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('critical')
+    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('important')
+    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('informational')
   })
 
   it('includes ContractNLI hypothesis testing', () => {
@@ -45,25 +44,39 @@ describe('GAP_ANALYST_SYSTEM_PROMPT', () => {
     expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('not_mentioned')
   })
 
-  it('includes gap score calculation', () => {
-    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('Gap Score')
-    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('+15')
-    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('+10')
+  it('includes recommended language and style matching guidelines', () => {
+    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('Style Matching')
+    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('Recommended Language')
+    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('template')
   })
 
-  it('requests JSON output format', () => {
+  it('requests JSON output format with coverage summary', () => {
     expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('JSON')
     expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('"presentCategories"')
-    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('"gapScore"')
+    expect(GAP_ANALYST_SYSTEM_PROMPT).toContain('"coverageSummary"')
   })
 })
 
 describe('createGapAnalystPrompt', () => {
+  const defaultGaps = [
+    {
+      category: 'Non-Compete',
+      status: 'missing' as const,
+      severity: 'important',
+      templateContext: [],
+    },
+  ]
+  const defaultSampleClauses = [
+    { category: 'Governing Law', text: 'This Agreement shall be governed by Delaware law.' },
+  ]
+
   it('includes document summary', () => {
     const prompt = createGapAnalystPrompt(
       'NDA between Company A and Company B',
       ['Parties', 'Governing Law'],
-      []
+      [],
+      defaultGaps,
+      defaultSampleClauses
     )
     expect(prompt).toContain('Company A and Company B')
   })
@@ -72,19 +85,23 @@ describe('createGapAnalystPrompt', () => {
     const prompt = createGapAnalystPrompt(
       'Summary',
       ['Parties', 'Governing Law', 'Non-Compete'],
-      []
+      [],
+      defaultGaps,
+      defaultSampleClauses
     )
     expect(prompt).toContain('Categories Found (3)')
     expect(prompt).toContain('Parties')
   })
 
-  it('includes classified clauses', () => {
+  it('includes sample clauses for style reference', () => {
     const prompt = createGapAnalystPrompt(
       'Summary',
       ['Governing Law'],
-      [{ id: 'cl-1', category: 'Governing Law', text: 'Delaware law governs this agreement' }]
+      [{ id: 'cl-1', category: 'Governing Law', text: 'Delaware law governs this agreement' }],
+      defaultGaps,
+      [{ category: 'Governing Law', text: 'This Agreement shall be governed by the laws of Delaware.' }]
     )
-    expect(prompt).toContain('[cl-1]')
-    expect(prompt).toContain('Delaware law')
+    expect(prompt).toContain('Sample Existing Clauses')
+    expect(prompt).toContain('governed by the laws of Delaware')
   })
 })
